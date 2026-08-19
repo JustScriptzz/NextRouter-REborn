@@ -69,7 +69,9 @@ export default function DocsPage() {
           <li>
             Model-level RPM limits may apply to individual custom models (set by the model owner).
           </li>
-          <li>One key can hold at most 10 API keys.</li>
+          <li>
+            Custom models: at most <strong>100 per account</strong>.
+          </li>
         </ul>
       </Section>
 

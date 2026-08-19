@@ -85,9 +85,9 @@ export interface BudgetOptions {
 
 function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array, Uint8Array> {
   const { userId, remainingBudget, inputTokens, upstreamModel, publicModelId } = opts;
+  let pending = '';
   let outputChars = 0;
   let recorded = false;
-  let capped = false;
 
   async function settle(): Promise<void> {
     if (recorded) return;
@@ -97,39 +97,66 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
     await recordUsage(userId, total);
   }
 
+  function countContent(text: string): void {
+    const contentMatcher = /"content":"((?:\\.|[^"\\])*)"/g;
+    for (const match of text.matchAll(contentMatcher)) {
+      outputChars += match[1]?.length ?? 0;
+    }
+  }
+
+  function capChunk(controller: TransformStreamDefaultController<Uint8Array>): void {
+    const consumed = Math.ceil(outputChars / 4);
+    const finalChunk = {
+      choices: [
+        {
+          index: 0,
+          delta: { role: 'assistant', content: '' },
+          finish_reason: 'length',
+        },
+      ],
+      usage: {
+        prompt_tokens: inputTokens,
+        completion_tokens: Math.min(Math.max(0, remainingBudget - inputTokens), consumed),
+        total_tokens:
+          inputTokens + Math.min(Math.max(0, remainingBudget - inputTokens), consumed),
+      },
+    };
+    controller.enqueue(enc.encode(`data: ${JSON.stringify(finalChunk)}\n\ndata: [DONE]\n\n`));
+    controller.terminate();
+  }
+
+  function consumeComplete(controller: TransformStreamDefaultController<Uint8Array>): void {
+    const lastBreak = pending.lastIndexOf('\n');
+    if (lastBreak === -1) return;
+    const complete = pending.slice(0, lastBreak + 1);
+    pending = pending.slice(lastBreak + 1);
+    const rewritten = rewriteModelName(complete, upstreamModel, publicModelId);
+    countContent(rewritten);
+    if (Math.ceil(outputChars / 4) >= remainingBudget) {
+      capChunk(controller);
+      return;
+    }
+    controller.enqueue(enc.encode(rewritten));
+  }
+
   return new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
-      let text = dec.decode(chunk, { stream: true });
-      text = rewriteModelName(text, upstreamModel, publicModelId);
-      const contentMatcher = /"content":"((?:\\.|[^"\\])*)"/g;
-      for (const match of text.matchAll(contentMatcher)) {
-        outputChars += match[1]?.length ?? 0;
+      pending += dec.decode(chunk, { stream: true });
+      while (!controller.desiredSize || controller.desiredSize > 0) {
+        const before = pending.length;
+        consumeComplete(controller);
+        if (pending.length === before) break;
       }
-      const consumed = Math.ceil(outputChars / 4);
-      if (consumed >= remainingBudget && !capped) {
-        capped = true;
-        void settle();
-        const finalChunk = {
-          choices: [
-            {
-              index: 0,
-              delta: { role: 'assistant', content: '' },
-              finish_reason: 'length',
-            },
-          ],
-          usage: {
-            prompt_tokens: inputTokens,
-            completion_tokens: Math.min(Math.max(0, remainingBudget - inputTokens), consumed),
-            total_tokens: inputTokens + Math.min(Math.max(0, remainingBudget - inputTokens), consumed),
-          },
-        };
-        controller.enqueue(enc.encode(`data: ${JSON.stringify(finalChunk)}\n\ndata: [DONE]\n\n`));
-        controller.terminate();
-        return;
-      }
-      controller.enqueue(enc.encode(text));
     },
-    async flush() {
+    async flush(controller) {
+      if (pending) {
+        const rewritten = rewriteModelName(pending, upstreamModel, publicModelId);
+        countContent(rewritten);
+        if (Math.ceil(outputChars / 4) < remainingBudget) {
+          controller.enqueue(enc.encode(rewritten));
+        }
+        pending = '';
+      }
       await settle();
     },
   });
