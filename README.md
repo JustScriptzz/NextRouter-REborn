@@ -8,7 +8,7 @@ A self-hostable AI provider gateway. Register an account, grab an API key, and u
 - **500,000 token/day** limit per user, combined across all models, resets at midnight UTC
 - OpenAI-compatible API: `/api/v1/chat/completions`, `/images/generations`, `/audio/speech`, `/audio/transcriptions`, `/models`
 - Catalog models from multiple free providers (configured server-side, never exposed to users)
-- **My Models**: point a custom endpoint, test it, and expose it as `{username}/{model-name}` — private or public, with optional per-user RPM limits and a fallback model
+- **My Models**: point a custom endpoint, test it, and expose it as `{username}/{model-name}` — private or public, with an optional per-user RPM limit and a required fallback model from the catalog
 - API key management with one-time display
 - Usage dashboard with today/all-time stats and 7-day history
 
