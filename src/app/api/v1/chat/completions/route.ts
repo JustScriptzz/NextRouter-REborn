@@ -1,0 +1,164 @@
+import { getUserFromApiKey } from '@/lib/auth';
+import { decryptSecret } from '@/lib/crypto';
+import { findCustomModelForCaller } from '@/lib/customModels';
+import { jsonErrorCors } from '@/lib/http';
+import { hordeTextCompletion } from '@/lib/horde';
+import { getCatalogModel } from '@/lib/providers';
+import { rateLimiter } from '@/lib/rateLimit';
+import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
+import { getUsageRemaining } from '@/lib/usage';
+
+export const runtime = 'nodejs';
+
+export async function POST(req: Request) {
+  const user = await getUserFromApiKey(req.headers.get('authorization'));
+  if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
+
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body || typeof body.model !== 'string' || !Array.isArray(body.messages)) {
+    return jsonErrorCors(400, 'Request body must include "model" and "messages"');
+  }
+  const modelId = body.model;
+
+  const remaining = await getUsageRemaining(user.id);
+  if (remaining <= 0) {
+    return jsonErrorCors(
+      429,
+      'Daily token limit reached (500,000). It resets at midnight UTC.',
+      'daily_limit',
+    );
+  }
+
+  const controller = new AbortController();
+  req.signal.addEventListener('abort', () => controller.abort());
+  const signal = controller.signal;
+
+  const catalogEntry = getCatalogModel(modelId);
+  if (catalogEntry) {
+    if (catalogEntry.type !== 'text') {
+      return jsonErrorCors(400, `Model "${modelId}" is not a text model`);
+    }
+    try {
+      if (catalogEntry.kind === 'openai') {
+        return await chatCompletions({
+          baseUrl: catalogEntry.baseUrl,
+          apiKey: catalogEntry.apiKey,
+          upstreamModel: catalogEntry.upstreamModel,
+          publicModelId: catalogEntry.id,
+          body,
+          signal,
+          userId: user.id,
+          remainingBudget: remaining,
+        });
+      }
+      return await hordeTextCompletion({
+        upstreamModel: catalogEntry.upstreamModel,
+        publicModelId: catalogEntry.id,
+        body,
+        signal,
+        userId: user.id,
+      });
+    } catch (error) {
+      if (error instanceof UpstreamRequestError) {
+        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+      }
+      return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+    }
+  }
+
+  const custom = await findCustomModelForCaller(modelId, user);
+  if (!custom) {
+    return jsonErrorCors(404, `Model "${modelId}" not found`);
+  }
+  const rpm = custom.rpm;
+  if (rpm && !rateLimiter.allow(`custom:${custom.modelId}:${user.id}`, rpm)) {
+    return jsonErrorCors(429, 'Rate limit exceeded for this model', 'rate_limit');
+  }
+
+  let primaryError: { status: number; message: string } | null = null;
+  try {
+    const token = custom.bearerTokenEnc ? decryptSecret(custom.bearerTokenEnc) : '';
+    const response = await chatCompletions({
+      baseUrl: custom.endpointUrl,
+      apiKey: token,
+      upstreamModel: custom.providerModelId,
+      publicModelId: custom.modelId,
+      body,
+      signal,
+      userId: user.id,
+      remainingBudget: remaining,
+    });
+    if (response.ok) return response;
+    primaryError = {
+      status: response.status,
+      message: response.status >= 500 ? 'Upstream request failed' : await readErrorText(response),
+    };
+  } catch (error) {
+    if (error instanceof UpstreamRequestError && error.status < 500) {
+      return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+    }
+  }
+
+  if (primaryError && primaryError.status < 500) {
+    return jsonErrorCors(primaryError.status, scrubMessage(primaryError.message), 'upstream_error');
+  }
+
+  const fallback = getCatalogModel(custom.fallbackModelId);
+  if (fallback && fallback.type === 'text') {
+    try {
+      const effectiveRemaining = await getUsageRemaining(user.id);
+      if (effectiveRemaining <= 0) {
+        return jsonErrorCors(
+          429,
+          'Daily token limit reached (500,000). It resets at midnight UTC.',
+          'daily_limit',
+        );
+      }
+      if (fallback.kind === 'openai') {
+        return await chatCompletions({
+          baseUrl: fallback.baseUrl,
+          apiKey: fallback.apiKey,
+          upstreamModel: fallback.upstreamModel,
+          publicModelId: fallback.id,
+          body,
+          signal,
+          userId: user.id,
+          remainingBudget: effectiveRemaining,
+        });
+      }
+      return await hordeTextCompletion({
+        upstreamModel: fallback.upstreamModel,
+        publicModelId: fallback.id,
+        body,
+        signal,
+        userId: user.id,
+      });
+    } catch {
+      return jsonErrorCors(502, 'The model and its fallback both failed', 'upstream_error');
+    }
+  }
+
+  return primaryError
+    ? jsonErrorCors(primaryError.status, scrubMessage(primaryError.message), 'upstream_error')
+    : jsonErrorCors(502, 'The model failed and no fallback is available', 'upstream_error');
+}
+
+async function readErrorText(response: Response): Promise<string> {
+  try {
+    const parsed = (await response.json()) as { error?: { message?: unknown } };
+    if (parsed.error?.message && typeof parsed.error.message === 'string') {
+      return parsed.error.message;
+    }
+  } catch {
+    /* keep generic */
+  }
+  return response.statusText || 'Upstream request failed';
+}
+
+function scrubMessage(message: string): string {
+  return message.replace(/https?:\/\/[^\s"')\]]+/g, '').slice(0, 500);
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+}
