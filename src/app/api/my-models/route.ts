@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'API bearer token is too long');
   }
 
-  const fallback = getCatalogModel(payload.fallbackModelId);
+  const fallback = await getCatalogModel(payload.fallbackModelId);
   if (!fallback) return jsonError(400, 'The chosen fallback model does not exist');
 
   const modelId = `${user.username}/${payload.modelName}`;

@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   req.signal.addEventListener('abort', () => controller.abort());
   const signal = controller.signal;
 
-  const catalogEntry = getCatalogModel(modelId);
+  const catalogEntry = await getCatalogModel(modelId);
   if (catalogEntry) {
     if (catalogEntry.type !== 'text') {
       return jsonErrorCors(400, `Model "${modelId}" is not a text model`);
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
     return jsonErrorCors(primaryError.status, scrubMessage(primaryError.message), 'upstream_error');
   }
 
-  const fallback = getCatalogModel(custom.fallbackModelId);
+  const fallback = await getCatalogModel(custom.fallbackModelId);
   if (fallback && fallback.type === 'text') {
     try {
       const effectiveRemaining = await getUsageRemaining(user.id);

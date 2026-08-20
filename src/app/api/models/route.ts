@@ -6,8 +6,8 @@ import type { PublicModelDTO } from '@/lib/types';
 export const runtime = 'nodejs';
 
 export async function GET() {
-  const catalog = getCatalog();
-  const fallbackId = getFallbackModelId();
+  const catalog = await getCatalog();
+  const fallbackId = await getFallbackModelId();
   const publicModels = await listPublicCustomModels();
   const models: PublicModelDTO[] = [
     ...catalog.models.map(

@@ -8,9 +8,9 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default function ModelsPage() {
-  const catalog = getCatalog();
-  const fallbackId = getFallbackModelId();
+export default async function ModelsPage() {
+  const catalog = await getCatalog();
+  const fallbackId = await getFallbackModelId();
   const models = catalog.models.map((m) => ({
     id: m.id,
     title: m.description,

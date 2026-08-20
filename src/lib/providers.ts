@@ -121,10 +121,60 @@ const HORDE_TEXT_DEFAULTS = [
 
 const HORDE_IMAGE_DEFAULTS = ['Deliberate', 'DreamShaper'];
 
-const globalForCatalog = globalThis as unknown as { nrCatalog?: Catalog };
+const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
+const LIVE_MODELS_TIMEOUT_MS = 8000;
+const LIVE_MODELS_MAX = 300;
 
-export function getCatalog(): Catalog {
-  if (globalForCatalog.nrCatalog) return globalForCatalog.nrCatalog;
+const globalForCatalog = globalThis as unknown as {
+  gatewayModels?: Record<string, { at: number; ids: string[] | null }>;
+};
+
+async function liveGatewayModelIds(slot: GatewaySlot): Promise<string[] | null> {
+  const baseUrl = (process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '').trim();
+  if (!baseUrl) return null;
+  const apiKey = process.env[slot.apiKeyEnv] ?? '';
+  const cacheKey = `${slot.provider}::${baseUrl}`;
+  const cache = globalForCatalog.gatewayModels?.[cacheKey];
+  const now = Date.now();
+  if (cache && now - cache.at < LIVE_MODELS_TTL_MS) return cache.ids;
+
+  let ids: string[] | null = null;
+  try {
+    const url = `${withV1Prefix(baseUrl)}/models`;
+    const res = await fetch(url, {
+      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+      cache: 'no-store',
+      signal: AbortSignal.timeout(LIVE_MODELS_TIMEOUT_MS),
+    });
+    if (res.ok) {
+      const body = (await res.json().catch(() => null)) as
+        | { data?: Array<{ id?: unknown }> }
+        | null;
+      if (body && Array.isArray(body.data)) {
+        const collected = body.data
+          .map((entry) => (typeof entry?.id === 'string' ? entry.id : ''))
+          .filter((id): id is string => id.length > 0);
+        if (collected.length > 0) ids = collected.slice(0, LIVE_MODELS_MAX);
+      }
+    }
+  } catch {
+    ids = null;
+  }
+
+  const gatewayModels = (globalForCatalog.gatewayModels ??= {});
+  gatewayModels[cacheKey] = { at: now, ids };
+  return ids;
+}
+
+async function gatewayModelIds(slot: GatewaySlot): Promise<string[]> {
+  const live = await liveGatewayModelIds(slot);
+  if (live && live.length > 0) return live;
+  const envIds = listFromEnv(slot.modelsEnv);
+  if (envIds.length > 0) return envIds;
+  return slot.defaults;
+}
+
+export async function getCatalog(): Promise<Catalog> {
   const byId = new Map<string, CatalogEntry>();
   const add = (entry: CatalogEntry) => {
     if (!byId.has(entry.id)) byId.set(entry.id, entry);
@@ -134,8 +184,7 @@ export function getCatalog(): Catalog {
     const baseUrl = (process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '').trim();
     if (!baseUrl) continue;
     const apiKey = process.env[slot.apiKeyEnv] ?? '';
-    const ids = listFromEnv(slot.modelsEnv);
-    const models = ids.length > 0 ? ids : slot.defaults;
+    const models = await gatewayModelIds(slot);
     for (const upstreamModel of models) {
       add({
         id: upstreamModel,
@@ -179,14 +228,15 @@ export function getCatalog(): Catalog {
   }
 
   const catalog: Catalog = { models: [...byId.values()], byId };
-  globalForCatalog.nrCatalog = catalog;
   return catalog;
 }
 
-export function getCatalogModel(id: string): CatalogEntry | null {
-  return getCatalog().byId.get(id) ?? null;
+export async function getCatalogModel(id: string): Promise<CatalogEntry | null> {
+  const catalog = await getCatalog();
+  return catalog.byId.get(id) ?? null;
 }
 
-export function getFallbackModelId(): string | null {
-  return getCatalog().models.find((entry) => entry.type === 'text')?.id ?? null;
+export async function getFallbackModelId(): Promise<string | null> {
+  const catalog = await getCatalog();
+  return catalog.models.find((entry) => entry.type === 'text')?.id ?? null;
 }

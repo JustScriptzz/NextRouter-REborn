@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const user = await getUserFromApiKey(req.headers.get('authorization'));
   if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
 
-  const catalog = getCatalog();
+  const catalog = await getCatalog();
   const publicCustom = await listPublicCustomModels();
   const created = Math.floor(Date.now() / 1000);
 
