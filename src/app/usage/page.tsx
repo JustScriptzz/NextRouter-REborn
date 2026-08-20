@@ -10,6 +10,8 @@ interface UsageSummaryDTO {
   last7: Array<{ date: string; tokens: number; calls: number }>;
 }
 
+import { apiErrorMessage } from '@/lib/api-error';
+
 export default function UsagePage() {
   const [usage, setUsage] = useState<UsageSummaryDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,7 @@ export default function UsagePage() {
     if (!res.ok) {
       if (res.status === 401) window.location.href = '/login';
       const data = await res.json().catch(() => ({}));
-      setError(data?.error ?? 'Failed to load usage');
+      setError(apiErrorMessage(data, 'Failed to load usage'));
       setLoading(false);
       return;
     }

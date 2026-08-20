@@ -23,6 +23,8 @@ interface CatalogModelDTO {
   isFallback: boolean;
 }
 
+import { apiErrorMessage } from '@/lib/api-error';
+
 export default function MyModelsPage() {
   const [username, setUsername] = useState('');
   const [models, setModels] = useState<MyModelDTO[]>([]);
@@ -69,7 +71,7 @@ export default function MyModelsPage() {
       setModels((prev) => prev.filter((m) => m.modelId !== id));
     } else {
       const data = await res.json().catch(() => ({}));
-      setError(data?.error ?? 'Failed to delete model');
+      setError(apiErrorMessage(data, 'Failed to delete model'));
     }
   }
 
@@ -265,7 +267,7 @@ function AddModelForm({
         setTestMessage(data.message ?? 'Test successful');
       } else {
         setTestState('fail');
-        setTestMessage(data?.error ?? 'Test failed');
+        setTestMessage(apiErrorMessage(data, 'Test failed'));
       }
     } catch {
       setTestState('fail');
@@ -289,7 +291,7 @@ function AddModelForm({
       if (res.ok) {
         setFetchedModels(data?.models ?? []);
       } else {
-        onError(data?.error ?? 'Failed to fetch models');
+        onError(apiErrorMessage(data, 'Failed to fetch models'));
       }
     } catch {
       onError('Failed to fetch models');
@@ -324,7 +326,7 @@ function AddModelForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        onError(data?.error ?? 'Failed to add model');
+        onError(apiErrorMessage(data, 'Failed to add model'));
         return;
       }
       onCreated(data.model);
@@ -610,7 +612,7 @@ function EditModelForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        onError(data?.error ?? 'Failed to update model');
+        onError(apiErrorMessage(data, 'Failed to update model'));
         return;
       }
       onSaved(data.model);

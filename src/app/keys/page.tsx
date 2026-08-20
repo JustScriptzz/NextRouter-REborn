@@ -10,6 +10,8 @@ interface ApiKeyDTO {
   lastUsedAt: string | null;
 }
 
+import { apiErrorMessage } from '@/lib/api-error';
+
 export default function KeysPage() {
   const [keys, setKeys] = useState<ApiKeyDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +25,7 @@ export default function KeysPage() {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) window.location.href = '/login';
-      setError(data?.error ?? 'Failed to load keys');
+      setError(apiErrorMessage(data, 'Failed to load keys'));
       setLoading(false);
       return;
     }
@@ -50,7 +52,7 @@ export default function KeysPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error ?? 'Failed to create key');
+        setError(apiErrorMessage(data, 'Failed to create key'));
         return;
       }
       setNewKey(data.key);
@@ -69,7 +71,7 @@ export default function KeysPage() {
       setKeys((prev) => prev.filter((k) => k.id !== id));
     } else {
       const data = await res.json().catch(() => ({}));
-      setError(data?.error ?? 'Failed to delete key');
+      setError(apiErrorMessage(data, 'Failed to delete key'));
     }
   }
 

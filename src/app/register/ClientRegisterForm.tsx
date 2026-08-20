@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { apiErrorMessage } from '@/lib/api-error';
+
 export function ClientRegisterForm() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -23,7 +25,7 @@ export function ClientRegisterForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error ?? 'Registration failed');
+        setError(apiErrorMessage(data, 'Registration failed'));
         return;
       }
       router.push('/models');

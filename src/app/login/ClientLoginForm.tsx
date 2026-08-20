@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { apiErrorMessage } from '@/lib/api-error';
+
 export function ClientLoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -22,7 +24,7 @@ export function ClientLoginForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error ?? 'Login failed');
+        setError(apiErrorMessage(data, 'Login failed'));
         return;
       }
       router.push('/models');
