@@ -143,11 +143,58 @@ const HORDE_IMAGE_DEFAULTS = ['Deliberate', 'DreamShaper'];
 
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
 const LIVE_MODELS_TIMEOUT_MS = 8000;
-const LIVE_MODELS_MAX = 300;
+const LIVE_MODELS_MAX = 500;
+
+const HORDE_MODELS_TTL_MS = 5 * 60 * 1000;
+const HORDE_MODELS_TIMEOUT_MS = 15000;
+const HORDE_MODELS_MAX = 1000;
 
 const globalForCatalog = globalThis as unknown as {
   gatewayModels?: Record<string, { at: number; ids: string[] | null }>;
+  hordeModels?: Record<string, { at: number; models: HordeLiveModels }>;
 };
+
+type HordeLiveModels = { text: string[]; image: string[] } | null;
+
+async function liveHordeModels(): Promise<HordeLiveModels> {
+  const base = (process.env.AI_HORDE_BASE_URL || 'https://aihorde.net').trim().replace(/\/+$/, '');
+  const cacheKey = `horde::${base}`;
+  const cache = globalForCatalog.hordeModels?.[cacheKey];
+  const now = Date.now();
+  if (cache && now - cache.at < HORDE_MODELS_TTL_MS) return cache.models;
+
+  let models: HordeLiveModels = null;
+  try {
+    const res = await fetch(`${base}/api/v2/status/models`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(HORDE_MODELS_TIMEOUT_MS),
+    });
+    if (res.ok) {
+      const body = (await res.json().catch(() => null)) as
+        | Array<{ name?: unknown; type?: unknown }>
+        | null;
+      if (Array.isArray(body)) {
+        const text: string[] = [];
+        const image: string[] = [];
+        for (const entry of body) {
+          if (typeof entry?.name !== 'string' || !entry.name) continue;
+          if (entry.type === 'image') {
+            if (image.length < HORDE_MODELS_MAX) image.push(entry.name);
+          } else if (text.length < HORDE_MODELS_MAX) {
+            text.push(entry.name);
+          }
+        }
+        if (text.length > 0 || image.length > 0) models = { text, image };
+      }
+    }
+  } catch {
+    models = null;
+  }
+
+  const hordeModels = (globalForCatalog.hordeModels ??= {});
+  hordeModels[cacheKey] = { at: now, models };
+  return models;
+}
 
 async function liveGatewayModelIds(slot: GatewaySlot): Promise<string[] | null> {
   const baseUrl = (process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '').trim();
@@ -221,7 +268,8 @@ export async function getCatalog(): Promise<Catalog> {
 
   const hordeKey = process.env.AI_HORDE_API_KEY;
   if (hordeKey) {
-    const textIds = listFromEnv('AI_HORDE_TEXT_MODELS');
+    const live = await liveHordeModels();
+    const textIds = live?.text?.length ? live.text : listFromEnv('AI_HORDE_TEXT_MODELS');
     const textModels = textIds.length > 0 ? textIds : HORDE_TEXT_DEFAULTS;
     for (const upstreamModel of textModels) {
       add({
@@ -233,7 +281,7 @@ export async function getCatalog(): Promise<Catalog> {
         upstreamModel,
       });
     }
-    const imageIds = listFromEnv('AI_HORDE_IMAGE_MODELS');
+    const imageIds = live?.image?.length ? live.image : listFromEnv('AI_HORDE_IMAGE_MODELS');
     const imageModels = imageIds.length > 0 ? imageIds : HORDE_IMAGE_DEFAULTS;
     for (const upstreamModel of imageModels) {
       add({
