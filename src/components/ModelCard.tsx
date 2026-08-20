@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 export interface CatalogModelDTO {
   id: string;
   title: string;
-  type: 'text' | 'image' | 'tts' | 'stt' | 'video';
+  type: 'text' | 'image' | 'tts' | 'stt' | 'video' | 'embedding';
   isFallback: boolean;
 }
 
@@ -41,7 +41,7 @@ export default function ModelCard({ model }: ModelCardProps) {
     }
   }
 
-  const typeLabel = { text: '📝', image: '🎨', tts: '🔊', stt: '🎤', video: '🎬' }[model.type];
+  const typeLabel = { text: '📝', image: '🎨', tts: '🔊', stt: '🎤', video: '🎬', embedding: '🧠' }[model.type];
 
   return (
     <div className="flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 transition hover:border-zinc-700">

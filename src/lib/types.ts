@@ -1,4 +1,4 @@
-export type ModelKind = 'text' | 'image' | 'tts' | 'stt' | 'video';
+export type ModelKind = 'text' | 'image' | 'tts' | 'stt' | 'video' | 'embedding';
 
 export const MODEL_KIND_LABELS: Record<ModelKind, string> = {
   text: 'Text',
@@ -6,6 +6,7 @@ export const MODEL_KIND_LABELS: Record<ModelKind, string> = {
   tts: 'Text-to-speech',
   stt: 'Speech-to-text',
   video: 'Video',
+  embedding: 'Embedding',
 };
 
 export interface SessionUser {

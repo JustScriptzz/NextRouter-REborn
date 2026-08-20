@@ -48,6 +48,26 @@ function describeModel(id: string): string {
   return 'Chat model';
 }
 
+function classifyModel(id: string): ModelKind {
+  const lower = id.toLowerCase();
+  if (/(text-embedding|embedding|e5-|bge-|minilm|rerank|ada-002)/.test(lower)) {
+    return 'embedding';
+  }
+  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper)/.test(lower)) {
+    return 'image';
+  }
+  if (/(whisper|transcri|speech-to-text|stt|recogni)/.test(lower)) {
+    return 'stt';
+  }
+  if (/(tts|text-to-speech|eleven|aura|kokoro|xtts)/.test(lower)) {
+    return 'tts';
+  }
+  if (/^(sora|veo|kling|wan)/.test(lower)) {
+    return 'video';
+  }
+  return 'text';
+}
+
 interface GatewaySlot {
   provider: string;
   baseUrlEnv: string;
@@ -188,7 +208,7 @@ export async function getCatalog(): Promise<Catalog> {
     for (const upstreamModel of models) {
       add({
         id: upstreamModel,
-        type: 'text',
+        type: classifyModel(upstreamModel),
         description: describeModel(upstreamModel),
         provider: slot.provider,
         kind: 'openai',
