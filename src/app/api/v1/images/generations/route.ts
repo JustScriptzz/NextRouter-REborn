@@ -6,7 +6,7 @@ import { hordeImageGeneration } from '@/lib/horde';
 import { getCatalogModel } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { imagesGenerations, UpstreamRequestError } from '@/lib/upstream';
-import { getUsageRemaining } from '@/lib/usage';
+import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
@@ -20,18 +20,19 @@ export async function POST(req: Request) {
   }
   const modelId = body.model;
 
-  const remaining = await getUsageRemaining(user.id);
+  const unlimited = isUnlimitedEmail(user.email);
+  const remaining = unlimited ? UNLIMITED_BUDGET : await getUsageRemaining(user.id);
   if (remaining <= 0) {
     return jsonErrorCors(
       429,
-      'Daily token limit reached (500,000). It resets at midnight UTC.',
+      'Daily token limit of 500000 tokens reached. It resets at midnight UTC.',
       'daily_limit',
     );
   }
   if (remaining < 1200) {
     return jsonErrorCors(
       429,
-      'Daily token limit reached (500,000). It resets at midnight UTC.',
+      'Daily token limit of 500000 tokens reached. It resets at midnight UTC.',
       'daily_limit',
     );
   }
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
     return jsonErrorCors(400, `Model "${modelId}" does not accept image prompts`);
   }
   const rpm = custom.rpm;
-  if (rpm && !rateLimiter.allow(`custom:${custom.modelId}:${user.id}`, rpm)) {
+  if (!unlimited && rpm && !rateLimiter.allow(`custom:${custom.modelId}:${user.id}`, rpm)) {
     return jsonErrorCors(429, 'Rate limit exceeded for this model', 'rate_limit');
   }
 
@@ -155,7 +156,8 @@ async function readErrorText(response: Response): Promise<string> {
 }
 
 function scrubMessage(message: string): string {
-  return message.replace(/https?:\/\/[^\s"')\]]+/g, '').slice(0, 500);
+  const urlPattern = new RegExp('https?:\\/\\/\\S+', 'g');
+  return message.replace(urlPattern, '').slice(0, 500);
 }
 
 export async function OPTIONS() {

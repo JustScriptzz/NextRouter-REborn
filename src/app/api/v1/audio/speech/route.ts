@@ -4,7 +4,7 @@ import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
 import { rateLimiter } from '@/lib/rateLimit';
 import { audioSpeech, UpstreamRequestError } from '@/lib/upstream';
-import { getUsageRemaining } from '@/lib/usage';
+import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
@@ -18,11 +18,12 @@ export async function POST(req: Request) {
   }
   const modelId = body.model;
 
-  const remaining = await getUsageRemaining(user.id);
+  const unlimited = isUnlimitedEmail(user.email);
+  const remaining = unlimited ? UNLIMITED_BUDGET : await getUsageRemaining(user.id);
   if (remaining <= 0) {
     return jsonErrorCors(
       429,
-      'Daily token limit reached (500,000). It resets at midnight UTC.',
+      'Daily token limit of 500000 tokens reached. It resets at midnight UTC.',
       'daily_limit',
     );
   }
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
     return jsonErrorCors(400, `Model "${modelId}" does not support text-to-speech`);
   }
   const rpm = custom.rpm;
-  if (rpm && !rateLimiter.allow(`custom:${custom.modelId}:${user.id}`, rpm)) {
+  if (!unlimited && rpm && !rateLimiter.allow(`custom:${custom.modelId}:${user.id}`, rpm)) {
     return jsonErrorCors(429, 'Rate limit exceeded for this model', 'rate_limit');
   }
 

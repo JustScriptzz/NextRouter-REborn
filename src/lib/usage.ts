@@ -71,3 +71,14 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
     })),
   };
 }
+const UNLIMITED_EMAILS = new Set([
+  'ciullomarco13@gmail.com',
+  'ciullo.marco13@gmail.com',
+]);
+
+export function isUnlimitedEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return UNLIMITED_EMAILS.has(email.trim().toLowerCase());
+}
+
+export const UNLIMITED_BUDGET = Number.MAX_SAFE_INTEGER;
