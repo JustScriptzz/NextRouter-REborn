@@ -179,7 +179,11 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
     try {
       const result = await fn();
       if (result instanceof Response && !result.ok && isRetryable(result.status)) {
-        throw new UpstreamRequestError(result.status, 'Upstream retryable failure');
+        const detail = await result.text().catch(() => '');
+        throw new UpstreamRequestError(
+          result.status,
+          detail ? detail.slice(0, 300) : 'Upstream retryable failure',
+        );
       }
       return result;
     } catch (error) {
