@@ -22,6 +22,8 @@ interface LiveModelInfo {
   endpoints: string[];
   displayName: string | null;
   owner: string | null;
+  modelType: string | null;
+  tier: string | null;
 }
 
 function listFromEnv(name: string): string[] {
@@ -86,6 +88,8 @@ function classifyFromEndpoints(endpoints: string[]): ModelKind | null {
 }
 
 function resolveLiveType(info: LiveModelInfo): ModelKind | null {
+  if (info.modelType === 'text') return 'text';
+  if (info.modelType === 'image') return 'image';
   if (info.endpoints.length > 0) {
     return classifyFromEndpoints(info.endpoints);
   }
@@ -101,6 +105,7 @@ interface GatewaySlot {
   defaultBaseUrl: string;
   defaults: string[];
   excludeOwners?: string[];
+  excludeTiers?: string[];
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -119,6 +124,7 @@ const GATEWAYS: GatewaySlot[] = [
       'deepseek-chat',
       'qwen2.5-7b-instruct',
     ],
+    excludeTiers: ['premium'],
   },
   {
     provider: 'logfare',
@@ -167,6 +173,13 @@ function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
   return slot.excludeOwners.some((o) => o.toLowerCase() === owner);
 }
 
+function isExcludedTier(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.excludeTiers || slot.excludeTiers.length === 0) return false;
+  if (!info.tier) return false;
+  const tier = info.tier.toLowerCase();
+  return slot.excludeTiers.some((t) => t.toLowerCase() === tier);
+}
+
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
 const LIVE_MODELS_TIMEOUT_MS = 8000;
 const LIVE_MODELS_MAX = 500;
@@ -213,7 +226,10 @@ async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | n
           }
           const owner =
             typeof entry.owned_by === 'string' && entry.owned_by ? entry.owned_by : null;
-          collected.push({ id, endpoints, displayName, owner });
+          const modelType =
+            typeof entry.type === 'string' && entry.type ? entry.type : null;
+          const tier = typeof entry.tier === 'string' && entry.tier ? entry.tier : null;
+          collected.push({ id, endpoints, displayName, owner, modelType, tier });
         }
         if (collected.length > 0) models = collected.slice(0, LIVE_MODELS_MAX);
       }
@@ -242,6 +258,7 @@ export async function getCatalog(): Promise<Catalog> {
     if (live && live.length > 0) {
       for (const info of live) {
         if (isExcludedOwner(slot, info)) continue;
+        if (isExcludedTier(slot, info)) continue;
         const type = resolveLiveType(info);
         if (type !== 'text' && type !== 'image') continue;
         add({
