@@ -6,12 +6,28 @@
   color-scheme: dark;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply bg-zinc-950 text-zinc-100;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.35);
 }
 
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -22,4 +38,150 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(63 63 70);
+}
+
+/* ---------- ambient background ---------- */
+
+.bg-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-aurora::before {
+  content: '';
+  position: absolute;
+  top: -320px;
+  left: 50%;
+  width: 900px;
+  height: 640px;
+  margin-left: -450px;
+  background: radial-gradient(closest-side, rgba(124, 58, 237, 0.22), transparent);
+  filter: blur(40px);
+}
+
+.bg-aurora::after {
+  content: '';
+  position: absolute;
+  top: -160px;
+  right: -220px;
+  width: 720px;
+  height: 560px;
+  background: radial-gradient(closest-side, rgba(34, 211, 238, 0.13), transparent);
+  filter: blur(48px);
+}
+
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse 90vh 60vh at 50vw 0vh, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 90vh 60vh at 50vw 0vh, black 30%, transparent 75%);
+}
+
+/* ---------- reusable surfaces ---------- */
+
+.card {
+  @apply rounded-2xl border border-white/10 bg-white/[0.03];
+}
+
+.card-hover {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.card-hover:hover {
+  border-color: rgba(167, 139, 250, 0.35);
+  background-color: rgba(255, 255, 255, 0.045);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 40px -12px rgba(124, 58, 237, 0.25);
+}
+
+.glass-nav {
+  background: rgba(9, 9, 11, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #c4b5fd, #67e8f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-violet-400 disabled:opacity-60;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700/80 bg-white/[0.02] px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-white disabled:opacity-50;
+}
+
+.input-dark {
+  @apply w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10;
+}
+
+/* ---------- animations ---------- */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes floaty {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.anim-fade-up {
+  animation: fadeUp 0.55s cubic-bezier(0.21, 0.61, 0.35, 1) both;
+}
+.anim-fade-in {
+  animation: fadeIn 0.45s ease-out both;
+}
+.anim-floaty {
+  animation: floaty 7s ease-in-out infinite;
+}
+
+.delay-1 { animation-delay: 0.06s; }
+.delay-2 { animation-delay: 0.12s; }
+.delay-3 { animation-delay: 0.18s; }
+.delay-4 { animation-delay: 0.24s; }
+.delay-5 { animation-delay: 0.3s; }
+.delay-6 { animation-delay: 0.36s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-up,
+  .anim-fade-in,
+  .anim-floaty {
+    animation: none;
+  }
 }

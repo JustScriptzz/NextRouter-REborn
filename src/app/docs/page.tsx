@@ -1,136 +1,175 @@
 import type { Metadata } from 'next';
+import CodeBlock from '@/components/CodeBlock';
 
 export const metadata: Metadata = {
-  title: 'Docs | NextRouter REborn',
+  title: 'Docs',
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://your-app.vercel.app';
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nextrouter-vert.vercel.app';
+const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 
 export default function DocsPage() {
-  const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  return (
-    <div className="mx-auto max-w-3xl py-10">
-      <h1 className="text-2xl font-bold text-zinc-100">Documentation</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        NextRouter REborn exposes an OpenAI-compatible API. Point your client at it with an API key
-        from the Keys page.
-      </p>
-
-      <Section title="Quick start">
-        <Code>
-          {`curl ${apiBase}/api/v1/chat/completions \\
+  const quickStart = `curl ${apiBase}/api/v1/chat/completions \\
   -H "Authorization: Bearer nr_xxxxxxxx" \\
   -H "Content-Type: application/json" \\
-  -d '{"model":"some-public-model","messages":[{"role":"user","content":"Hello"}]}'`}
-        </Code>
-        <p>
-          Just swap the base URL and key. The available model IDs are listed on the Models page.
-        </p>
-      </Section>
+  -d '{"model":"kiro-auto","messages":[{"role":"user","content":"Hello"}]}'`;
 
-      <Section title="Endpoints">
-        <Endpoint
-          method="POST"
-          path="/api/v1/chat/completions"
-          desc="Text completions. Supports streaming (SSE) and non-streaming."
-        />
-        <Endpoint
-          method="POST"
-          path="/api/v1/images/generations"
-          desc="Image generation from a text prompt. OpenAI-compatible body."
-        />
-        <Endpoint
-          method="POST"
-          path="/api/v1/images/edits"
-          desc="Image editing for models that support it (e.g. flux-2-pro, sdxl-lightning)."
-        />
-        <Endpoint method="GET" path="/api/v1/models" desc="Lists available model IDs." />
-      </Section>
-
-      <Section title="Authentication">
-        <p>
-          All <code className="text-zinc-300">/api/v1</code> endpoints require{' '}
-          <code className="text-zinc-300">Authorization: Bearer &lt;key&gt;</code>. Generate keys on
-          the Keys page. Keys are shown once — keep them safe.
-        </p>
-      </Section>
-
-      <Section title="Limits">
-        <ul className="list-disc space-y-2 pl-5">
-          <li>
-            Daily token limit: <strong>500000 tokens</strong> per user, combined across all models.
-            Resets at midnight UTC.
-          </li>
-          <li>
-            Model-level RPM limits may apply to individual custom models (set by the model owner).
-          </li>
-          <li>
-            Custom models: at most <strong>100 per account</strong>.
-          </li>
-        </ul>
-      </Section>
-
-      <Section title="Custom models">
-        <p>
-          Owners can add their own endpoints on the My Models page. Public custom models can be
-          called by anyone as <code className="text-zinc-300">{'{owner-username}/{model-name}'}</code>.
-          Private models only work with the owner&apos;s keys.
-        </p>
-      </Section>
-
-      <Section title="Streaming example">
-        <Code>
-          {`const res = await fetch("${apiBase}/api/v1/chat/completions", {
+  const streamingExample = `const res = await fetch("${apiBase}/api/v1/chat/completions", {
   method: "POST",
   headers: {
     "Authorization": "Bearer nr_xxxxxxxx",
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
-    model: "some-public-model",
+    model: "kiro-auto",
     stream: true,
     messages: [{ role: "user", content: "Hello" }]
   })
 });
 for await (const chunk of res.body) {
   console.log(new TextDecoder().decode(chunk));
-}`}
-        </Code>
+}`;
+
+  return (
+    <div className="mx-auto max-w-3xl py-10">
+      <div className="anim-fade-up">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Documentation</h1>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
+          NextRouter REborn exposes an OpenAI-compatible API. Point your client at it with an API
+          key from the Keys page — no SDK changes needed.
+        </p>
+      </div>
+
+      <Section title="Quick start" className="anim-fade-up delay-1">
+        <CodeBlock code={quickStart} label="bash" />
+        <p className="mt-3 text-sm text-zinc-400">
+          Just swap the base URL and key. Available model IDs are listed on the Models page.
+        </p>
+      </Section>
+
+      <Section title="Endpoints" className="anim-fade-up delay-2">
+        <div className="card divide-y divide-white/5 overflow-hidden">
+          <Endpoint
+            method="POST"
+            path="/api/v1/chat/completions"
+            desc="Text completions. Supports streaming (SSE) and non-streaming."
+          />
+          <Endpoint
+            method="POST"
+            path="/api/v1/images/generations"
+            desc="Image generation from a text prompt. OpenAI-compatible body."
+          />
+          <Endpoint
+            method="POST"
+            path="/api/v1/images/edits"
+            desc="Image editing for models that support it (e.g. flux-2-pro, sdxl-lightning)."
+          />
+          <Endpoint method="GET" path="/api/v1/models" desc="Lists available model IDs." />
+        </div>
+      </Section>
+
+      <Section title="Authentication" className="anim-fade-up delay-3">
+        <div className="card p-5">
+          <p className="text-sm leading-relaxed text-zinc-300">
+            All{' '}
+            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+              /api/v1
+            </code>{' '}
+            endpoints require{' '}
+            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+              Authorization: Bearer &lt;key&gt;
+            </code>
+            . Generate keys on the Keys page. Keys are shown once — keep them safe.
+          </p>
+        </div>
+      </Section>
+
+      <Section title="Limits" className="anim-fade-up delay-4">
+        <div className="card p-5">
+          <ul className="space-y-3 text-sm text-zinc-300">
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
+                Daily token limit: <strong className="text-zinc-100">500K tokens</strong> per user,
+                combined across all models. Resets at midnight UTC.
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
+                Model-level RPM limits may apply to individual custom models (set by the model
+                owner).
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
+                Custom models: at most <strong className="text-zinc-100">100 per account</strong>.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </Section>
+
+      <Section title="Custom models" className="anim-fade-up delay-5">
+        <div className="card p-5">
+          <p className="text-sm leading-relaxed text-zinc-300">
+            Owners can add their own endpoints on the My Models page. Public custom models can be
+            called by anyone as{' '}
+            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+              {'{owner-username}/{model-name}'}
+            </code>
+            . Private models only work with the owner&apos;s keys.
+          </p>
+        </div>
+      </Section>
+
+      <Section title="Streaming example" className="anim-fade-up delay-6">
+        <CodeBlock code={streamingExample} label="javascript" />
       </Section>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+  className = '',
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <section className="mt-8">
-      <h2 className="mb-3 text-lg font-semibold text-zinc-100">{title}</h2>
+    <section className={`mt-10 ${className}`}>
+      <h2 className="mb-4 flex items-center gap-3 text-lg font-semibold text-zinc-100">
+        {title}
+        <span className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
+      </h2>
       {children}
     </section>
   );
 }
 
-function Code({ children }: { children: string }) {
-  return (
-    <pre className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300">
-      <code>{children}</code>
-    </pre>
-  );
+function Bullet() {
+  return <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />;
 }
 
 function Endpoint({ method, path, desc }: { method: string; path: string; desc: string }) {
-  const color =
-    method === 'GET'
-      ? 'bg-cyan-500/15 text-cyan-300'
-      : 'bg-violet-500/15 text-violet-300';
+  const isGet = method === 'GET';
+  const color = isGet
+    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
+    : 'border-violet-500/30 bg-violet-500/10 text-violet-300';
   return (
-    <div className="flex items-start gap-3 border-b border-zinc-800/60 py-3 last:border-0">
-      <span className={`mt-0.5 shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold ${color}`}>
+    <div className="group flex items-start gap-4 p-4 transition hover:bg-white/[0.02]">
+      <span
+        className={`mt-0.5 shrink-0 rounded-lg border px-2 py-1 font-mono text-[11px] font-bold tracking-wide ${color}`}
+      >
         {method}
       </span>
       <div className="min-w-0">
-        <div className="font-mono text-sm text-zinc-200">{path}</div>
-        <div className="mt-0.5 text-sm text-zinc-500">{desc}</div>
+        <div className="break-all font-mono text-sm text-zinc-200">{path}</div>
+        <div className="mt-1 text-sm leading-relaxed text-zinc-500">{desc}</div>
       </div>
     </div>
   );
