@@ -144,3 +144,5 @@ function scrubMessage(message: string): string {
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
 }
+
+export const maxDuration = 60;
