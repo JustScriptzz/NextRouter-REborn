@@ -32,6 +32,18 @@ function listFromEnv(name: string): string[] {
     .filter(Boolean);
 }
 
+export function cleanEnvValue(value: string): string {
+  let out = value.trim();
+  if (
+    out.length >= 2 &&
+    ((out.startsWith('"') && out.endsWith('"')) ||
+      (out.startsWith("'") && out.endsWith("'")))
+  ) {
+    out = out.slice(1, -1).trim();
+  }
+  return out.replace(new RegExp('\\s+', 'g'), '');
+}
+
 function describeModel(id: string): string {
   const lower = id.toLowerCase();
   if (lower.includes('cogito')) return 'Reasoning-optimized chat model';
@@ -154,9 +166,9 @@ const globalForCatalog = globalThis as unknown as {
 };
 
 async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | null> {
-  const baseUrl = (process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '').trim();
+  const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
   if (!baseUrl) return null;
-  const apiKey = process.env[slot.apiKeyEnv] ?? '';
+  const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
   const cacheKey = `${slot.provider}::${baseUrl}`;
   const cache = globalForCatalog.gatewayModels?.[cacheKey];
   const now = Date.now();
@@ -210,9 +222,9 @@ export async function getCatalog(): Promise<Catalog> {
   };
 
   for (const slot of GATEWAYS) {
-    const baseUrl = (process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '').trim();
+    const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
     if (!baseUrl) continue;
-    const apiKey = process.env[slot.apiKeyEnv] ?? '';
+    const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
     const live = await liveGatewayModels(slot);
 
     if (live && live.length > 0) {
