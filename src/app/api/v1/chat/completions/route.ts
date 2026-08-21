@@ -2,7 +2,7 @@ import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
-import { getCatalogModel } from '@/lib/providers';
+import { getCatalog, getCatalogModel, type CatalogEntry } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
 import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
@@ -13,8 +13,12 @@ const RETRY_MAX_ATTEMPTS = 8;
 const RETRY_BASE_DELAY_MS = 300;
 const RETRY_MAX_DELAY_MS = 4000;
 const RETRY_TIME_BUDGET_MS = 45000;
+const PRIMARY_TIME_BUDGET_MS = 30000;
+const FAILOVER_MAX_ATTEMPTS = 3;
+const REQUEST_HARD_DEADLINE_MS = 52000;
 
 export async function POST(req: Request) {
+  const requestStart = Date.now();
   const user = await getUserFromApiKey(req.headers.get('authorization'));
   if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
 
@@ -43,22 +47,68 @@ export async function POST(req: Request) {
     if (catalogEntry.type !== 'text') {
       return jsonErrorCors(400, `Model "${modelId}" is not a text model`);
     }
+    let lastUpstreamError: UpstreamRequestError | null = null;
     try {
-      return await withRetry(() =>
-        chatCompletions({
-          baseUrl: catalogEntry.baseUrl,
-          apiKey: catalogEntry.apiKey,
-          upstreamModel: catalogEntry.upstreamModel,
-          publicModelId: catalogEntry.id,
-          body,
-          signal,
-          userId: user.id,
-          remainingBudget: remaining,
-        }),
+      return await withRetry(
+        () =>
+          chatCompletions({
+            baseUrl: catalogEntry.baseUrl,
+            apiKey: catalogEntry.apiKey,
+            upstreamModel: catalogEntry.upstreamModel,
+            publicModelId: catalogEntry.id,
+            body,
+            signal,
+            userId: user.id,
+            remainingBudget: remaining,
+          }),
+        { deadlineAt: requestStart + PRIMARY_TIME_BUDGET_MS },
       );
     } catch (error) {
       if (error instanceof UpstreamRequestError) {
-        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+        if (!isRetryable(error.status)) {
+          return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+        }
+        lastUpstreamError = error;
+      } else if (isAbortError(error)) {
+        return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+      }
+
+      const alternate = await findAlternateTextModel(modelId);
+      if (alternate) {
+        try {
+          const result = await withRetry(
+            () =>
+              chatCompletions({
+                baseUrl: alternate.baseUrl,
+                apiKey: alternate.apiKey,
+                upstreamModel: alternate.upstreamModel,
+                publicModelId: alternate.id,
+                body,
+                signal,
+                userId: user.id,
+                remainingBudget: remaining,
+              }),
+            {
+              maxAttempts: FAILOVER_MAX_ATTEMPTS,
+              deadlineAt: requestStart + REQUEST_HARD_DEADLINE_MS,
+            },
+          );
+          if (result instanceof Response) {
+            result.headers.set('x-nextrouter-failover-from', modelId);
+            result.headers.set('x-nextrouter-served-by', alternate.id);
+          }
+          return result;
+        } catch {
+          /* fall through to original error */
+        }
+      }
+
+      if (lastUpstreamError) {
+        return jsonErrorCors(
+          lastUpstreamError.status,
+          scrubMessage(lastUpstreamError.message),
+          'upstream_error',
+        );
       }
       return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
     }
@@ -149,6 +199,13 @@ export async function POST(req: Request) {
     : jsonErrorCors(502, 'The model failed and no fallback is available', 'upstream_error');
 }
 
+async function findAlternateTextModel(failedId: string): Promise<CatalogEntry | null> {
+  const catalog = await getCatalog();
+  const candidates = catalog.models.filter((m) => m.type === 'text' && m.id !== failedId);
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)] ?? null;
+}
+
 function isRetryable(status: number): boolean {
   return status >= 500 || status === 408 || status === 425 || status === 429;
 }
@@ -172,10 +229,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+interface RetryOptions {
+  maxAttempts?: number;
+  deadlineAt?: number;
+}
+
+async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Promise<T> {
   const start = Date.now();
+  const maxAttempts = opts.maxAttempts ?? RETRY_MAX_ATTEMPTS;
+  const deadlineAt = opts.deadlineAt ?? start + RETRY_TIME_BUDGET_MS;
   let lastError: unknown;
-  for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const result = await fn();
       if (result instanceof Response && !result.ok && isRetryable(result.status)) {
@@ -194,7 +258,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
         throw error;
       }
       lastError = error;
-      if (attempt === RETRY_MAX_ATTEMPTS || Date.now() - start > RETRY_TIME_BUDGET_MS) {
+      if (attempt === maxAttempts || Date.now() >= deadlineAt) {
         break;
       }
       await sleep(backoffFor(attempt));
