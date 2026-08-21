@@ -2,39 +2,19 @@ import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
-import { getCatalog, getCatalogModel, type CatalogEntry } from '@/lib/providers';
+import { getCatalogModel } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
 import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
-const RETRY_MAX_ATTEMPTS = 8;
+const RETRY_MAX_ATTEMPTS = 60;
 const RETRY_BASE_DELAY_MS = 300;
 const RETRY_MAX_DELAY_MS = 4000;
-const RETRY_TIME_BUDGET_MS = 45000;
-const PRIMARY_TIME_BUDGET_MS = 30000;
-const FAILOVER_MAX_ATTEMPTS = 2;
-const FAILOVER_CANDIDATE_BUDGET_MS = 15000;
-const REQUEST_HARD_DEADLINE_MS = 52000;
-const MODEL_COOLDOWN_MS = 120000;
-
-const globalForHealth = globalThis as unknown as {
-  modelCooldowns?: Record<string, number>;
-};
-
-function markModelFailed(id: string): void {
-  const store = (globalForHealth.modelCooldowns ??= {});
-  store[id] = Date.now() + MODEL_COOLDOWN_MS;
-}
-
-function modelCooling(id: string): boolean {
-  const until = globalForHealth.modelCooldowns?.[id];
-  return typeof until === 'number' && Date.now() < until;
-}
+const RETRY_TIME_BUDGET_MS = 240000;
 
 export async function POST(req: Request) {
-  const requestStart = Date.now();
   const user = await getUserFromApiKey(req.headers.get('authorization'));
   if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
 
@@ -63,92 +43,25 @@ export async function POST(req: Request) {
     if (catalogEntry.type !== 'text') {
       return jsonErrorCors(400, `Model "${modelId}" is not a text model`);
     }
-
-    let lastUpstreamError: UpstreamRequestError | null = null;
-    let primaryAttempted = false;
-
-    if (!modelCooling(modelId)) {
-      primaryAttempted = true;
-      try {
-        return await withRetry(
-          () =>
-            chatCompletions({
-              baseUrl: catalogEntry.baseUrl,
-              apiKey: catalogEntry.apiKey,
-              upstreamModel: catalogEntry.upstreamModel,
-              publicModelId: catalogEntry.id,
-              body,
-              signal,
-              userId: user.id,
-              remainingBudget: remaining,
-            }),
-          { deadlineAt: requestStart + PRIMARY_TIME_BUDGET_MS },
-        );
-      } catch (error) {
-        if (error instanceof UpstreamRequestError) {
-          if (!isRetryable(error.status)) {
-            return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
-          }
-          lastUpstreamError = error;
-          markModelFailed(modelId);
-        } else if (isAbortError(error)) {
-          return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
-        } else {
-          markModelFailed(modelId);
-        }
+    try {
+      return await withRetry(() =>
+        chatCompletions({
+          baseUrl: catalogEntry.baseUrl,
+          apiKey: catalogEntry.apiKey,
+          upstreamModel: catalogEntry.upstreamModel,
+          publicModelId: catalogEntry.id,
+          body,
+          signal,
+          userId: user.id,
+          remainingBudget: remaining,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof UpstreamRequestError) {
+        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
       }
-    } else {
-      lastUpstreamError = new UpstreamRequestError(503, 'Service temporarily unavailable');
+      return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
     }
-
-    const alternates = await findAlternateTextModels(modelId);
-    let failoverError: UpstreamRequestError | null = null;
-    for (const alternate of alternates) {
-      if (Date.now() >= requestStart + REQUEST_HARD_DEADLINE_MS) break;
-      try {
-        const result = await withRetry(
-          () =>
-            chatCompletions({
-              baseUrl: alternate.baseUrl,
-              apiKey: alternate.apiKey,
-              upstreamModel: alternate.upstreamModel,
-              publicModelId: alternate.id,
-              body,
-              signal,
-              userId: user.id,
-              remainingBudget: remaining,
-            }),
-          {
-            maxAttempts: FAILOVER_MAX_ATTEMPTS,
-            deadlineAt: Math.min(
-              requestStart + REQUEST_HARD_DEADLINE_MS,
-              Date.now() + FAILOVER_CANDIDATE_BUDGET_MS,
-            ),
-          },
-        );
-        if (result instanceof Response) {
-          result.headers.set('x-nextrouter-failover-from', modelId);
-          result.headers.set('x-nextrouter-served-by', alternate.id);
-        }
-        return result;
-      } catch (error) {
-        markModelFailed(alternate.id);
-        if (error instanceof UpstreamRequestError && isRetryable(error.status)) {
-          failoverError = error;
-        } else if (error instanceof UpstreamRequestError) {
-          failoverError = failoverError ?? error;
-        }
-      }
-    }
-
-    const finalError = failoverError ?? lastUpstreamError;
-    if (!primaryAttempted && !failoverError && finalError) {
-      /* cooling model with no alternates attempted */
-    }
-    if (finalError) {
-      return jsonErrorCors(finalError.status, scrubMessage(finalError.message), 'upstream_error');
-    }
-    return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
   }
 
   const custom = await findCustomModelForCaller(modelId, user);
@@ -236,20 +149,6 @@ export async function POST(req: Request) {
     : jsonErrorCors(502, 'The model failed and no fallback is available', 'upstream_error');
 }
 
-async function findAlternateTextModels(failedId: string): Promise<CatalogEntry[]> {
-  const catalog = await getCatalog();
-  const candidates = catalog.models.filter((m) => m.type === 'text' && m.id !== failedId);
-  const fresh = candidates.filter((m) => !modelCooling(m.id));
-  const pool = fresh.length > 0 ? fresh : candidates;
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = pool[i];
-    pool[i] = pool[j];
-    pool[j] = tmp;
-  }
-  return pool;
-}
-
 function isRetryable(status: number): boolean {
   return status >= 500 || status === 408 || status === 425 || status === 429;
 }
@@ -332,4 +231,4 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
 }
 
-export const maxDuration = 60;
+export const maxDuration = 300;
