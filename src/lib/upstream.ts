@@ -43,7 +43,7 @@ export class UpstreamRequestError extends Error {
   }
 }
 
-const UPSTREAM_CONNECT_TIMEOUT_MS = 30000;
+const UPSTREAM_CONNECT_TIMEOUT_MS = 20000;
 
 function withConnectTimeout(signal: AbortSignal): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();
