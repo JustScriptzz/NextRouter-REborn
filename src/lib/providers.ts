@@ -21,6 +21,7 @@ interface LiveModelInfo {
   id: string;
   endpoints: string[];
   displayName: string | null;
+  owner: string | null;
 }
 
 function listFromEnv(name: string): string[] {
@@ -99,6 +100,7 @@ interface GatewaySlot {
   modelsEnv: string;
   defaultBaseUrl: string;
   defaults: string[];
+  excludeOwners?: string[];
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -146,6 +148,7 @@ const GATEWAYS: GatewaySlot[] = [
       'qwen2.5-7b-instruct',
       'gemini-1.5-flash',
     ],
+    excludeOwners: ['moonshot', 'deepseek'],
   },
   {
     provider: 'cogito',
@@ -156,6 +159,13 @@ const GATEWAYS: GatewaySlot[] = [
     defaults: ['cogito-v1-preview'],
   },
 ];
+
+function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.excludeOwners || slot.excludeOwners.length === 0) return false;
+  if (!info.owner) return false;
+  const owner = info.owner.toLowerCase();
+  return slot.excludeOwners.some((o) => o.toLowerCase() === owner);
+}
 
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
 const LIVE_MODELS_TIMEOUT_MS = 8000;
@@ -201,7 +211,9 @@ async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | n
           } else if (typeof entry.name === 'string' && entry.name) {
             displayName = entry.name;
           }
-          collected.push({ id, endpoints, displayName });
+          const owner =
+            typeof entry.owned_by === 'string' && entry.owned_by ? entry.owned_by : null;
+          collected.push({ id, endpoints, displayName, owner });
         }
         if (collected.length > 0) models = collected.slice(0, LIVE_MODELS_MAX);
       }
@@ -229,6 +241,7 @@ export async function getCatalog(): Promise<Catalog> {
 
     if (live && live.length > 0) {
       for (const info of live) {
+        if (isExcludedOwner(slot, info)) continue;
         const type = resolveLiveType(info);
         if (type !== 'text' && type !== 'image') continue;
         add({
