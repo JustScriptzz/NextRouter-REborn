@@ -1,29 +1,26 @@
 import type { ModelKind } from './types';
 import { withV1Prefix } from './upstream';
 
-export type CatalogEntry =
-  | {
-      id: string;
-      type: ModelKind;
-      description: string;
-      provider: string;
-      kind: 'openai';
-      baseUrl: string;
-      apiKey: string;
-      upstreamModel: string;
-    }
-  | {
-      id: string;
-      type: ModelKind;
-      description: string;
-      provider: string;
-      kind: 'horde';
-      upstreamModel: string;
-    };
+export interface CatalogEntry {
+  id: string;
+  type: ModelKind;
+  description: string;
+  provider: string;
+  baseUrl: string;
+  apiKey: string;
+  upstreamModel: string;
+  supportsImageEdits: boolean;
+}
 
 export interface Catalog {
   models: CatalogEntry[];
   byId: Map<string, CatalogEntry>;
+}
+
+interface LiveModelInfo {
+  id: string;
+  endpoints: string[];
+  displayName: string | null;
 }
 
 function listFromEnv(name: string): string[] {
@@ -53,10 +50,10 @@ function classifyModel(id: string): ModelKind {
   if (/(text-embedding|embedding|e5-|bge-|minilm|rerank|ada-002)/.test(lower)) {
     return 'embedding';
   }
-  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper)/.test(lower)) {
+  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid)/.test(lower)) {
     return 'image';
   }
-  if (/(whisper|transcri|speech-to-text|stt|recogni)/.test(lower)) {
+  if (/(whisper|transcri|speech-to-text|stt|recogni|nova-3)/.test(lower)) {
     return 'stt';
   }
   if (/(tts|text-to-speech|eleven|aura|kokoro|xtts)/.test(lower)) {
@@ -66,6 +63,12 @@ function classifyModel(id: string): ModelKind {
     return 'video';
   }
   return 'text';
+}
+
+function classifyFromEndpoints(endpoints: string[]): ModelKind | null {
+  if (endpoints.includes('chat/completions')) return 'text';
+  if (endpoints.some((e) => e.startsWith('images/'))) return 'image';
+  return null;
 }
 
 interface GatewaySlot {
@@ -86,7 +89,6 @@ const GATEWAYS: GatewaySlot[] = [
     defaultBaseUrl: '',
     defaults: [
       'gpt-4o-mini',
-      'gpt-4o-mini-2024-07-18',
       'llama-3.1-8b-instruct',
       'mistral-7b-instruct',
       'gemini-2.0-flash',
@@ -134,78 +136,24 @@ const GATEWAYS: GatewaySlot[] = [
   },
 ];
 
-const HORDE_TEXT_DEFAULTS = [
-  'koboldcpp/KoboldCpp/StableBeluga7B',
-  'aphrodite/Sao10K/Llama-3.1-8B-Lexi-Uncensored-V2',
-];
-
-const HORDE_IMAGE_DEFAULTS = ['Deliberate', 'DreamShaper'];
-
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
 const LIVE_MODELS_TIMEOUT_MS = 8000;
 const LIVE_MODELS_MAX = 500;
 
-const HORDE_MODELS_TTL_MS = 5 * 60 * 1000;
-const HORDE_MODELS_TIMEOUT_MS = 15000;
-const HORDE_MODELS_MAX = 1000;
-
 const globalForCatalog = globalThis as unknown as {
-  gatewayModels?: Record<string, { at: number; ids: string[] | null }>;
-  hordeModels?: Record<string, { at: number; models: HordeLiveModels }>;
+  gatewayModels?: Record<string, { at: number; models: LiveModelInfo[] | null }>;
 };
 
-type HordeLiveModels = { text: string[]; image: string[] } | null;
-
-async function liveHordeModels(): Promise<HordeLiveModels> {
-  const base = (process.env.AI_HORDE_BASE_URL || 'https://aihorde.net').trim().replace(/\/+$/, '');
-  const cacheKey = `horde::${base}`;
-  const cache = globalForCatalog.hordeModels?.[cacheKey];
-  const now = Date.now();
-  if (cache && now - cache.at < HORDE_MODELS_TTL_MS) return cache.models;
-
-  let models: HordeLiveModels = null;
-  try {
-    const res = await fetch(`${base}/api/v2/status/models`, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(HORDE_MODELS_TIMEOUT_MS),
-    });
-    if (res.ok) {
-      const body = (await res.json().catch(() => null)) as
-        | Array<{ name?: unknown; type?: unknown }>
-        | null;
-      if (Array.isArray(body)) {
-        const text: string[] = [];
-        const image: string[] = [];
-        for (const entry of body) {
-          if (typeof entry?.name !== 'string' || !entry.name) continue;
-          if (entry.type === 'image') {
-            if (image.length < HORDE_MODELS_MAX) image.push(entry.name);
-          } else if (text.length < HORDE_MODELS_MAX) {
-            text.push(entry.name);
-          }
-        }
-        if (text.length > 0 || image.length > 0) models = { text, image };
-      }
-    }
-  } catch {
-    models = null;
-  }
-
-  const hordeModels = (globalForCatalog.hordeModels ??= {});
-  hordeModels[cacheKey] = { at: now, models };
-  return models;
-}
-
-async function liveGatewayModelIds(slot: GatewaySlot): Promise<string[] | null> {
+async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | null> {
   const baseUrl = (process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '').trim();
   if (!baseUrl) return null;
   const apiKey = process.env[slot.apiKeyEnv] ?? '';
   const cacheKey = `${slot.provider}::${baseUrl}`;
   const cache = globalForCatalog.gatewayModels?.[cacheKey];
   const now = Date.now();
-  if (cache && now - cache.at < LIVE_MODELS_TTL_MS) return cache.ids;
+  if (cache && now - cache.at < LIVE_MODELS_TTL_MS) return cache.models;
 
-  let ids: string[] | null = null;
+  let models: LiveModelInfo[] | null = null;
   try {
     const url = `${withV1Prefix(baseUrl)}/models`;
     const res = await fetch(url, {
@@ -215,30 +163,33 @@ async function liveGatewayModelIds(slot: GatewaySlot): Promise<string[] | null> 
     });
     if (res.ok) {
       const body = (await res.json().catch(() => null)) as
-        | { data?: Array<{ id?: unknown }> }
+        | { data?: Array<Record<string, unknown>> }
         | null;
       if (body && Array.isArray(body.data)) {
-        const collected = body.data
-          .map((entry) => (typeof entry?.id === 'string' ? entry.id : ''))
-          .filter((id): id is string => id.length > 0);
-        if (collected.length > 0) ids = collected.slice(0, LIVE_MODELS_MAX);
+        const collected: LiveModelInfo[] = [];
+        for (const entry of body.data) {
+          const id = typeof entry?.id === 'string' ? entry.id : '';
+          if (!id) continue;
+          const rawEndpoints = Array.isArray(entry.endpoints) ? entry.endpoints : [];
+          const endpoints = rawEndpoints.filter(
+            (e): e is string => typeof e === 'string' && e.length > 0,
+          );
+          const displayName =
+            typeof entry.display_name === 'string' && entry.display_name
+              ? entry.display_name
+              : null;
+          collected.push({ id, endpoints, displayName });
+        }
+        if (collected.length > 0) models = collected.slice(0, LIVE_MODELS_MAX);
       }
     }
   } catch {
-    ids = null;
+    models = null;
   }
 
   const gatewayModels = (globalForCatalog.gatewayModels ??= {});
-  gatewayModels[cacheKey] = { at: now, ids };
-  return ids;
-}
-
-async function gatewayModelIds(slot: GatewaySlot): Promise<string[]> {
-  const live = await liveGatewayModelIds(slot);
-  if (live && live.length > 0) return live;
-  const envIds = listFromEnv(slot.modelsEnv);
-  if (envIds.length > 0) return envIds;
-  return slot.defaults;
+  gatewayModels[cacheKey] = { at: now, models };
+  return models;
 }
 
 export async function getCatalog(): Promise<Catalog> {
@@ -251,46 +202,40 @@ export async function getCatalog(): Promise<Catalog> {
     const baseUrl = (process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '').trim();
     if (!baseUrl) continue;
     const apiKey = process.env[slot.apiKeyEnv] ?? '';
-    const models = await gatewayModelIds(slot);
+    const live = await liveGatewayModels(slot);
+
+    if (live && live.length > 0) {
+      for (const info of live) {
+        const type = classifyFromEndpoints(info.endpoints);
+        if (type !== 'text' && type !== 'image') continue;
+        add({
+          id: info.id,
+          type,
+          description: info.displayName ?? describeModel(info.id),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(baseUrl),
+          apiKey,
+          upstreamModel: info.id,
+          supportsImageEdits: info.endpoints.includes('images/edits'),
+        });
+      }
+      continue;
+    }
+
+    const envIds = listFromEnv(slot.modelsEnv);
+    const models = envIds.length > 0 ? envIds : slot.defaults;
     for (const upstreamModel of models) {
+      const kind = classifyModel(upstreamModel);
+      if (kind !== 'text' && kind !== 'image') continue;
       add({
         id: upstreamModel,
-        type: classifyModel(upstreamModel),
+        type: kind,
         description: describeModel(upstreamModel),
         provider: slot.provider,
-        kind: 'openai',
         baseUrl: withV1Prefix(baseUrl),
         apiKey,
         upstreamModel,
-      });
-    }
-  }
-
-  const hordeKey = process.env.AI_HORDE_API_KEY;
-  if (hordeKey) {
-    const live = await liveHordeModels();
-    const textIds = live?.text?.length ? live.text : listFromEnv('AI_HORDE_TEXT_MODELS');
-    const textModels = textIds.length > 0 ? textIds : HORDE_TEXT_DEFAULTS;
-    for (const upstreamModel of textModels) {
-      add({
-        id: upstreamModel,
-        type: 'text',
-        description: 'Crowdsourced community text model',
-        provider: 'horde',
-        kind: 'horde',
-        upstreamModel,
-      });
-    }
-    const imageIds = live?.image?.length ? live.image : listFromEnv('AI_HORDE_IMAGE_MODELS');
-    const imageModels = imageIds.length > 0 ? imageIds : HORDE_IMAGE_DEFAULTS;
-    for (const upstreamModel of imageModels) {
-      add({
-        id: upstreamModel,
-        type: 'image',
-        description: 'Crowdsourced community image model',
-        provider: 'horde',
-        kind: 'horde',
-        upstreamModel,
+        supportsImageEdits: false,
       });
     }
   }

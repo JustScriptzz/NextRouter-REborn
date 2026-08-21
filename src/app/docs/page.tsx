@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://your-app.vercel.app';
 
 export default function DocsPage() {
-  const apiBase = baseUrl.replace(/\/$/, '');
+  const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   return (
     <div className="mx-auto max-w-3xl py-10">
       <h1 className="text-2xl font-bold text-zinc-100">Documentation</h1>
@@ -37,17 +37,12 @@ export default function DocsPage() {
         <Endpoint
           method="POST"
           path="/api/v1/images/generations"
-          desc="Image generation. OpenAI-compatible body."
+          desc="Image generation from a text prompt. OpenAI-compatible body."
         />
         <Endpoint
           method="POST"
-          path="/api/v1/audio/speech"
-          desc="Text-to-speech, returns audio bytes."
-        />
-        <Endpoint
-          method="POST"
-          path="/api/v1/audio/transcriptions"
-          desc="Speech-to-text, multipart form upload."
+          path="/api/v1/images/edits"
+          desc="Image editing for models that support it (e.g. flux-2-pro, sdxl-lightning)."
         />
         <Endpoint method="GET" path="/api/v1/models" desc="Lists available model IDs." />
       </Section>
@@ -63,7 +58,7 @@ export default function DocsPage() {
       <Section title="Limits">
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            Daily token limit: <strong>500,000 tokens</strong> per user, combined across all models.
+            Daily token limit: <strong>500000 tokens</strong> per user, combined across all models.
             Resets at midnight UTC.
           </li>
           <li>

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-const SECTION_ORDER: ModelKind[] = ['text', 'image', 'tts', 'stt', 'embedding', 'video'];
+const SECTION_ORDER: ModelKind[] = ['text', 'image'];
 
 export default async function ModelsPage() {
   const catalog = await getCatalog();

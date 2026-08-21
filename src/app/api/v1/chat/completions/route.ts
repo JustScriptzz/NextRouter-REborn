@@ -2,7 +2,6 @@ import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
-import { hordeTextCompletion } from '@/lib/horde';
 import { getCatalogModel } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
@@ -45,27 +44,16 @@ export async function POST(req: Request) {
       return jsonErrorCors(400, `Model "${modelId}" is not a text model`);
     }
     try {
-      if (catalogEntry.kind === 'openai') {
-        return await withRetry(() =>
-          chatCompletions({
-            baseUrl: catalogEntry.baseUrl,
-            apiKey: catalogEntry.apiKey,
-            upstreamModel: catalogEntry.upstreamModel,
-            publicModelId: catalogEntry.id,
-            body,
-            signal,
-            userId: user.id,
-            remainingBudget: remaining,
-          }),
-        );
-      }
       return await withRetry(() =>
-        hordeTextCompletion({
+        chatCompletions({
+          baseUrl: catalogEntry.baseUrl,
+          apiKey: catalogEntry.apiKey,
           upstreamModel: catalogEntry.upstreamModel,
           publicModelId: catalogEntry.id,
           body,
           signal,
           userId: user.id,
+          remainingBudget: remaining,
         }),
       );
     } catch (error) {
@@ -139,27 +127,16 @@ export async function POST(req: Request) {
           'daily_limit',
         );
       }
-      if (fallback.kind === 'openai') {
-        return await withRetry(() =>
-          chatCompletions({
-            baseUrl: fallback.baseUrl,
-            apiKey: fallback.apiKey,
-            upstreamModel: fallback.upstreamModel,
-            publicModelId: fallback.id,
-            body,
-            signal,
-            userId: user.id,
-            remainingBudget: effectiveRemaining,
-          }),
-        );
-      }
       return await withRetry(() =>
-        hordeTextCompletion({
+        chatCompletions({
+          baseUrl: fallback.baseUrl,
+          apiKey: fallback.apiKey,
           upstreamModel: fallback.upstreamModel,
           publicModelId: fallback.id,
           body,
           signal,
           userId: user.id,
+          remainingBudget: effectiveRemaining,
         }),
       );
     } catch {

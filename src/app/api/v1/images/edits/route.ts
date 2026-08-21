@@ -4,7 +4,7 @@ import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
 import { getCatalogModel } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
-import { imagesGenerations, UpstreamRequestError } from '@/lib/upstream';
+import { imagesEdits, UpstreamRequestError } from '@/lib/upstream';
 import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
@@ -45,8 +45,14 @@ export async function POST(req: Request) {
     if (catalogEntry.type !== 'image') {
       return jsonErrorCors(400, `Model "${modelId}" is not an image model`);
     }
+    if (!catalogEntry.supportsImageEdits) {
+      return jsonErrorCors(
+        400,
+        `Model "${modelId}" does not support image edits. Use /api/v1/images/generations instead.`,
+      );
+    }
     try {
-      return await imagesGenerations({
+      return await imagesEdits({
         baseUrl: catalogEntry.baseUrl,
         apiKey: catalogEntry.apiKey,
         upstreamModel: catalogEntry.upstreamModel,
@@ -78,7 +84,7 @@ export async function POST(req: Request) {
   let primaryError: { status: number; message: string } | null = null;
   try {
     const token = custom.bearerTokenEnc ? decryptSecret(custom.bearerTokenEnc) : '';
-    const response = await imagesGenerations({
+    const response = await imagesEdits({
       baseUrl: custom.endpointUrl,
       apiKey: token,
       upstreamModel: custom.providerModelId,
@@ -103,9 +109,9 @@ export async function POST(req: Request) {
   }
 
   const fallback = await getCatalogModel(custom.fallbackModelId);
-  if (fallback && fallback.type === 'image') {
+  if (fallback && fallback.type === 'image' && fallback.supportsImageEdits) {
     try {
-      return await imagesGenerations({
+      return await imagesEdits({
         baseUrl: fallback.baseUrl,
         apiKey: fallback.apiKey,
         upstreamModel: fallback.upstreamModel,

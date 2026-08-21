@@ -373,3 +373,31 @@ export async function audioTranscriptions(opts: TranscriptionCallOptions): Promi
     },
   });
 }
+export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
+  const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
+  const url = `${baseUrl}/images/edits`;
+  const upstream = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ ...body, model: upstreamModel }),
+    signal,
+  }).catch(() => {
+    throw new UpstreamRequestError(502, 'Upstream request failed');
+  });
+  if (!upstream.ok) {
+    return upstreamErrorResponse(upstream);
+  }
+  const data = (await upstream.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!data) {
+    throw new UpstreamRequestError(502, 'Upstream returned an invalid response');
+  }
+  const count = Math.max(1, typeof body.n === 'number' ? Math.ceil(body.n) : 1);
+  await recordUsage(userId, count * IMAGE_TOKEN_COST);
+  return Response.json(data, {
+    status: 200,
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  });
+}
