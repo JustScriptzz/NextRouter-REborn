@@ -4,13 +4,32 @@ import { recordUsage } from './usage';
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
-export function withV1Prefix(baseUrl: string): string {
-  const trimmed = baseUrl.trim().replace(/\/+$/, '');
-  if (!trimmed) return '';
-  if (/\/v\d+$/.test(trimmed)) return trimmed;
-  if (/\/(chat\/completions|images\/generations|audio\/speech|audio\/transcriptions|models)$/.test(trimmed)) {
-    return trimmed;
+function stripTrailingSlashes(value: string): string {
+  let out = value;
+  while (out.endsWith('/')) {
+    out = out.slice(0, -1);
   }
+  return out;
+}
+
+export function withV1Prefix(baseUrl: string): string {
+  const trimmed = stripTrailingSlashes(baseUrl.trim());
+  if (!trimmed) return '';
+  const versionMarker = '/v';
+  const lastMarker = trimmed.lastIndexOf(versionMarker);
+  if (lastMarker !== -1) {
+    const after = trimmed.slice(lastMarker + 2);
+    if (after.length > 0 && Number.isInteger(Number(after))) return trimmed;
+  }
+  const suffixes = [
+    '/chat/completions',
+    '/images/generations',
+    '/images/edits',
+    '/audio/speech',
+    '/audio/transcriptions',
+    '/models',
+  ];
+  if (suffixes.some((s) => trimmed.endsWith(s))) return trimmed;
   return `${trimmed}/v1`;
 }
 
@@ -22,6 +41,15 @@ export class UpstreamRequestError extends Error {
     super(message);
     this.name = 'UpstreamRequestError';
   }
+}
+
+const UPSTREAM_CONNECT_TIMEOUT_MS = 30000;
+
+function withConnectTimeout(signal: AbortSignal): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const composite = AbortSignal.any([signal, controller.signal]);
+  const timer = setTimeout(() => controller.abort(), UPSTREAM_CONNECT_TIMEOUT_MS);
+  return { signal: composite, clear: () => clearTimeout(timer) };
 }
 
 export function estimateTextTokens(text: string): number {
@@ -44,11 +72,12 @@ export function estimateChatInputTokens(body: Record<string, unknown>): number {
       }
     }
   }
-  return estimateTextTokens(chars > 0 ? String(chars) : '8');
+  return Math.max(1, Math.ceil(chars / 4));
 }
 
 function scrubUpstreamMessage(message: string): string {
-  return message.replace(/https?:\/\/[^\s"')\]]+/g, '').slice(0, 500);
+  const urlPattern = new RegExp('https?:\\/\\/\\S+', 'g');
+  return message.replace(urlPattern, '').slice(0, 500);
 }
 
 export async function upstreamErrorResponse(
@@ -83,6 +112,26 @@ export interface BudgetOptions {
   publicModelId: string;
 }
 
+function countStreamContent(text: string): number {
+  const marker = '"content":"';
+  let total = 0;
+  let idx = text.indexOf(marker);
+  while (idx !== -1) {
+    let j = idx + marker.length;
+    while (j < text.length) {
+      if (text[j] === '\\') {
+        j += 2;
+        continue;
+      }
+      if (text[j] === '"') break;
+      j++;
+    }
+    total += j - (idx + marker.length);
+    idx = text.indexOf(marker, j);
+  }
+  return total;
+}
+
 function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array, Uint8Array> {
   const { userId, remainingBudget, inputTokens, upstreamModel, publicModelId } = opts;
   let pending = '';
@@ -98,10 +147,7 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
   }
 
   function countContent(text: string): void {
-    const contentMatcher = /"content":"((?:\\.|[^"\\])*)"/g;
-    for (const match of text.matchAll(contentMatcher)) {
-      outputChars += match[1]?.length ?? 0;
-    }
+    outputChars += countStreamContent(text);
   }
 
   function capChunk(controller: TransformStreamDefaultController<Uint8Array>): void {
@@ -177,17 +223,24 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId, remainingBudget } =
     opts;
   const url = `${baseUrl}/chat/completions`;
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ ...body, model: upstreamModel }),
-    signal,
-  }).catch(() => {
+  const conn = withConnectTimeout(signal);
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ ...body, model: upstreamModel }),
+      signal: conn.signal,
+    });
+  } catch (error) {
+    conn.clear();
+    if (signal.aborted) throw error;
     throw new UpstreamRequestError(502, 'Upstream request failed');
-  });
+  }
+  conn.clear();
 
   if (!upstream.ok) {
     return upstreamErrorResponse(upstream);
@@ -260,7 +313,7 @@ function estimateChatOutputTokens(data: Record<string, unknown>): number {
       }
     }
   }
-  return estimateTextTokens(chars > 0 ? String(chars) : '1');
+  return Math.max(1, Math.ceil(chars / 4));
 }
 
 export interface ImagesCallOptions {
@@ -278,17 +331,24 @@ export const IMAGE_TOKEN_COST = 1200;
 export async function imagesGenerations(opts: ImagesCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
   const url = `${baseUrl}/images/generations`;
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ ...body, model: upstreamModel }),
-    signal,
-  }).catch(() => {
+  const conn = withConnectTimeout(signal);
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ ...body, model: upstreamModel }),
+      signal: conn.signal,
+    });
+  } catch (error) {
+    conn.clear();
+    if (signal.aborted) throw error;
     throw new UpstreamRequestError(502, 'Upstream request failed');
-  });
+  }
+  conn.clear();
   if (!upstream.ok) {
     return upstreamErrorResponse(upstream);
   }
@@ -373,20 +433,28 @@ export async function audioTranscriptions(opts: TranscriptionCallOptions): Promi
     },
   });
 }
+
 export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
   const url = `${baseUrl}/images/edits`;
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ ...body, model: upstreamModel }),
-    signal,
-  }).catch(() => {
+  const conn = withConnectTimeout(signal);
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ ...body, model: upstreamModel }),
+      signal: conn.signal,
+    });
+  } catch (error) {
+    conn.clear();
+    if (signal.aborted) throw error;
     throw new UpstreamRequestError(502, 'Upstream request failed');
-  });
+  }
+  conn.clear();
   if (!upstream.ok) {
     return upstreamErrorResponse(upstream);
   }

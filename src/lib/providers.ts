@@ -42,6 +42,7 @@ function describeModel(id: string): string {
   if (lower.includes('mistral')) return 'Efficient open-weight chat model';
   if (lower.includes('deepseek')) return 'Strong reasoning chat model';
   if (lower.includes('qwen')) return 'Open-weights chat model';
+  if (lower.includes('flux') || lower.includes('sdxl')) return 'Image generation model';
   return 'Chat model';
 }
 
@@ -69,6 +70,14 @@ function classifyFromEndpoints(endpoints: string[]): ModelKind | null {
   if (endpoints.includes('chat/completions')) return 'text';
   if (endpoints.some((e) => e.startsWith('images/'))) return 'image';
   return null;
+}
+
+function resolveLiveType(info: LiveModelInfo): ModelKind | null {
+  if (info.endpoints.length > 0) {
+    return classifyFromEndpoints(info.endpoints);
+  }
+  const guessed = classifyModel(info.id);
+  return guessed === 'text' || guessed === 'image' ? guessed : null;
 }
 
 interface GatewaySlot {
@@ -174,10 +183,12 @@ async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | n
           const endpoints = rawEndpoints.filter(
             (e): e is string => typeof e === 'string' && e.length > 0,
           );
-          const displayName =
-            typeof entry.display_name === 'string' && entry.display_name
-              ? entry.display_name
-              : null;
+          let displayName: string | null = null;
+          if (typeof entry.display_name === 'string' && entry.display_name) {
+            displayName = entry.display_name;
+          } else if (typeof entry.name === 'string' && entry.name) {
+            displayName = entry.name;
+          }
           collected.push({ id, endpoints, displayName });
         }
         if (collected.length > 0) models = collected.slice(0, LIVE_MODELS_MAX);
@@ -206,7 +217,7 @@ export async function getCatalog(): Promise<Catalog> {
 
     if (live && live.length > 0) {
       for (const info of live) {
-        const type = classifyFromEndpoints(info.endpoints);
+        const type = resolveLiveType(info);
         if (type !== 'text' && type !== 'image') continue;
         add({
           id: info.id,
