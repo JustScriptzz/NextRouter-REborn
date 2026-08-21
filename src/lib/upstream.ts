@@ -43,12 +43,12 @@ export class UpstreamRequestError extends Error {
   }
 }
 
-const UPSTREAM_CONNECT_TIMEOUT_MS = 20000;
+const UPSTREAM_ATTEMPT_TIMEOUT_MS = 75000;
 
-function withConnectTimeout(signal: AbortSignal): { signal: AbortSignal; clear: () => void } {
+function withAttemptTimeout(signal: AbortSignal): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();
   const composite = AbortSignal.any([signal, controller.signal]);
-  const timer = setTimeout(() => controller.abort(), UPSTREAM_CONNECT_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), UPSTREAM_ATTEMPT_TIMEOUT_MS);
   return { signal: composite, clear: () => clearTimeout(timer) };
 }
 
@@ -223,7 +223,7 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId, remainingBudget } =
     opts;
   const url = `${baseUrl}/chat/completions`;
-  const conn = withConnectTimeout(signal);
+  const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
     upstream = await fetch(url, {
@@ -331,7 +331,7 @@ export const IMAGE_TOKEN_COST = 1200;
 export async function imagesGenerations(opts: ImagesCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
   const url = `${baseUrl}/images/generations`;
-  const conn = withConnectTimeout(signal);
+  const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
     upstream = await fetch(url, {
@@ -437,7 +437,7 @@ export async function audioTranscriptions(opts: TranscriptionCallOptions): Promi
 export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
   const url = `${baseUrl}/images/edits`;
-  const conn = withConnectTimeout(signal);
+  const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
     upstream = await fetch(url, {

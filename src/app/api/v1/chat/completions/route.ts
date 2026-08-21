@@ -10,8 +10,8 @@ import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usa
 export const runtime = 'nodejs';
 
 const RETRY_MAX_ATTEMPTS = 60;
-const RETRY_BASE_DELAY_MS = 300;
-const RETRY_MAX_DELAY_MS = 4000;
+const RETRY_BASE_DELAY_MS = 2000;
+const RETRY_MAX_DELAY_MS = 10000;
 const RETRY_TIME_BUDGET_MS = 240000;
 
 export async function POST(req: Request) {
@@ -164,8 +164,7 @@ function isAbortError(error: unknown): boolean {
 
 function backoffFor(attempt: number): number {
   const base = Math.min(RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1), RETRY_MAX_DELAY_MS);
-  const jitter = Math.random() * Math.min(250, base / 2);
-  return base + jitter;
+  return Math.random() * base;
 }
 
 function sleep(ms: number): Promise<void> {
