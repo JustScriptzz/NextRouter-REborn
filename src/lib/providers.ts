@@ -26,6 +26,8 @@ interface LiveModelInfo {
   tier: string | null;
 }
 
+const ALL_KINDS: ModelKind[] = ['text', 'image', 'tts', 'stt', 'video', 'embedding'];
+
 function listFromEnv(name: string): string[] {
   const raw = process.env[name];
   if (!raw) return [];
@@ -84,17 +86,22 @@ function classifyModel(id: string): ModelKind {
 function classifyFromEndpoints(endpoints: string[]): ModelKind | null {
   if (endpoints.includes('chat/completions')) return 'text';
   if (endpoints.some((e) => e.startsWith('images/'))) return 'image';
+  if (endpoints.includes('audio/speech')) return 'tts';
+  if (endpoints.includes('audio/transcriptions')) return 'stt';
+  if (endpoints.some((e) => e.startsWith('embeddings'))) return 'embedding';
   return null;
 }
 
 function resolveLiveType(info: LiveModelInfo): ModelKind | null {
-  if (info.modelType === 'text') return 'text';
-  if (info.modelType === 'image') return 'image';
+  if (info.modelType) {
+    const lower = info.modelType.toLowerCase();
+    if (ALL_KINDS.includes(lower as ModelKind)) return lower as ModelKind;
+    if (lower !== 'audio') return null;
+  }
   if (info.endpoints.length > 0) {
     return classifyFromEndpoints(info.endpoints);
   }
-  const guessed = classifyModel(info.id);
-  return guessed === 'text' || guessed === 'image' ? guessed : null;
+  return classifyModel(info.id);
 }
 
 interface GatewaySlot {
@@ -260,7 +267,7 @@ export async function getCatalog(): Promise<Catalog> {
         if (isExcludedOwner(slot, info)) continue;
         if (isExcludedTier(slot, info)) continue;
         const type = resolveLiveType(info);
-        if (type !== 'text' && type !== 'image') continue;
+        if (!type) continue;
         add({
           id: info.id,
           type,
@@ -279,7 +286,6 @@ export async function getCatalog(): Promise<Catalog> {
     const models = envIds.length > 0 ? envIds : slot.defaults;
     for (const upstreamModel of models) {
       const kind = classifyModel(upstreamModel);
-      if (kind !== 'text' && kind !== 'image') continue;
       add({
         id: upstreamModel,
         type: kind,

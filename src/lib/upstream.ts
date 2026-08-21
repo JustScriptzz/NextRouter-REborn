@@ -27,10 +27,21 @@ export function withV1Prefix(baseUrl: string): string {
     '/images/edits',
     '/audio/speech',
     '/audio/transcriptions',
+    '/embeddings',
     '/models',
   ];
-  if (suffixes.some((s) => trimmed.endsWith(s))) return trimmed;
+  if (suffixes.some((s) => trimmed.endsWith(s))) {
+    for (const s of suffixes) {
+      if (trimmed.endsWith(s)) return trimmed.slice(0, trimmed.length - s.length);
+    }
+  }
   return `${trimmed}/v1`;
+}
+
+function joinEndpoint(baseUrl: string, path: string): string {
+  const base = stripTrailingSlashes(baseUrl.trim());
+  if (base.endsWith(`/${path}`)) return base;
+  return `${base}/${path}`;
 }
 
 export class UpstreamRequestError extends Error {
@@ -70,6 +81,19 @@ export function estimateChatInputTokens(body: Record<string, unknown>): number {
           if (typeof text === 'string') chars += text.length;
         }
       }
+    }
+  }
+  return Math.max(1, Math.ceil(chars / 4));
+}
+
+export function estimateEmbeddingInputTokens(body: Record<string, unknown>): number {
+  const input = body.input;
+  let chars = 0;
+  if (typeof input === 'string') {
+    chars = input.length;
+  } else if (Array.isArray(input)) {
+    for (const part of input) {
+      if (typeof part === 'string') chars += part.length;
     }
   }
   return Math.max(1, Math.ceil(chars / 4));
@@ -222,7 +246,7 @@ export interface ChatCallOptions {
 export async function chatCompletions(opts: ChatCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId, remainingBudget } =
     opts;
-  const url = `${baseUrl}/chat/completions`;
+  const url = joinEndpoint(baseUrl, 'chat/completions');
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
@@ -330,7 +354,43 @@ export const IMAGE_TOKEN_COST = 1200;
 
 export async function imagesGenerations(opts: ImagesCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
-  const url = `${baseUrl}/images/generations`;
+  const url = joinEndpoint(baseUrl, 'images/generations');
+  const conn = withAttemptTimeout(signal);
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ ...body, model: upstreamModel }),
+      signal: conn.signal,
+    });
+  } catch (error) {
+    conn.clear();
+    if (signal.aborted) throw error;
+    throw new UpstreamRequestError(502, 'Upstream request failed');
+  }
+  conn.clear();
+  if (!upstream.ok) {
+    return upstreamErrorResponse(upstream);
+  }
+  const data = (await upstream.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!data) {
+    throw new UpstreamRequestError(502, 'Upstream returned an invalid response');
+  }
+  const count = Math.max(1, typeof body.n === 'number' ? Math.ceil(body.n) : 1);
+  await recordUsage(userId, count * IMAGE_TOKEN_COST);
+  return Response.json(data, {
+    status: 200,
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  });
+}
+
+export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
+  const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
+  const url = joinEndpoint(baseUrl, 'images/edits');
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
@@ -376,18 +436,25 @@ export interface SpeechCallOptions {
 
 export async function audioSpeech(opts: SpeechCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
-  const url = `${baseUrl}/audio/speech`;
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ ...body, model: upstreamModel }),
-    signal,
-  }).catch(() => {
+  const url = joinEndpoint(baseUrl, 'audio/speech');
+  const conn = withAttemptTimeout(signal);
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ ...body, model: upstreamModel }),
+      signal: conn.signal,
+    });
+  } catch (error) {
+    conn.clear();
+    if (signal.aborted) throw error;
     throw new UpstreamRequestError(502, 'Upstream request failed');
-  });
+  }
+  conn.clear();
   if (!upstream.ok) {
     return upstreamErrorResponse(upstream);
   }
@@ -403,24 +470,37 @@ export async function audioSpeech(opts: SpeechCallOptions): Promise<Response> {
   });
 }
 
-export interface TranscriptionCallOptions extends SpeechCallOptions {
+export interface TranscriptionCallOptions {
+  baseUrl: string;
+  apiKey: string;
+  upstreamModel: string;
+  publicModelId: string;
+  signal: AbortSignal;
+  userId: string;
   formData: FormData;
 }
 
 export async function audioTranscriptions(opts: TranscriptionCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, signal, userId, formData } = opts;
-  const url = `${baseUrl}/audio/transcriptions`;
+  const url = joinEndpoint(baseUrl, 'audio/transcriptions');
   formData.set('model', upstreamModel);
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: formData,
-    signal,
-  }).catch(() => {
+  const conn = withAttemptTimeout(signal);
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+      signal: conn.signal,
+    });
+  } catch (error) {
+    conn.clear();
+    if (signal.aborted) throw error;
     throw new UpstreamRequestError(502, 'Upstream request failed');
-  });
+  }
+  conn.clear();
   if (!upstream.ok) {
     return upstreamErrorResponse(upstream);
   }
@@ -434,9 +514,19 @@ export async function audioTranscriptions(opts: TranscriptionCallOptions): Promi
   });
 }
 
-export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
+export interface EmbeddingsCallOptions {
+  baseUrl: string;
+  apiKey: string;
+  upstreamModel: string;
+  publicModelId: string;
+  body: Record<string, unknown>;
+  signal: AbortSignal;
+  userId: string;
+}
+
+export async function embeddingsCall(opts: EmbeddingsCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
-  const url = `${baseUrl}/images/edits`;
+  const url = joinEndpoint(baseUrl, 'embeddings');
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
@@ -462,9 +552,9 @@ export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
   if (!data) {
     throw new UpstreamRequestError(502, 'Upstream returned an invalid response');
   }
-  const count = Math.max(1, typeof body.n === 'number' ? Math.ceil(body.n) : 1);
-  await recordUsage(userId, count * IMAGE_TOKEN_COST);
-  return Response.json(data, {
+  const rewritten = rewriteModelField(data, upstreamModel, publicModelId);
+  await recordUsage(userId, estimateEmbeddingInputTokens(body));
+  return Response.json(rewritten, {
     status: 200,
     headers: { 'Access-Control-Allow-Origin': '*' },
   });

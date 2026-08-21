@@ -64,6 +64,21 @@ for await (const chunk of res.body) {
             path="/api/v1/images/edits"
             desc="Image editing for models that support it (e.g. flux-2-pro, sdxl-lightning)."
           />
+          <Endpoint
+            method="POST"
+            path="/api/v1/audio/speech"
+            desc="Text-to-speech for tts models. Returns audio bytes."
+          />
+          <Endpoint
+            method="POST"
+            path="/api/v1/audio/transcriptions"
+            desc="Speech-to-text for stt models. Multipart form upload with a file field."
+          />
+          <Endpoint
+            method="POST"
+            path="/api/v1/embeddings"
+            desc="Text embeddings. OpenAI-compatible body."
+          />
           <Endpoint method="GET" path="/api/v1/models" desc="Lists available model IDs." />
         </div>
       </Section>
