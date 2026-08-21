@@ -10,6 +10,11 @@ import { getUsageRemaining } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
+const RETRY_MAX_ATTEMPTS = 8;
+const RETRY_BASE_DELAY_MS = 300;
+const RETRY_MAX_DELAY_MS = 4000;
+const RETRY_TIME_BUDGET_MS = 45000;
+
 export async function POST(req: Request) {
   const user = await getUserFromApiKey(req.headers.get('authorization'));
   if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
@@ -24,7 +29,7 @@ export async function POST(req: Request) {
   if (remaining <= 0) {
     return jsonErrorCors(
       429,
-      'Daily token limit reached (500,000). It resets at midnight UTC.',
+      'Daily token limit of 500000 tokens reached. It resets at midnight UTC.',
       'daily_limit',
     );
   }
@@ -40,24 +45,28 @@ export async function POST(req: Request) {
     }
     try {
       if (catalogEntry.kind === 'openai') {
-        return await chatCompletions({
-          baseUrl: catalogEntry.baseUrl,
-          apiKey: catalogEntry.apiKey,
+        return await withRetry(() =>
+          chatCompletions({
+            baseUrl: catalogEntry.baseUrl,
+            apiKey: catalogEntry.apiKey,
+            upstreamModel: catalogEntry.upstreamModel,
+            publicModelId: catalogEntry.id,
+            body,
+            signal,
+            userId: user.id,
+            remainingBudget: remaining,
+          }),
+        );
+      }
+      return await withRetry(() =>
+        hordeTextCompletion({
           upstreamModel: catalogEntry.upstreamModel,
           publicModelId: catalogEntry.id,
           body,
           signal,
           userId: user.id,
-          remainingBudget: remaining,
-        });
-      }
-      return await hordeTextCompletion({
-        upstreamModel: catalogEntry.upstreamModel,
-        publicModelId: catalogEntry.id,
-        body,
-        signal,
-        userId: user.id,
-      });
+        }),
+      );
     } catch (error) {
       if (error instanceof UpstreamRequestError) {
         return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
@@ -76,27 +85,42 @@ export async function POST(req: Request) {
   }
 
   let primaryError: { status: number; message: string } | null = null;
-  try {
-    const token = custom.bearerTokenEnc ? decryptSecret(custom.bearerTokenEnc) : '';
-    const response = await chatCompletions({
-      baseUrl: custom.endpointUrl,
-      apiKey: token,
-      upstreamModel: custom.providerModelId,
-      publicModelId: custom.modelId,
-      body,
-      signal,
-      userId: user.id,
-      remainingBudget: remaining,
-    });
-    if (response.ok) return response;
-    primaryError = {
-      status: response.status,
-      message: response.status >= 500 ? 'Upstream request failed' : await readErrorText(response),
-    };
-  } catch (error) {
-    if (error instanceof UpstreamRequestError && error.status < 500) {
-      return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+  const primaryStart = Date.now();
+  for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
+    try {
+      const token = custom.bearerTokenEnc ? decryptSecret(custom.bearerTokenEnc) : '';
+      const response = await chatCompletions({
+        baseUrl: custom.endpointUrl,
+        apiKey: token,
+        upstreamModel: custom.providerModelId,
+        publicModelId: custom.modelId,
+        body,
+        signal,
+        userId: user.id,
+        remainingBudget: remaining,
+      });
+      if (response.ok) return response;
+      if (!isRetryable(response.status)) {
+        primaryError = {
+          status: response.status,
+          message: await readErrorText(response),
+        };
+        break;
+      }
+      primaryError = { status: response.status, message: 'Upstream request failed' };
+    } catch (error) {
+      if (error instanceof UpstreamRequestError && !isRetryable(error.status)) {
+        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+      }
+      if (isAbortError(error)) {
+        return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+      }
+      primaryError = { status: 502, message: 'Upstream request failed' };
     }
+    if (attempt === RETRY_MAX_ATTEMPTS || Date.now() - primaryStart > RETRY_TIME_BUDGET_MS) {
+      break;
+    }
+    await sleep(backoffFor(attempt));
   }
 
   if (primaryError && primaryError.status < 500) {
@@ -110,29 +134,33 @@ export async function POST(req: Request) {
       if (effectiveRemaining <= 0) {
         return jsonErrorCors(
           429,
-          'Daily token limit reached (500,000). It resets at midnight UTC.',
+          'Daily token limit of 500000 tokens reached. It resets at midnight UTC.',
           'daily_limit',
         );
       }
       if (fallback.kind === 'openai') {
-        return await chatCompletions({
-          baseUrl: fallback.baseUrl,
-          apiKey: fallback.apiKey,
+        return await withRetry(() =>
+          chatCompletions({
+            baseUrl: fallback.baseUrl,
+            apiKey: fallback.apiKey,
+            upstreamModel: fallback.upstreamModel,
+            publicModelId: fallback.id,
+            body,
+            signal,
+            userId: user.id,
+            remainingBudget: effectiveRemaining,
+          }),
+        );
+      }
+      return await withRetry(() =>
+        hordeTextCompletion({
           upstreamModel: fallback.upstreamModel,
           publicModelId: fallback.id,
           body,
           signal,
           userId: user.id,
-          remainingBudget: effectiveRemaining,
-        });
-      }
-      return await hordeTextCompletion({
-        upstreamModel: fallback.upstreamModel,
-        publicModelId: fallback.id,
-        body,
-        signal,
-        userId: user.id,
-      });
+        }),
+      );
     } catch {
       return jsonErrorCors(502, 'The model and its fallback both failed', 'upstream_error');
     }
@@ -141,6 +169,56 @@ export async function POST(req: Request) {
   return primaryError
     ? jsonErrorCors(primaryError.status, scrubMessage(primaryError.message), 'upstream_error')
     : jsonErrorCors(502, 'The model failed and no fallback is available', 'upstream_error');
+}
+
+function isRetryable(status: number): boolean {
+  return status >= 500 || status === 408 || status === 425 || status === 429;
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: string }).name === 'AbortError'
+  );
+}
+
+function backoffFor(attempt: number): number {
+  const base = Math.min(RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1), RETRY_MAX_DELAY_MS);
+  const jitter = Math.random() * Math.min(250, base / 2);
+  return base + jitter;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  const start = Date.now();
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
+    try {
+      const result = await fn();
+      if (result instanceof Response && !result.ok && isRetryable(result.status)) {
+        throw new UpstreamRequestError(result.status, 'Upstream retryable failure');
+      }
+      return result;
+    } catch (error) {
+      if (error instanceof UpstreamRequestError && !isRetryable(error.status)) {
+        throw error;
+      }
+      if (isAbortError(error)) {
+        throw error;
+      }
+      lastError = error;
+      if (attempt === RETRY_MAX_ATTEMPTS || Date.now() - start > RETRY_TIME_BUDGET_MS) {
+        break;
+      }
+      await sleep(backoffFor(attempt));
+    }
+  }
+  throw lastError;
 }
 
 async function readErrorText(response: Response): Promise<string> {
@@ -156,7 +234,8 @@ async function readErrorText(response: Response): Promise<string> {
 }
 
 function scrubMessage(message: string): string {
-  return message.replace(/https?:\/\/[^\s"')\]]+/g, '').slice(0, 500);
+  const urlPattern = new RegExp('https?:\\/\\/\\S+', 'g');
+  return message.replace(urlPattern, '').slice(0, 500);
 }
 
 export async function OPTIONS() {
