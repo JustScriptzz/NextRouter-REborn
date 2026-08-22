@@ -3,19 +3,33 @@
 import { useMemo, useState } from 'react';
 import ModelCard, { type CatalogModelDTO } from '@/components/ModelCard';
 
-type Filter = 'all' | 'text' | 'image';
+const KIND_ORDER = ['text', 'image', 'tts', 'stt', 'embedding', 'video'];
+
+const KIND_LABELS: Record<string, string> = {
+  text: 'Text',
+  image: 'Image',
+  tts: 'Speech',
+  stt: 'Transcribe',
+  embedding: 'Embedding',
+  video: 'Video',
+};
 
 export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }) {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState('all');
 
-  const counts = useMemo(
-    () => ({
-      all: models.length,
-      text: models.filter((m) => m.type === 'text').length,
-      image: models.filter((m) => m.type === 'image').length,
-    }),
-    [models],
+  const counts = useMemo(() => {
+    const map = new Map<string, number>();
+    map.set('all', models.length);
+    for (const m of models) {
+      map.set(m.type, (map.get(m.type) ?? 0) + 1);
+    }
+    return map;
+  }, [models]);
+
+  const kinds = useMemo(
+    () => KIND_ORDER.filter((k) => (counts.get(k) ?? 0) > 0),
+    [counts],
   );
 
   const visible = useMemo(() => {
@@ -26,12 +40,6 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
       return m.id.toLowerCase().includes(q) || (m.title ?? '').toLowerCase().includes(q);
     });
   }, [models, query, filter]);
-
-  const filters: Array<{ key: Filter; label: string }> = [
-    { key: 'all', label: 'All' },
-    { key: 'text', label: 'Text' },
-    { key: 'image', label: 'Image' },
-  ];
 
   return (
     <div>
@@ -54,20 +62,32 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
             className="input-dark pl-10"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
-          {filters.map((f) => (
+        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
+              filter === 'all'
+                ? 'bg-violet-500/20 text-violet-200 shadow-inner'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            All
+            <span className="ml-1.5 text-xs text-zinc-500">{counts.get('all')}</span>
+          </button>
+          {kinds.map((kind) => (
             <button
-              key={f.key}
+              key={kind}
               type="button"
-              onClick={() => setFilter(f.key)}
+              onClick={() => setFilter(kind)}
               className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
-                filter === f.key
+                filter === kind
                   ? 'bg-violet-500/20 text-violet-200 shadow-inner'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              {f.label}
-              <span className="ml-1.5 text-xs text-zinc-500">{counts[f.key]}</span>
+              {KIND_LABELS[kind] ?? kind}
+              <span className="ml-1.5 text-xs text-zinc-500">{counts.get(kind)}</span>
             </button>
           ))}
         </div>
