@@ -113,6 +113,7 @@ interface GatewaySlot {
   defaults: string[];
   excludeOwners?: string[];
   excludeTiers?: string[];
+  excludeSubstrings?: string[];
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -161,6 +162,7 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'JANKROUTER_MODELS',
     defaultBaseUrl: 'https://jankrouter.waifly.com/',
     defaults: [],
+    excludeSubstrings: ['-pro'],
   },
   {
     provider: 'aquadevs',
@@ -193,6 +195,12 @@ function isExcludedTier(slot: GatewaySlot, info: LiveModelInfo): boolean {
   if (!info.tier) return false;
   const tier = info.tier.toLowerCase();
   return slot.excludeTiers.some((t) => t.toLowerCase() === tier);
+}
+
+function isExcludedSubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.excludeSubstrings || slot.excludeSubstrings.length === 0) return false;
+  const id = info.id.toLowerCase();
+  return slot.excludeSubstrings.some((s) => id.includes(s.toLowerCase()));
 }
 
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
@@ -274,6 +282,7 @@ export async function getCatalog(): Promise<Catalog> {
       for (const info of live) {
         if (isExcludedOwner(slot, info)) continue;
         if (isExcludedTier(slot, info)) continue;
+        if (isExcludedSubstring(slot, info)) continue;
         const type = resolveLiveType(info);
         if (!type) continue;
         add({
