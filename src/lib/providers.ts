@@ -144,13 +144,6 @@ const GATEWAYS: GatewaySlot[] = [
     staticModels: ['x-preview-f-free'],
   },
   {
-    provider: 'groq',
-    baseUrlEnv: 'GROQ_BASE_URL',
-    apiKeyEnv: 'GROQ_API_KEY',
-    modelsEnv: 'GROQ_MODELS',
-    defaultBaseUrl: 'https://api.groq.com/openai',
-  },
-  {
     provider: 'jankrouter',
     baseUrlEnv: 'JANKROUTER_BASE_URL',
     apiKeyEnv: 'JANKROUTER_API_KEY',
