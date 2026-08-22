@@ -117,6 +117,22 @@ interface GatewaySlot {
 
 const GATEWAYS: GatewaySlot[] = [
   {
+    provider: 'logfare',
+    baseUrlEnv: 'LOGFARE_BASE_URL',
+    apiKeyEnv: 'LOGFARE_API_KEY',
+    modelsEnv: 'LOGFARE_MODELS',
+    defaultBaseUrl: '',
+    defaults: [
+      'gpt-4o-mini',
+      'gpt-4.1-mini',
+      'claude-3-5-haiku-latest',
+      'llama-3.1-8b-instruct',
+      'mistral-small-3.1-24b-instruct-2503',
+      'deepseek-v3',
+      'gemini-2.0-flash',
+    ],
+  },
+  {
     provider: 'aquadevs',
     baseUrlEnv: 'AQUADEVS_BASE_URL',
     apiKeyEnv: 'AQUADEVS_API_KEY',
@@ -132,22 +148,6 @@ const GATEWAYS: GatewaySlot[] = [
       'qwen2.5-7b-instruct',
     ],
     excludeTiers: ['premium'],
-  },
-  {
-    provider: 'logfare',
-    baseUrlEnv: 'LOGFARE_BASE_URL',
-    apiKeyEnv: 'LOGFARE_API_KEY',
-    modelsEnv: 'LOGFARE_MODELS',
-    defaultBaseUrl: '',
-    defaults: [
-      'gpt-4o-mini',
-      'gpt-4.1-mini',
-      'claude-3-5-haiku-latest',
-      'llama-3.1-8b-instruct',
-      'mistral-small-3.1-24b-instruct-2503',
-      'deepseek-v3',
-      'gemini-2.0-flash',
-    ],
   },
   {
     provider: 'scriptzz',
