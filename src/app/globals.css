@@ -115,6 +115,37 @@ kbd {
   color: transparent;
 }
 
+.text-shimmer {
+  background: linear-gradient(110deg, #c4b5fd 20%, #ffffff 40%, #67e8f9 60%, #c4b5fd 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmerSlide 6s linear infinite;
+}
+
+@keyframes shimmerSlide {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.hero-glow {
+  position: relative;
+}
+.hero-glow::before {
+  content: '';
+  position: absolute;
+  inset: -60px -120px;
+  background: radial-gradient(closest-side, rgba(124, 58, 237, 0.18), transparent);
+  filter: blur(30px);
+  z-index: -1;
+  pointer-events: none;
+}
+
 .btn-primary {
   @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-violet-400 disabled:opacity-60;
 }

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
 import { getCatalog } from '@/lib/providers';
+import CodeBlock from '@/components/CodeBlock';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,10 +75,10 @@ export default async function HomePage() {
           {modelCount} models live right now
         </span>
 
-        <h1 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
+        <h1 className="hero-glow max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
           One API key.
           <br />
-          <span className="text-gradient">Every model.</span>
+          <span className="text-shimmer">Every model.</span>
         </h1>
 
         <p className="anim-fade-up delay-1 mt-6 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
@@ -155,8 +156,9 @@ export default async function HomePage() {
               </ul>
             </div>
             <div className="bg-zinc-950/60 p-6">
-              <pre className="overflow-x-auto rounded-xl border border-white/10 bg-black/40 p-4 font-mono text-xs leading-relaxed text-zinc-300">
-                <code>{`curl https://nextrouter-vert.vercel.app/api/v1/chat/completions \\
+              <CodeBlock
+                label="bash"
+                code={`curl https://nextrouter-vert.vercel.app/api/v1/chat/completions \\
   -H "Authorization: Bearer nr_xxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -164,8 +166,8 @@ export default async function HomePage() {
     "messages": [
       {"role": "user", "content": "Hello!"}
     ]
-  }'`}</code>
-              </pre>
+  }'`}
+              />
             </div>
           </div>
         </div>
