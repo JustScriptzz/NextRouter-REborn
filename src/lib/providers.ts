@@ -162,7 +162,6 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'JANKROUTER_MODELS',
     defaultBaseUrl: 'https://jankrouter.waifly.com/',
     defaults: [],
-    excludeSubstrings: ['-pro'],
   },
   {
     provider: 'aquadevs',
