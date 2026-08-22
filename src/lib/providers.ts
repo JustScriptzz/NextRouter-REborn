@@ -110,7 +110,6 @@ interface GatewaySlot {
   apiKeyEnv: string;
   modelsEnv: string;
   defaultBaseUrl: string;
-  defaults: string[];
   excludeOwners?: string[];
   excludeTiers?: string[];
   excludeSubstrings?: string[];
@@ -123,15 +122,6 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'LOGFARE_API_KEY',
     modelsEnv: 'LOGFARE_MODELS',
     defaultBaseUrl: '',
-    defaults: [
-      'gpt-4o-mini',
-      'gpt-4.1-mini',
-      'claude-3-5-haiku-latest',
-      'llama-3.1-8b-instruct',
-      'mistral-small-3.1-24b-instruct-2503',
-      'deepseek-v3',
-      'gemini-2.0-flash',
-    ],
   },
   {
     provider: 'scriptzz',
@@ -139,12 +129,6 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'SCRIPTZZ_API_KEY',
     modelsEnv: 'SCRIPTZZ_MODELS',
     defaultBaseUrl: '',
-    defaults: [
-      'gpt-4o-mini',
-      'llama-3.1-8b-instruct',
-      'qwen2.5-7b-instruct',
-      'gemini-1.5-flash',
-    ],
     excludeOwners: ['moonshot', 'deepseek'],
   },
   {
@@ -153,7 +137,6 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'COGITO_API_KEY',
     modelsEnv: 'COGITO_MODELS',
     defaultBaseUrl: '',
-    defaults: ['cogito-v1-preview'],
   },
   {
     provider: 'jankrouter',
@@ -161,7 +144,6 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'JANKROUTER_API_KEY',
     modelsEnv: 'JANKROUTER_MODELS',
     defaultBaseUrl: 'https://jankrouter.waifly.com/',
-    defaults: [],
   },
   {
     provider: 'aquadevs',
@@ -169,15 +151,6 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'AQUADEVS_API_KEY',
     modelsEnv: 'AQUADEVS_MODELS',
     defaultBaseUrl: '',
-    defaults: [
-      'gpt-4o-mini',
-      'llama-3.1-8b-instruct',
-      'mistral-7b-instruct',
-      'gemini-2.0-flash',
-      'claude-3-haiku-20240307',
-      'deepseek-chat',
-      'qwen2.5-7b-instruct',
-    ],
     excludeTiers: ['premium'],
   },
 ];
@@ -302,9 +275,7 @@ export async function getCatalog(): Promise<Catalog> {
       continue;
     }
 
-    const envIds = listFromEnv(slot.modelsEnv);
-    const models = envIds.length > 0 ? envIds : slot.defaults;
-    for (const upstreamModel of models) {
+    for (const upstreamModel of listFromEnv(slot.modelsEnv)) {
       const kind = classifyModel(upstreamModel);
       add({
         id: upstreamModel,
