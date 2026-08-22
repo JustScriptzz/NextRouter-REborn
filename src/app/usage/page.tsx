@@ -8,6 +8,7 @@ interface UsageSummaryDTO {
   limit: number;
   remaining: number;
   last7: Array<{ date: string; tokens: number; calls: number }>;
+  unlimited?: boolean;
 }
 
 import { apiErrorMessage } from '@/lib/api-error';
@@ -16,6 +17,7 @@ export default function UsagePage() {
   const [usage, setUsage] = useState<UsageSummaryDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [unlimited, setUnlimited] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/usage');
@@ -28,6 +30,7 @@ export default function UsagePage() {
     }
     const data = await res.json();
     setUsage(data.usage);
+    setUnlimited(!!data.unlimited);
     setLoading(false);
   }, []);
 
@@ -57,10 +60,18 @@ export default function UsagePage() {
   return (
     <div className="mx-auto max-w-3xl py-10">
       <div className="anim-fade-up">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Usage</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Usage</h1>
+          {unlimited && (
+            <span className="rounded-full border border-violet-500/30 bg-violet-500/15 px-3 py-1 text-xs font-bold tracking-wide text-violet-300">
+              UNLIMITED
+            </span>
+          )}
+        </div>
         <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">
-          The daily limit applies to everything combined, across all models. It resets at midnight
-          UTC.
+          {unlimited
+            ? 'Your account has no daily cap — usage is tracked for display only and never blocks requests.'
+            : 'The daily limit applies to everything combined, across all models. It resets at midnight UTC.'}
         </p>
       </div>
 
@@ -68,7 +79,7 @@ export default function UsagePage() {
         <StatCard
           label="Tokens today"
           value={usage.today.tokens.toLocaleString()}
-          sub={`of ${usage.limit.toLocaleString()}`}
+          sub={unlimited ? 'Unlimited' : `of ${usage.limit.toLocaleString()}`}
           icon={<IconBolt />}
           accent="text-violet-300"
         />
@@ -92,38 +103,54 @@ export default function UsagePage() {
         />
       </div>
 
-      <div className="card anim-fade-up delay-2 mt-6 p-5">
-        <div className="mb-3 flex items-center justify-between text-sm">
-          <span className="font-medium text-zinc-300">Daily budget used</span>
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-              pct >= 90
-                ? 'bg-red-500/15 text-red-300'
-                : pct >= 60
-                  ? 'bg-amber-500/15 text-amber-300'
-                  : 'bg-emerald-500/15 text-emerald-300'
-            }`}
-          >
-            {pct}%
-          </span>
+      {unlimited ? (
+        <div className="card anim-fade-up delay-2 mt-6 border-violet-500/30 bg-violet-500/10 p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300">
+              ∞
+            </span>
+            <div>
+              <div className="text-sm font-semibold text-violet-200">Unlimited — no daily cap</div>
+              <div className="text-xs text-violet-300/70">
+                {usage.today.tokens.toLocaleString()} tokens used today · never blocked
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="h-3 overflow-hidden rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
-          <div
-            className={`h-full rounded-full transition-all duration-700 ${
-              pct >= 90
-                ? 'bg-gradient-to-r from-red-600 to-red-400'
-                : pct >= 60
-                  ? 'bg-gradient-to-r from-amber-600 to-amber-400'
-                  : 'bg-gradient-to-r from-violet-600 to-cyan-400'
-            }`}
-            style={{ width: `${Math.max(pct, 1)}%` }}
-          />
+      ) : (
+        <div className="card anim-fade-up delay-2 mt-6 p-5">
+          <div className="mb-3 flex items-center justify-between text-sm">
+            <span className="font-medium text-zinc-300">Daily budget used</span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                pct >= 90
+                  ? 'bg-red-500/15 text-red-300'
+                  : pct >= 60
+                    ? 'bg-amber-500/15 text-amber-300'
+                    : 'bg-emerald-500/15 text-emerald-300'
+              }`}
+            >
+              {pct}%
+            </span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${
+                pct >= 90
+                  ? 'bg-gradient-to-r from-red-600 to-red-400'
+                  : pct >= 60
+                    ? 'bg-gradient-to-r from-amber-600 to-amber-400'
+                    : 'bg-gradient-to-r from-violet-600 to-cyan-400'
+              }`}
+              style={{ width: `${Math.max(pct, 1)}%` }}
+            />
+          </div>
+          <div className="mt-2 flex justify-between text-xs text-zinc-500">
+            <span>{usage.today.tokens.toLocaleString()} tokens used</span>
+            <span>{usage.remaining.toLocaleString()} remaining</span>
+          </div>
         </div>
-        <div className="mt-2 flex justify-between text-xs text-zinc-500">
-          <span>{usage.today.tokens.toLocaleString()} tokens used</span>
-          <span>{usage.remaining.toLocaleString()} remaining</span>
-        </div>
-      </div>
+      )}
 
       {breakdown.length > 0 && (
         <>

@@ -68,7 +68,7 @@ function classifyModel(id: string): ModelKind {
   if (/(text-embedding|embedding|e5-|bge-|minilm|rerank|ada-002)/.test(lower)) {
     return 'embedding';
   }
-  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid)/.test(lower)) {
+  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid|meta-image)/.test(lower)) {
     return 'image';
   }
   if (/(whisper|transcri|speech-to-text|stt|recogni|nova-3)/.test(lower)) {
