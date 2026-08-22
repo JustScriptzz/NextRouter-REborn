@@ -133,23 +133,6 @@ const GATEWAYS: GatewaySlot[] = [
     ],
   },
   {
-    provider: 'aquadevs',
-    baseUrlEnv: 'AQUADEVS_BASE_URL',
-    apiKeyEnv: 'AQUADEVS_API_KEY',
-    modelsEnv: 'AQUADEVS_MODELS',
-    defaultBaseUrl: '',
-    defaults: [
-      'gpt-4o-mini',
-      'llama-3.1-8b-instruct',
-      'mistral-7b-instruct',
-      'gemini-2.0-flash',
-      'claude-3-haiku-20240307',
-      'deepseek-chat',
-      'qwen2.5-7b-instruct',
-    ],
-    excludeTiers: ['premium'],
-  },
-  {
     provider: 'scriptzz',
     baseUrlEnv: 'SCRIPTZZ_BASE_URL',
     apiKeyEnv: 'SCRIPTZZ_API_KEY',
@@ -170,6 +153,23 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'COGITO_MODELS',
     defaultBaseUrl: '',
     defaults: ['cogito-v1-preview'],
+  },
+  {
+    provider: 'aquadevs',
+    baseUrlEnv: 'AQUADEVS_BASE_URL',
+    apiKeyEnv: 'AQUADEVS_API_KEY',
+    modelsEnv: 'AQUADEVS_MODELS',
+    defaultBaseUrl: '',
+    defaults: [
+      'gpt-4o-mini',
+      'llama-3.1-8b-instruct',
+      'mistral-7b-instruct',
+      'gemini-2.0-flash',
+      'claude-3-haiku-20240307',
+      'deepseek-chat',
+      'qwen2.5-7b-instruct',
+    ],
+    excludeTiers: ['premium'],
   },
 ];
 
