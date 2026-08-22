@@ -1,0 +1,254 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+
+interface MeResponse {
+  user: { email: string; username: string } | null;
+}
+
+const NAV_ITEMS = [
+  { href: '/models', label: 'Models' },
+  { href: '/my-models', label: 'My Models' },
+  { href: '/keys', label: 'Keys' },
+  { href: '/usage', label: 'Usage' },
+  { href: '/docs', label: 'Docs' },
+];
+
+export default function SiteChrome({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<{ email: string; username: string } | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const loadUser = useCallback(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data: MeResponse) => setUser(data.user))
+      .catch(() => setUser(null));
+  }, []);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    router.push('/login');
+  }
+
+  return (
+    <>
+      {/* ambient background */}
+      <div className="bg-aurora" aria-hidden />
+      <div className="bg-grid" aria-hidden />
+
+      {/* top navigation */}
+      <header className="glass-nav sticky top-0 z-40 border-b border-white/10">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
+          <button
+            type="button"
+            aria-label="Open menu"
+            onClick={() => setOpen((v) => !v)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] transition hover:border-violet-500/40 md:hidden"
+          >
+            <span className="relative block h-4 w-5">
+              <span
+                className={`absolute left-0 top-0 h-0.5 w-5 rounded-full bg-zinc-100 transition-all duration-200 ${
+                  open ? 'top-1.5 rotate-45' : ''
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-1.5 h-0.5 w-5 rounded-full bg-zinc-100 transition-all duration-200 ${
+                  open ? 'opacity-0' : ''
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-3 h-0.5 w-5 rounded-full bg-zinc-100 transition-all duration-200 ${
+                  open ? 'top-1.5 -rotate-45' : ''
+                }`}
+              />
+            </span>
+          </button>
+
+          <Link href="/" className="group flex shrink-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 font-mono text-sm font-bold text-white shadow-lg shadow-violet-600/30 transition group-hover:shadow-violet-500/50">
+              NR
+            </span>
+            <span className="text-gradient hidden text-base font-bold leading-tight sm:block">
+              NextRouter REborn
+            </span>
+          </Link>
+
+          <nav className="ml-auto hidden items-center gap-1 md:flex">
+            {NAV_ITEMS.map((item) => {
+              const active =
+                pathname === item.href || pathname.startsWith(item.href + '/');
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-xl px-3.5 py-2 text-sm transition ${
+                    active
+                      ? 'bg-violet-500/15 font-medium text-violet-200'
+                      : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2 md:ml-3">
+            {user ? (
+              <div className="flex items-center gap-2.5">
+                <span
+                  title={user.email}
+                  className="hidden text-sm text-zinc-400 sm:block"
+                >
+                  @{user.username}
+                </span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/15 text-sm font-semibold uppercase text-violet-300">
+                  {user.username.charAt(0)}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn-ghost hidden px-3 py-2 text-xs sm:inline-flex"
+                >
+                  Log out
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link href="/login" className="btn-ghost px-3 py-2 text-xs sm:text-sm">
+                  Log in
+                </Link>
+                <Link href="/register" className="btn-primary px-3 py-2 text-xs sm:text-sm">
+                  Sign up
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* mobile drawer */}
+      {open && (
+        <div
+          className="anim-fade-in fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+      <aside
+        className={`glass-nav fixed bottom-0 left-0 top-0 z-50 flex w-72 flex-col border-r border-white/10 shadow-2xl shadow-black/50 transition-transform duration-300 ease-out md:hidden ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="border-b border-white/10 p-5">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 font-mono text-sm font-bold text-white shadow-lg shadow-violet-600/30">
+              NR
+            </span>
+            <span>
+              <span className="text-gradient block text-base font-bold leading-tight">
+                NextRouter REborn
+              </span>
+              <span className="block text-[11px] leading-tight text-zinc-500">
+                Unified AI gateway
+              </span>
+            </span>
+          </Link>
+        </div>
+
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {NAV_ITEMS.map((item) => {
+            const active =
+              pathname === item.href || pathname.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`relative block rounded-xl px-3 py-2.5 text-sm transition ${
+                  active
+                    ? 'bg-violet-500/15 font-medium text-violet-200'
+                    : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-400 to-cyan-400" />
+                )}
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-white/10 p-4">
+          {user ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/15 text-sm font-semibold uppercase text-violet-300">
+                  {user.username.charAt(0)}
+                </span>
+                <div className="min-w-0 text-sm">
+                  <div className="truncate font-medium text-zinc-100">{user.username}</div>
+                  <div className="truncate text-xs text-zinc-500">{user.email}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full rounded-xl border border-zinc-700/80 px-3 py-2 text-sm text-zinc-300 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Link href="/login" className="btn-ghost flex-1 px-3 py-2 text-center">
+                Log in
+              </Link>
+              <Link href="/register" className="btn-primary flex-1 px-3 py-2 text-center">
+                Sign up
+              </Link>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <main className="relative mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-8 sm:px-6">
+        {children}
+      </main>
+
+      {/* footer */}
+      <footer className="border-t border-white/5 py-6">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 text-xs text-zinc-600 sm:flex-row sm:px-6">
+          <span>NextRouter REborn — unified AI gateway</span>
+          <span className="flex items-center gap-1.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            All systems operational
+          </span>
+        </div>
+      </footer>
+    </>
+  );
+}

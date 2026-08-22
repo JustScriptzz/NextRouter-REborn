@@ -243,6 +243,67 @@ export interface ChatCallOptions {
   remainingBudget: number;
 }
 
+async function peekSseForUpstreamError(
+  stream: ReadableStream<Uint8Array>,
+): Promise<ReadableStream<Uint8Array> | null> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+
+  for (;;) {
+    const lines = pending.split('\n');
+    let verdict: 'ok' | 'none' = 'none';
+    for (let i = 0; i < lines.length - 1; i++) {
+      const line = lines[i].trim();
+      if (!line || line.startsWith(':')) continue;
+      if (!line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const parsed = JSON.parse(payload) as Record<string, unknown>;
+        if (parsed && typeof parsed === 'object' && 'error' in parsed) {
+          void reader.cancel().catch(() => undefined);
+          return null;
+        }
+      } catch {
+        /* not json */
+      }
+      verdict = 'ok';
+      break;
+    }
+    if (verdict === 'ok') break;
+
+    const { done, value } = await reader.read();
+    if (done) {
+      void reader.cancel().catch(() => undefined);
+      return null;
+    }
+    pending += decoder.decode(value, { stream: true });
+  }
+
+  const leftover = pending;
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(enc.encode(leftover));
+    },
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(value);
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+}
+
 export async function chatCompletions(opts: ChatCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId, remainingBudget } =
     opts;
@@ -277,7 +338,11 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
     if (!stream) {
       throw new UpstreamRequestError(502, 'Upstream returned no stream');
     }
-    const counted = stream.pipeThrough(
+    const guarded = await peekSseForUpstreamError(stream);
+    if (!guarded) {
+      throw new UpstreamRequestError(503, 'Service temporarily unavailable');
+    }
+    const counted = guarded.pipeThrough(
       createBudgetTransform({ userId, remainingBudget, inputTokens, upstreamModel, publicModelId }),
     );
     return new Response(counted, {
