@@ -110,6 +110,8 @@ interface GatewaySlot {
   apiKeyEnv: string;
   modelsEnv: string;
   defaultBaseUrl: string;
+  disableLive?: boolean;
+  staticModels?: string[];
   excludeOwners?: string[];
   excludeTiers?: string[];
   excludeSubstrings?: string[];
@@ -137,6 +139,57 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'COGITO_API_KEY',
     modelsEnv: 'COGITO_MODELS',
     defaultBaseUrl: '',
+    disableLive: true,
+    staticModels: [
+      'big-pickle',
+      'claude-fable-5',
+      'claude-haiku-4-5',
+      'claude-opus-4-5',
+      'claude-opus-4-6',
+      'claude-opus-4-7',
+      'claude-opus-4-8',
+      'claude-opus-5',
+      'claude-sonnet-4',
+      'claude-sonnet-4-5',
+      'claude-sonnet-4-6',
+      'claude-sonnet-5',
+      'deepseek-v4-flash-free',
+      'gemini-3-flash',
+      'gemini-3.1-pro',
+      'gemini-3.5-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.6-flash',
+      'gemini-3.7-flash',
+      'glm-5',
+      'glm-5.1',
+      'gpt-5-codex',
+      'gpt-5-nano',
+      'gpt-5.1-codex',
+      'gpt-5.1-codex-max',
+      'gpt-5.1-codex-mini',
+      'gpt-5.2-codex',
+      'gpt-5.3-codex',
+      'gpt-5.3-codex-spark',
+      'gpt-5.4-mini',
+      'gpt-5.4-nano',
+      'gpt-5.4-pro',
+      'gpt-5.5-pro',
+      'grok-build-0.1',
+      'hy3-free',
+      'kimi-k2.5',
+      'kimi-k2.6',
+      'kimi-k2.7-code',
+      'laguna-s-2.1-free',
+      'mimo-v2.5-free',
+      'minimax-m2.5',
+      'minimax-m2.7',
+      'muse-spark-1.2-contributor-free',
+      'nemotron-3-ultra-free',
+      'nemotron-3.5-lightning-free',
+      'qwen3.5-plus',
+      'qwen3.6-plus',
+      'x-preview-f-free',
+    ],
   },
   {
     provider: 'groq',
@@ -267,6 +320,25 @@ export async function getCatalog(): Promise<Catalog> {
     const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
     if (!baseUrl) continue;
     const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+
+    if (slot.disableLive) {
+      for (const upstreamModel of listFromEnv(slot.modelsEnv).length
+        ? listFromEnv(slot.modelsEnv)
+        : slot.staticModels ?? []) {
+        add({
+          id: upstreamModel,
+          type: classifyModel(upstreamModel),
+          description: describeModel(upstreamModel),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(baseUrl),
+          apiKey,
+          upstreamModel,
+          supportsImageEdits: false,
+        });
+      }
+      continue;
+    }
+
     const live = await liveGatewayModels(slot);
 
     if (live && live.length > 0) {
