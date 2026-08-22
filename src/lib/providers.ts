@@ -139,6 +139,13 @@ const GATEWAYS: GatewaySlot[] = [
     defaultBaseUrl: '',
   },
   {
+    provider: 'groq',
+    baseUrlEnv: 'GROQ_BASE_URL',
+    apiKeyEnv: 'GROQ_API_KEY',
+    modelsEnv: 'GROQ_MODELS',
+    defaultBaseUrl: 'https://api.groq.com/openai',
+  },
+  {
     provider: 'jankrouter',
     baseUrlEnv: 'JANKROUTER_BASE_URL',
     apiKeyEnv: 'JANKROUTER_API_KEY',
@@ -297,6 +304,11 @@ export async function getCatalog(): Promise<Catalog> {
 export async function getCatalogModel(id: string): Promise<CatalogEntry | null> {
   const catalog = await getCatalog();
   return catalog.byId.get(id) ?? null;
+}
+
+export async function getCatalogModelProviders(id: string): Promise<CatalogEntry[]> {
+  const catalog = await getCatalog();
+  return catalog.models.filter((m) => m.id === id);
 }
 
 export async function getFallbackModelId(): Promise<string | null> {

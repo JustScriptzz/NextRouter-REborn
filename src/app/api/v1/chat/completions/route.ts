@@ -2,7 +2,7 @@ import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
-import { getCatalogModel } from '@/lib/providers';
+import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
 import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
@@ -12,9 +12,13 @@ export const runtime = 'nodejs';
 const RETRY_MAX_ATTEMPTS = 60;
 const RETRY_BASE_DELAY_MS = 2000;
 const RETRY_MAX_DELAY_MS = 10000;
-const RETRY_TIME_BUDGET_MS = 240000;
+const RETRY_TIME_BUDGET_MS = 180000;
+const REQUEST_HARD_DEADLINE_MS = 280000;
+const PROVIDER_FAILOVER_ATTEMPTS = 2;
+const PROVIDER_FAILOVER_BUDGET_MS = 25000;
 
 export async function POST(req: Request) {
+  const requestStart = Date.now();
   const user = await getUserFromApiKey(req.headers.get('authorization'));
   if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
 
@@ -44,19 +48,60 @@ export async function POST(req: Request) {
       return jsonErrorCors(400, `Model "${modelId}" is not a text model`);
     }
     try {
-      return await withRetry(() =>
-        chatCompletions({
-          baseUrl: catalogEntry.baseUrl,
-          apiKey: catalogEntry.apiKey,
-          upstreamModel: catalogEntry.upstreamModel,
-          publicModelId: catalogEntry.id,
-          body,
-          signal,
-          userId: user.id,
-          remainingBudget: remaining,
-        }),
+      return await withRetry(
+        () =>
+          chatCompletions({
+            baseUrl: catalogEntry.baseUrl,
+            apiKey: catalogEntry.apiKey,
+            upstreamModel: catalogEntry.upstreamModel,
+            publicModelId: catalogEntry.id,
+            body,
+            signal,
+            userId: user.id,
+            remainingBudget: remaining,
+          }),
+        { deadlineAt: requestStart + RETRY_TIME_BUDGET_MS },
       );
     } catch (error) {
+      if (error instanceof UpstreamRequestError && !isRetryable(error.status)) {
+        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+      }
+      if (isAbortError(error)) {
+        return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+      }
+
+      // Same model ID, next provider that carries it (redundant pipe, never a different model)
+      const providerAlternates = (await getCatalogModelProviders(modelId)).filter(
+        (e) => e.provider !== catalogEntry.provider,
+      );
+      for (const alt of providerAlternates) {
+        if (Date.now() >= requestStart + REQUEST_HARD_DEADLINE_MS) break;
+        try {
+          return await withRetry(
+            () =>
+              chatCompletions({
+                baseUrl: alt.baseUrl,
+                apiKey: alt.apiKey,
+                upstreamModel: alt.upstreamModel,
+                publicModelId: alt.id,
+                body,
+                signal,
+                userId: user.id,
+                remainingBudget: remaining,
+              }),
+            {
+              maxAttempts: PROVIDER_FAILOVER_ATTEMPTS,
+              deadlineAt: Math.min(
+                requestStart + REQUEST_HARD_DEADLINE_MS,
+                Date.now() + PROVIDER_FAILOVER_BUDGET_MS,
+              ),
+            },
+          );
+        } catch {
+          continue;
+        }
+      }
+
       if (error instanceof UpstreamRequestError) {
         return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
       }
