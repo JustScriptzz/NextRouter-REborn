@@ -155,6 +155,14 @@ const GATEWAYS: GatewaySlot[] = [
     defaults: ['cogito-v1-preview'],
   },
   {
+    provider: 'jankrouter',
+    baseUrlEnv: 'JANKROUTER_BASE_URL',
+    apiKeyEnv: 'JANKROUTER_API_KEY',
+    modelsEnv: 'JANKROUTER_MODELS',
+    defaultBaseUrl: 'https://jankrouter.waifly.com/',
+    defaults: [],
+  },
+  {
     provider: 'aquadevs',
     baseUrlEnv: 'AQUADEVS_BASE_URL',
     apiKeyEnv: 'AQUADEVS_API_KEY',
