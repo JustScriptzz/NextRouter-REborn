@@ -140,7 +140,7 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'COGITO_MODELS',
     defaultBaseUrl: '',
     disableLive: true,
-    staticModels: [],
+    staticModels: ['x-preview-f-free'],
   },
   {
     provider: 'groq',
