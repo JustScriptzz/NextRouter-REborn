@@ -267,8 +267,12 @@ async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | n
 
 export async function getCatalog(): Promise<Catalog> {
   const byId = new Map<string, CatalogEntry>();
+  const normalizedIds = new Map<string, string>();
   const add = (entry: CatalogEntry) => {
-    if (!byId.has(entry.id)) byId.set(entry.id, entry);
+    const normalized = entry.id.replace(/-/g, '');
+    if (byId.has(entry.id) || normalizedIds.has(normalized)) return;
+    byId.set(entry.id, entry);
+    normalizedIds.set(normalized, entry.id);
   };
 
   for (const slot of GATEWAYS) {
