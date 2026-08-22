@@ -2,25 +2,28 @@
 
 import { useEffect, useState } from 'react';
 
-const SECTIONS: Array<{ key: string; label: string; hint: string }> = [
-  { key: 'blocked_models', label: 'Blocked models', hint: 'One model ID per line — hidden from catalog and unroutable.' },
-  { key: 'pinned_models', label: 'Pinned models', hint: 'One ID per line — shown first on the models page, in order.' },
-  { key: 'unlimited_emails', label: 'Unlimited emails', hint: 'Extra emails with no daily cap (beyond hardcoded owners).' },
-  { key: 'disabled_providers', label: 'Disabled providers', hint: 'Provider names to skip entirely (e.g. jankrouter).' },
-  { key: 'banner', label: 'Global banner', hint: 'First line is shown site-wide to every user. Empty = off.' },
+const SECTIONS: Array<{ key: string; label: string; hint: string; placeholder?: string }> = [
+  { key: 'blocked_models', label: 'Blocked models', hint: 'One model ID per line — hidden from catalog and unroutable.', placeholder: 'kimi-k3\nnova-3' },
+  { key: 'pinned_models', label: 'Pinned models', hint: 'One ID per line — shown first on the models page, in order.', placeholder: 'kiro-auto\nnanobanana' },
+  { key: 'unlimited_emails', label: 'Unlimited emails', hint: 'Extra emails with no daily cap (beyond hardcoded owners).', placeholder: 'friend@example.com' },
+  { key: 'disabled_providers', label: 'Disabled providers', hint: 'Provider names to skip entirely.', placeholder: 'jankrouter' },
+  { key: 'banner', label: 'Global banner', hint: 'Shown site-wide to every user. Empty = off.', placeholder: 'Scheduled maintenance at midnight UTC' },
   {
     key: 'model_rules',
-    label: 'Model rules (rename / rename ID / edit name / override endpoint / add model)',
-    hint: 'One rule per line:\nadd | public-id | text|image|tts|stt|embedding | https://base/v1 | upstream-model | display name | apiKey\nrename | old-id | new-id\nname | model-id | New display name\nendpoint | model-id | https://new-base/v1',
+    label: 'Model rules',
+    hint: 'Rename / re-ID / edit name / reroute / add models — one rule per line:\nrename | old-id | new-id\nname | model-id | New display name\nendpoint | model-id | https://new-base/v1\nadd | public-id | text | https://base/v1 | upstream-id | Display Name | optional-key',
+    placeholder: 'name | kimi-k3 | Kimi K3 (fast)\nendpoint | glm-5.2 | https://backup.example.com/v1',
   },
   {
     key: 'extra_gateways',
-    label: 'Extra gateways / endpoints',
-    hint: 'One per line: name | https://base-url | optional-api-key — live-fetched like built-ins.',
+    label: 'Extra gateways',
+    hint: 'Add whole endpoints, live-fetched like built-ins:\nname | https://base-url | optional-api-key',
+    placeholder: 'myagg | https://api.example.com/v1 | sk-...',
   },
 ];
 
-export default function AdminConfig() {
+export default function AdminConfig({ sections }: { sections: string[] }) {
+  const shown = SECTIONS.filter((s) => sections.includes(s.key));
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState('');
   const [saved, setSaved] = useState('');
@@ -57,12 +60,12 @@ export default function AdminConfig() {
 
   return (
     <div className="space-y-4">
-      {SECTIONS.map((s) => (
+      {shown.map((s) => (
         <div key={s.key} className="card p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-zinc-100">{s.label}</h3>
-              <p className="mt-0.5 text-xs text-zinc-500">{s.hint}</p>
+              <p className="mt-0.5 whitespace-pre-line text-xs text-zinc-500">{s.hint}</p>
             </div>
             <button
               type="button"
@@ -80,6 +83,7 @@ export default function AdminConfig() {
             onChange={(e) => setValues((prev) => ({ ...prev, [s.key]: e.target.value }))}
             rows={s.key === 'banner' ? 2 : 4}
             spellCheck={false}
+            placeholder={s.placeholder}
             className="input-dark mt-3 font-mono text-xs"
           />
         </div>
