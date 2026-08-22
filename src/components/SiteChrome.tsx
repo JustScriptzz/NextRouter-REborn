@@ -21,8 +21,16 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<{ email: string; username: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [banner, setBanner] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/banner')
+      .then((r) => r.json())
+      .then((d) => setBanner(d?.message ?? null))
+      .catch(() => undefined);
+  }, []);
 
   const loadUser = useCallback(() => {
     fetch('/api/auth/me')
@@ -164,6 +172,12 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
           </div>
         </div>
       </header>
+
+      {banner && (
+        <div className="border-b border-violet-500/20 bg-violet-500/10 px-4 py-2 text-center text-xs font-medium text-violet-200">
+          {banner}
+        </div>
+      )}
 
       {/* mobile drawer */}
       {open && (

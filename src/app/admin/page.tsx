@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { desc, eq, sql } from 'drizzle-orm';
 import { getSessionUser } from '@/lib/auth';
 import { isAdminEmail } from '@/lib/admin';
 import { getCatalog, getGatewaysHealth } from '@/lib/providers';
+import { db } from '@/lib/db/client';
+import { dailyUsage, users } from '@/lib/db/schema';
 import AdminRefresh from './AdminRefresh';
+import AdminConfig from './AdminConfig';
 
 export const metadata: Metadata = {
   title: 'Admin',
@@ -51,6 +55,34 @@ export default async function AdminPage() {
     byProvider.set(m.provider, (byProvider.get(m.provider) ?? 0) + 1);
   }
 
+  const totals = await db
+    .select({
+      tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`,
+      calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)`,
+    })
+    .from(dailyUsage);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayTotals = await db
+    .select({
+      tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`,
+      calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)`,
+    })
+    .from(dailyUsage)
+    .where(eq(dailyUsage.date, todayStr));
+  const topUsers = await db
+    .select({
+      username: users.username,
+      email: users.email,
+      tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`,
+      calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)`,
+    })
+    .from(users)
+    .leftJoin(dailyUsage, eq(dailyUsage.userId, users.id))
+    .groupBy(users.id, users.username, users.email)
+    .orderBy(desc(sql`coalesce(sum(${dailyUsage.tokens}), 0)`))
+    .limit(15);
+  const userCount = await db.select({ n: sql<number>`count(*)` }).from(users);
+
   return (
     <div className="mx-auto max-w-3xl py-10">
       <div className="anim-fade-up flex items-center justify-between gap-4">
@@ -93,6 +125,53 @@ export default async function AdminPage() {
           </tbody>
         </table>
       </div>
+
+      <div className="anim-fade-up delay-2 mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-zinc-500">Users</div>
+          <div className="mt-1 text-xl font-bold text-zinc-100">{Number(userCount[0]?.n ?? 0)}</div>
+        </div>
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-zinc-500">Tokens today</div>
+          <div className="mt-1 text-xl font-bold text-zinc-100">{Number(todayTotals[0]?.tokens ?? 0).toLocaleString()}</div>
+        </div>
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-zinc-500">Calls today</div>
+          <div className="mt-1 text-xl font-bold text-zinc-100">{Number(todayTotals[0]?.calls ?? 0).toLocaleString()}</div>
+        </div>
+        <div className="card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-zinc-500">All-time tokens</div>
+          <div className="mt-1 text-xl font-bold text-zinc-100">{Number(totals[0]?.tokens ?? 0).toLocaleString()}</div>
+        </div>
+      </div>
+
+      <h2 className="mt-10 mb-3 text-lg font-semibold text-zinc-100">Top users</h2>
+      <div className="card overflow-hidden p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-wider text-zinc-500">
+              <th className="px-5 py-3 font-medium">User</th>
+              <th className="px-5 py-3 font-medium">Calls</th>
+              <th className="px-5 py-3 text-right font-medium">Tokens</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topUsers.map((u) => (
+              <tr key={u.email} className="border-b border-white/5 last:border-0">
+                <td className="px-5 py-2.5">
+                  <div className="text-zinc-200">@{u.username}</div>
+                  <div className="text-xs text-zinc-500">{u.email}</div>
+                </td>
+                <td className="px-5 py-2.5 tabular-nums text-zinc-400">{Number(u.calls).toLocaleString()}</td>
+                <td className="px-5 py-2.5 text-right font-mono text-xs text-zinc-400">{Number(u.tokens).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mt-10 mb-3 text-lg font-semibold text-zinc-100">Platform controls</h2>
+      <AdminConfig />
     </div>
   );
 }

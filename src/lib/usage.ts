@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from './db/client';
 import { dailyUsage } from './db/schema';
 import type { UsagePoint, UsageSummary } from './types';
+import { kvGetCached } from './kv';
 
 export const DAILY_TOKEN_LIMIT = 500_000;
 
@@ -76,9 +77,22 @@ const UNLIMITED_EMAILS = new Set([
   'ciullo.marco13@gmail.com',
 ]);
 
+let dynamicUnlimited: string[] = [];
+void kvGetCached('unlimited_emails').then((v) => {
+  dynamicUnlimited = v;
+});
+const UNLIMITED_REFRESH = setInterval(() => {
+  void kvGetCached('unlimited_emails').then((v) => {
+    dynamicUnlimited = v;
+  });
+}, 20000);
+if (typeof UNLIMITED_REFRESH.unref === 'function') UNLIMITED_REFRESH.unref();
+
 export function isUnlimitedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
-  return UNLIMITED_EMAILS.has(email.trim().toLowerCase());
+  const normalized = email.trim().toLowerCase();
+  if (UNLIMITED_EMAILS.has(normalized)) return true;
+  return dynamicUnlimited.map((v) => v.toLowerCase()).includes(normalized);
 }
 
 export const UNLIMITED_BUDGET = Number.MAX_SAFE_INTEGER;

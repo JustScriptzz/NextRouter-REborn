@@ -1,5 +1,6 @@
 import type { ModelKind } from './types';
 import { withV1Prefix } from './upstream';
+import { kvGetCached } from './kv';
 
 export interface CatalogEntry {
   id: string;
@@ -268,6 +269,8 @@ export async function getCatalog(): Promise<Catalog> {
   };
 
   for (const slot of GATEWAYS) {
+    const disabledProviders = await kvGetCached('disabled_providers');
+    if (disabledProviders.includes(slot.provider)) continue;
     const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
     if (!baseUrl) continue;
     const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
@@ -328,7 +331,22 @@ export async function getCatalog(): Promise<Catalog> {
     }
   }
 
-  const catalog: Catalog = { models: [...byId.values()], byId };
+  const blockedModels = await kvGetCached('blocked_models');
+  const pinnedModels = await kvGetCached('pinned_models');
+  let modelsOut = [...byId.values()];
+  if (blockedModels.length > 0) {
+    const blocked = new Set(blockedModels.map((b) => b.toLowerCase()));
+    modelsOut = modelsOut.filter((m) => !blocked.has(m.id.toLowerCase()));
+  }
+  if (pinnedModels.length > 0) {
+    const pinOrder = new Map(pinnedModels.map((id, i) => [id.toLowerCase(), i]));
+    modelsOut.sort(
+      (a, b) =>
+        (pinOrder.get(a.id.toLowerCase()) ?? 9999) -
+        (pinOrder.get(b.id.toLowerCase()) ?? 9999),
+    );
+  }
+  const catalog: Catalog = { models: modelsOut, byId };
   return catalog;
 }
 
