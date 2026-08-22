@@ -8,6 +8,16 @@ const SECTIONS: Array<{ key: string; label: string; hint: string }> = [
   { key: 'unlimited_emails', label: 'Unlimited emails', hint: 'Extra emails with no daily cap (beyond hardcoded owners).' },
   { key: 'disabled_providers', label: 'Disabled providers', hint: 'Provider names to skip entirely (e.g. jankrouter).' },
   { key: 'banner', label: 'Global banner', hint: 'First line is shown site-wide to every user. Empty = off.' },
+  {
+    key: 'model_rules',
+    label: 'Model rules (rename / rename ID / edit name / override endpoint / add model)',
+    hint: 'One rule per line:\nadd | public-id | text|image|tts|stt|embedding | https://base/v1 | upstream-model | display name | apiKey\nrename | old-id | new-id\nname | model-id | New display name\nendpoint | model-id | https://new-base/v1',
+  },
+  {
+    key: 'extra_gateways',
+    label: 'Extra gateways / endpoints',
+    hint: 'One per line: name | https://base-url | optional-api-key — live-fetched like built-ins.',
+  },
 ];
 
 export default function AdminConfig() {

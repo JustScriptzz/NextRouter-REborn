@@ -196,10 +196,15 @@ const globalForCatalog = globalThis as unknown as {
   lastGoodGatewayModels?: Record<string, { at: number; models: LiveModelInfo[] }>;
 };
 
-async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | null> {
-  const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
+async function liveGatewayModels(
+  slot: GatewaySlot,
+  overrides?: { baseUrl?: string; apiKey?: string },
+): Promise<LiveModelInfo[] | null> {
+  const baseUrl =
+    overrides?.baseUrl ??
+    cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
   if (!baseUrl) return null;
-  const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+  const apiKey = overrides?.apiKey ?? cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
   const cacheKey = `${slot.provider}::${baseUrl}`;
   const cache = globalForCatalog.gatewayModels?.[cacheKey];
   const now = Date.now();
@@ -330,6 +335,74 @@ export async function getCatalog(): Promise<Catalog> {
       });
     }
   }
+
+  const extraGateways = await kvGetCached('extra_gateways');
+  for (const line of extraGateways) {
+    const parts = line.split('|').map((p) => p.trim());
+    if (parts.length < 2) continue;
+    const [name, gwBaseUrl, gwKey] = parts;
+    const slot: GatewaySlot = {
+      provider: name.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom',
+      baseUrlEnv: '',
+      apiKeyEnv: '',
+      modelsEnv: '',
+      defaultBaseUrl: gwBaseUrl,
+    };
+    const live = await liveGatewayModels(slot, { baseUrl: gwBaseUrl, apiKey: gwKey ?? '' });
+    if (live && live.length > 0) {
+      for (const info of live) {
+        const type = resolveLiveType(info);
+        if (!type) continue;
+        add({
+          id: info.id,
+          type,
+          description: info.displayName ?? describeModel(info.id),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(gwBaseUrl),
+          apiKey: gwKey ?? '',
+          upstreamModel: info.id,
+          supportsImageEdits: info.endpoints.includes('images/edits'),
+        });
+      }
+    }
+  }
+
+  const rules = await kvGetCached('model_rules');
+  const entries = [...byId.values()];
+  for (const rule of rules) {
+    const parts = rule.split('|').map((p) => p.trim());
+    const cmd = parts[0]?.toLowerCase();
+    if (cmd === 'add' && parts.length >= 5) {
+      const id = parts[1];
+      const type = ALL_KINDS.includes(parts[2] as ModelKind) ? (parts[2] as ModelKind) : 'text';
+      entries.push({
+        id,
+        type,
+        description: parts[5] ?? describeModel(id),
+        provider: 'admin',
+        baseUrl: withV1Prefix(parts[3]),
+        apiKey: parts[6] ?? '',
+        upstreamModel: parts[4] ?? id,
+        supportsImageEdits: false,
+      });
+    } else if (cmd === 'rename' && parts.length >= 3) {
+      const target = entries.find((x) => x.id === parts[1]);
+      if (target) target.id = parts[2];
+    } else if (cmd === 'endpoint' && parts.length >= 3) {
+      const target = entries.find((x) => x.id === parts[1]);
+      if (target) target.baseUrl = withV1Prefix(parts[2]);
+    } else if (cmd === 'name' && parts.length >= 3) {
+      const target = entries.find((x) => x.id === parts[1]);
+      if (target) target.description = parts[2];
+    }
+  }
+
+  const rebuiltById = new Map<string, CatalogEntry>();
+  for (const entry of entries) {
+    if (!rebuiltById.has(entry.id)) rebuiltById.set(entry.id, entry);
+  }
+  byId.clear();
+  for (const [k, v] of rebuiltById) byId.set(k, v);
 
   const blockedModels = await kvGetCached('blocked_models');
   const pinnedModels = await kvGetCached('pinned_models');

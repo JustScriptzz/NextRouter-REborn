@@ -6,7 +6,7 @@ import { clearGatewayCaches } from '@/lib/providers';
 
 export const runtime = 'nodejs';
 
-const ALLOWED_KEYS = ['blocked_models', 'pinned_models', 'unlimited_emails', 'disabled_providers', 'banner'];
+const ALLOWED_KEYS = ['blocked_models', 'pinned_models', 'unlimited_emails', 'disabled_providers', 'banner', 'model_rules', 'extra_gateways'];
 
 export async function GET() {
   const user = await getSessionUser();
