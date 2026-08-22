@@ -323,3 +323,33 @@ export async function getFallbackModelId(): Promise<string | null> {
   const catalog = await getCatalog();
   return catalog.models.find((entry) => entry.type === 'text')?.id ?? null;
 }
+
+export function clearGatewayCaches(): void {
+  globalForCatalog.gatewayModels = {};
+}
+
+export interface GatewayHealth {
+  provider: string;
+  configured: boolean;
+  baseUrl: string;
+  cachedModels: number | null;
+  lastSuccessAt: number | null;
+  lastAttemptAt: number | null;
+}
+
+export function getGatewaysHealth(): GatewayHealth[] {
+  return GATEWAYS.map((slot) => {
+    const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
+    const fresh = globalForCatalog.gatewayModels?.[`${slot.provider}::${baseUrl}`] ?? null;
+    const lastGood =
+      globalForCatalog.lastGoodGatewayModels?.[`${slot.provider}::${baseUrl}`] ?? null;
+    return {
+      provider: slot.provider,
+      configured: baseUrl.length > 0,
+      baseUrl,
+      cachedModels: fresh?.models ? fresh.models.length : null,
+      lastSuccessAt: lastGood?.at ?? null,
+      lastAttemptAt: fresh?.at ?? null,
+    };
+  });
+}

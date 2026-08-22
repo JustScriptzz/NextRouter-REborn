@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 interface MeResponse {
   user: { email: string; username: string } | null;
+  isAdmin?: boolean;
 }
 
 const NAV_ITEMS = [
@@ -19,13 +20,17 @@ const NAV_ITEMS = [
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<{ email: string; username: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   const loadUser = useCallback(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((data: MeResponse) => setUser(data.user))
+      .then((data: MeResponse) => {
+        setUser(data.user);
+        setIsAdmin(!!data.isAdmin);
+      })
       .catch(() => setUser(null));
   }, []);
 
@@ -112,6 +117,18 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
                 </Link>
               );
             })}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`rounded-xl px-3.5 py-2 text-sm transition ${
+                  pathname === '/admin'
+                    ? 'bg-cyan-500/15 font-medium text-cyan-200'
+                    : 'text-cyan-300/80 hover:bg-white/5 hover:text-cyan-200'
+                }`}
+              >
+                Admin
+              </Link>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-2 md:ml-3">
