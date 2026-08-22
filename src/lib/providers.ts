@@ -183,11 +183,12 @@ function isExcludedSubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
 }
 
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
-const LIVE_MODELS_TIMEOUT_MS = 8000;
+const LIVE_MODELS_TIMEOUT_MS = 15000;
 const LIVE_MODELS_MAX = 500;
 
 const globalForCatalog = globalThis as unknown as {
   gatewayModels?: Record<string, { at: number; models: LiveModelInfo[] | null }>;
+  lastGoodGatewayModels?: Record<string, { at: number; models: LiveModelInfo[] }>;
 };
 
 async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | null> {
@@ -241,6 +242,13 @@ async function liveGatewayModels(slot: GatewaySlot): Promise<LiveModelInfo[] | n
   }
 
   const gatewayModels = (globalForCatalog.gatewayModels ??= {});
+  if (models !== null && models.length > 0) {
+    const lastGood = (globalForCatalog.lastGoodGatewayModels ??= {});
+    lastGood[cacheKey] = { at: now, models };
+  } else {
+    const lastGood = globalForCatalog.lastGoodGatewayModels?.[cacheKey];
+    if (lastGood) models = lastGood.models;
+  }
   gatewayModels[cacheKey] = { at: now, models };
   return models;
 }
