@@ -31,6 +31,7 @@ interface LiveModelInfo {
 const MODEL_ALIASES = new Map<string, string>([
   ['os-alpha', 'x-preview-f-free'],
   ['os_alpha', 'x-preview-f-free'],
+  ['gemini-3-flash', 'gemini-3.6'],
 ]);
 
 function resolveAlias(id: string): string {
@@ -349,12 +350,36 @@ export async function getCatalog(): Promise<Catalog> {
         if (isExcludedOwner(slot, info)) continue;
         if (isExcludedTier(slot, info)) continue;
         if (isExcludedSubstring(slot, info)) continue;
+        const canonicalId = resolveAlias(info.id);
+        const isAliased = canonicalId !== info.id;
+        if (isAliased && byId.has(canonicalId)) {
+          const type = resolveLiveType(info);
+          if (!type) continue;
+          const existing = byId.get(canonicalId)!;
+          if (type !== existing.type) continue;
+          const alt: CatalogEntry = {
+            id: canonicalId,
+            type,
+            description: info.displayName ?? describeModel(canonicalId),
+            provider: slot.provider,
+            baseUrl: withV1Prefix(baseUrl),
+            apiKey,
+            upstreamModel: info.id,
+            supportsImageEdits: info.endpoints.includes('images/edits'),
+          };
+          const list = providersMap.get(canonicalId) ?? [existing];
+          if (!list.some((e) => e.provider === slot.provider && e.upstreamModel === info.id)) {
+            list.push(alt);
+            providersMap.set(canonicalId, list);
+          }
+          continue;
+        }
         const type = resolveLiveType(info);
         if (!type) continue;
         add({
-          id: info.id,
+          id: canonicalId,
           type,
-          description: info.displayName ?? describeModel(info.id),
+          description: info.displayName ?? describeModel(canonicalId),
           provider: slot.provider,
           baseUrl: withV1Prefix(baseUrl),
           apiKey,
