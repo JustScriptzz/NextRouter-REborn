@@ -52,9 +52,40 @@ export function ClientLoginForm() {
         />
       </div>
       <div>
-        <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-400">
-          Password
-        </label>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label htmlFor="password" className="text-sm font-medium text-zinc-400">
+            Password
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              const target = 'nextrouter@aster.cx';
+              const subject = encodeURIComponent('Password reset request');
+              const body = encodeURIComponent(
+                `Hello,\n\nI need a password reset for my account${email ? ` (${email})` : ''}.\n\nPlease help me reset it.\n`,
+              );
+              const domain = email.split('@')[1]?.toLowerCase() ?? '';
+              let url = `mailto:${target}?subject=${subject}&body=${body}`;
+              if (domain === 'gmail.com' || domain === 'googlemail.com') {
+                url = `https://mail.google.com/mail/?view=cm&fs=1&to=${target}&su=${subject}&body=${body}`;
+              } else if (domain === 'outlook.com' || domain === 'hotmail.com' || domain === 'live.com') {
+                url = `https://outlook.live.com/mail/0/deeplink/compose?to=${target}&subject=${subject}&body=${body}`;
+              } else if (domain === 'yahoo.com') {
+                url = `https://compose.mail.yahoo.com/?to=${target}&subject=${subject}&body=${body}`;
+              } else if (domain === 'proton.me' || domain === 'protonmail.com' || domain === 'pm.me') {
+                url = `https://mail.proton.me/u/0/inbox?compose`;
+              }
+              window.open(url, '_blank');
+              // Fallback to mailto for clients that block the web compose
+              if (!url.startsWith('mailto:')) {
+                setTimeout(() => window.location.assign(`mailto:${target}?subject=${subject}&body=${body}`), 400);
+              }
+            }}
+            className="text-xs font-medium text-violet-400 transition hover:text-violet-300"
+          >
+            Forgot password?
+          </button>
+        </div>
         <input
           id="password"
           type="password"
