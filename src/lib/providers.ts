@@ -128,6 +128,7 @@ interface GatewaySlot {
   excludeOwners?: string[];
   excludeTiers?: string[];
   excludeSubstrings?: string[];
+  onlyIfContains?: string[];
   matchExistingOnly?: boolean;
 }
 
@@ -162,6 +163,28 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'JANKROUTER_API_KEY',
     modelsEnv: 'JANKROUTER_MODELS',
     defaultBaseUrl: 'https://jankrouter.waifly.com/',
+  },
+  {
+    provider: 'kilo',
+    baseUrlEnv: 'KILO_BASE_URL',
+    apiKeyEnv: 'KILO_API_KEY',
+    modelsEnv: 'KILO_MODELS',
+    defaultBaseUrl: 'https://api.kilo.ai/api/gateway',
+    onlyIfContains: [':free', 'kilo-auto/free'],
+  },
+  {
+    provider: 'nvidia',
+    baseUrlEnv: 'NVIDIA_BASE_URL',
+    apiKeyEnv: 'NVIDIA_API_KEY',
+    modelsEnv: 'NVIDIA_MODELS',
+    defaultBaseUrl: 'https://integrate.api.nvidia.com/v1',
+  },
+  {
+    provider: 'cloudflare',
+    baseUrlEnv: 'CLOUDFLARE_AI_BASE_URL',
+    apiKeyEnv: 'CLOUDFLARE_AI_KEY',
+    modelsEnv: 'CLOUDFLARE_AI_MODELS',
+    defaultBaseUrl: '',
   },
   {
     provider: 'aquadevs',
@@ -199,6 +222,12 @@ function isExcludedSubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
   if (!slot.excludeSubstrings || slot.excludeSubstrings.length === 0) return false;
   const id = info.id.toLowerCase();
   return slot.excludeSubstrings.some((s) => id.includes(s.toLowerCase()));
+}
+
+function isAllowedBySubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.onlyIfContains || slot.onlyIfContains.length === 0) return true;
+  const id = info.id.toLowerCase();
+  return slot.onlyIfContains.some((s) => id.includes(s.toLowerCase()));
 }
 
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
@@ -350,6 +379,7 @@ export async function getCatalog(): Promise<Catalog> {
         if (isExcludedOwner(slot, info)) continue;
         if (isExcludedTier(slot, info)) continue;
         if (isExcludedSubstring(slot, info)) continue;
+        if (!isAllowedBySubstring(slot, info)) continue;
         const canonicalId = resolveAlias(info.id);
         const isAliased = canonicalId !== info.id;
         if (isAliased && byId.has(canonicalId)) {
