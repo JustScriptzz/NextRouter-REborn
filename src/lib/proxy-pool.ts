@@ -1,4 +1,4 @@
-import { ProxyAgent } from 'undici';
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 
 interface ProxyEntry {
   url: string;
@@ -120,7 +120,7 @@ function noteFailure(entry: ProxyEntry, cooldownMs?: number): void {
   );
 }
 
-type FetchInit = RequestInit & { dispatcher?: unknown };
+type UndiciInit = Parameters<typeof undiciFetch>[1];
 
 export async function proxiedFetch(url: string, init: RequestInit = {}): Promise<Response> {
   let host = '';
@@ -133,7 +133,10 @@ export async function proxiedFetch(url: string, init: RequestInit = {}): Promise
   const entry = pickEntry();
   if (!entry) return fetch(url, init);
   try {
-    const res = await fetch(url, { ...init, dispatcher: entry.agent } as FetchInit);
+    const res = (await undiciFetch(url, {
+      ...(init as Record<string, unknown>),
+      dispatcher: entry.agent,
+    } as UndiciInit)) as unknown as Response;
     if (res.status === 429) {
       const retryAfter = Number(res.headers.get('retry-after'));
       noteFailure(
@@ -146,7 +149,9 @@ export async function proxiedFetch(url: string, init: RequestInit = {}): Promise
     return res;
   } catch (error) {
     noteFailure(entry, NET_FAIL_COOLDOWN_MS);
-    throw error;
+    if (init.signal?.aborted) throw error;
+    console.warn(`[proxy-pool] ${entry.label} failed, falling back to direct connection`);
+    return fetch(url, init);
   }
 }
 

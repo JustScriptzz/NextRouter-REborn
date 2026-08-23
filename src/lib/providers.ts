@@ -232,7 +232,7 @@ function isAllowedBySubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
 }
 
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
-const LIVE_MODELS_TIMEOUT_MS = 15000;
+const LIVE_MODELS_TIMEOUT_MS = 25000;
 const LIVE_MODELS_MAX = 500;
 
 const globalForCatalog = globalThis as unknown as {
