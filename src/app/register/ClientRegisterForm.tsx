@@ -1,40 +1,54 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createElement } from 'react';
 
 import { apiErrorMessage } from '@/lib/api-error';
-import Turnstile from '@/components/Turnstile';
 
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+const ALTCHA_ENABLED = process.env.NEXT_PUBLIC_ALTCHA_ENABLED === 'true';
 
 export function ClientRegisterForm() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ALTCHA_ENABLED) return;
+    if (document.querySelector('script[data-altcha]')) return;
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/altcha/dist/altcha.js';
+    script.type = 'module';
+    script.dataset.altcha = '1';
+    document.head.appendChild(script);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (TURNSTILE_SITE_KEY && !turnstileToken) {
-      setError('Please complete the captcha first.');
-      return;
+    let altchaPayload: string | null = null;
+    if (ALTCHA_ENABLED && formRef.current) {
+      const input = formRef.current.querySelector<HTMLInputElement>('input[name="altcha"]');
+      altchaPayload = input?.value ?? null;
+      if (!altchaPayload) {
+        setError('Please complete the captcha first.');
+        return;
+      }
     }
     setLoading(true);
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, turnstileToken }),
+        body: JSON.stringify({ username, email, password, altchaPayload }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(apiErrorMessage(data, 'Registration failed'));
-        setTurnstileToken(null);
         return;
       }
       router.push('/models');
@@ -45,7 +59,7 @@ export function ClientRegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-zinc-400">
           Username
@@ -99,9 +113,13 @@ export function ClientRegisterForm() {
         />
         <p className="mt-1.5 text-xs text-zinc-600">At least 8 characters.</p>
       </div>
-      {TURNSTILE_SITE_KEY && (
-        <div>
-          <Turnstile siteKey={TURNSTILE_SITE_KEY} onToken={setTurnstileToken} />
+      {ALTCHA_ENABLED && (
+        <div className="altcha-box">
+          {createElement('altcha-widget', {
+            challengeurl: '/api/altcha/challenge',
+            name: 'altcha',
+            style: { '--altcha-color-text': '#a1a1aa' } as React.CSSProperties,
+          })}
         </div>
       )}
       {error && (
