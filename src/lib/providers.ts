@@ -28,6 +28,16 @@ interface LiveModelInfo {
   tier: string | null;
 }
 
+const MODEL_ALIASES = new Map<string, string>([
+  ['os-alpha', 'x-preview-f-free'],
+  ['os_alpha', 'x-preview-f-free'],
+]);
+
+function resolveAlias(id: string): string {
+  const lower = id.toLowerCase();
+  return MODEL_ALIASES.get(lower) ?? id;
+}
+
 const ALL_KINDS: ModelKind[] = ['text', 'image', 'tts', 'stt', 'video', 'embedding'];
 
 function listFromEnv(name: string): string[] {
@@ -458,15 +468,17 @@ export async function getCatalog(): Promise<Catalog> {
 }
 
 export async function getCatalogModel(id: string): Promise<CatalogEntry | null> {
+  const target = resolveAlias(id);
   const catalog = await getCatalog();
-  return catalog.byId.get(id) ?? null;
+  return catalog.byId.get(target) ?? catalog.byId.get(id) ?? null;
 }
 
 export async function getCatalogModelProviders(id: string): Promise<CatalogEntry[]> {
+  const target = resolveAlias(id);
   const catalog = await getCatalog();
-  const viaMap = catalog.providersMap?.get(id);
+  const viaMap = catalog.providersMap?.get(target) ?? catalog.providersMap?.get(id);
   if (viaMap && viaMap.length > 0) return viaMap;
-  return catalog.models.filter((m) => m.id === id);
+  return catalog.models.filter((m) => m.id === target || m.id === id);
 }
 
 export async function getFallbackModelId(): Promise<string | null> {
