@@ -8,6 +8,7 @@ import { db } from '@/lib/db/client';
 import { dailyUsage, users } from '@/lib/db/schema';
 import AdminRefresh from './AdminRefresh';
 import AdminConfig from './AdminConfig';
+import AdminModels from './AdminModels';
 import AdminUserManagement from './AdminUserManagement';
 
 export const metadata: Metadata = {
@@ -204,13 +205,14 @@ export default async function AdminPage({
       {(tab === 'models' || tab === 'providers' || tab === 'access' || tab === 'broadcast') && (
         <div className="mt-6">
           {tab === 'models' && (
-            <>
-              <p className="mb-4 text-xs text-zinc-500">
-                Catalog IDs for reference:{' '}
-                <span className="font-mono text-zinc-400">{catalogIds.join(', ')}</span>
-              </p>
-              <AdminConfig sections={['blocked_models', 'pinned_models', 'model_rules']} />
-            </>
+            <AdminModels
+              catalog={catalog.models.map((m) => ({
+                id: m.id,
+                type: m.type,
+                provider: m.provider,
+                description: m.description,
+              }))}
+            />
           )}
           {tab === 'providers' && <AdminConfig sections={['disabled_providers', 'extra_gateways']} />}
           {tab === 'access' && (
