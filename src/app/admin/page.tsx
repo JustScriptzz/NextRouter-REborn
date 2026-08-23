@@ -217,7 +217,7 @@ export default async function AdminPage({
           {tab === 'providers' && <AdminConfig sections={['disabled_providers', 'extra_gateways']} />}
           {tab === 'access' && (
             <>
-              <AdminConfig sections={['unlimited_emails']} />
+              <AdminConfig sections={['unlimited_emails', 'blocked_email_domains']} />
               <h2 className="mb-3 mt-8 text-lg font-semibold text-zinc-100">Users — manage</h2>
               <AdminUserManagement
                 initialUsers={topUsers.map((u) => ({

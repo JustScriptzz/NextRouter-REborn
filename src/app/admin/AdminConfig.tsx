@@ -6,6 +6,7 @@ const SECTIONS: Array<{ key: string; label: string; hint: string; placeholder?: 
   { key: 'blocked_models', label: 'Blocked models', hint: 'One model ID per line — hidden from catalog and unroutable.', placeholder: 'kimi-k3\nnova-3' },
   { key: 'pinned_models', label: 'Pinned models', hint: 'One ID per line — shown first on the models page, in order.', placeholder: 'kiro-auto\nnanobanana' },
   { key: 'unlimited_emails', label: 'Unlimited emails', hint: 'Extra emails with no daily cap (beyond hardcoded owners).', placeholder: 'friend@example.com' },
+  { key: 'blocked_email_domains', label: 'Blocked email domains', hint: 'Extra disposable domains rejected at signup (built-in list already covers 50+).', placeholder: 'spam-gpt.site\nfakemail.xyz' },
   { key: 'disabled_providers', label: 'Disabled providers', hint: 'Provider names to skip entirely.', placeholder: 'jankrouter' },
   { key: 'banner', label: 'Global banner', hint: 'Shown site-wide to every user. Empty = off.', placeholder: 'Scheduled maintenance at midnight UTC' },
   {

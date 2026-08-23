@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { apiErrorMessage } from '@/lib/api-error';
+import Turnstile from '@/components/Turnstile';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 export function ClientRegisterForm() {
   const router = useRouter();
@@ -12,20 +15,26 @@ export function ClientRegisterForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError('Please complete the captcha first.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, turnstileToken }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(apiErrorMessage(data, 'Registration failed'));
+        setTurnstileToken(null);
         return;
       }
       router.push('/models');
@@ -90,6 +99,11 @@ export function ClientRegisterForm() {
         />
         <p className="mt-1.5 text-xs text-zinc-600">At least 8 characters.</p>
       </div>
+      {TURNSTILE_SITE_KEY && (
+        <div>
+          <Turnstile siteKey={TURNSTILE_SITE_KEY} onToken={setTurnstileToken} />
+        </div>
+      )}
       {error && (
         <div className="anim-fade-in rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-300">
           {error}
