@@ -16,6 +16,7 @@ export interface CatalogEntry {
 export interface Catalog {
   models: CatalogEntry[];
   byId: Map<string, CatalogEntry>;
+  providersMap?: Map<string, CatalogEntry[]>;
 }
 
 interface LiveModelInfo {
@@ -116,6 +117,7 @@ interface GatewaySlot {
   excludeOwners?: string[];
   excludeTiers?: string[];
   excludeSubstrings?: string[];
+  matchExistingOnly?: boolean;
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -157,6 +159,14 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'AQUADEVS_MODELS',
     defaultBaseUrl: '',
     excludeTiers: ['premium'],
+  },
+  {
+    provider: 'ollamafree',
+    baseUrlEnv: 'OLLAMAFREE_BASE_URL',
+    apiKeyEnv: 'OLLAMAFREE_API_KEY',
+    modelsEnv: 'OLLAMAFREE_MODELS',
+    defaultBaseUrl: '',
+    matchExistingOnly: true,
   },
 ];
 
@@ -259,11 +269,14 @@ async function liveGatewayModels(
 export async function getCatalog(): Promise<Catalog> {
   const byId = new Map<string, CatalogEntry>();
   const normalizedIds = new Map<string, string>();
+  const providersMap = new Map<string, CatalogEntry[]>();
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const add = (entry: CatalogEntry) => {
     const normalized = entry.id.replace(/-/g, '');
     if (byId.has(entry.id) || normalizedIds.has(normalized)) return;
     byId.set(entry.id, entry);
     normalizedIds.set(normalized, entry.id);
+    providersMap.set(entry.id, [entry]);
   };
 
   for (const slot of GATEWAYS) {
@@ -295,6 +308,34 @@ export async function getCatalog(): Promise<Catalog> {
 
     if (live && live.length > 0) {
       for (const info of live) {
+        if (slot.matchExistingOnly) {
+          const n = norm(info.id);
+          let matched: CatalogEntry | null = null;
+          for (const existing of byId.values()) {
+            const e = norm(existing.id);
+            if (e === n || e.startsWith(n) || n.startsWith(e)) {
+              matched = existing;
+              break;
+            }
+          }
+          if (!matched) continue;
+          const type = resolveLiveType(info);
+          if (!type || type !== matched.type) continue;
+          const alt: CatalogEntry = {
+            id: matched.id,
+            type,
+            description: info.displayName ?? describeModel(matched.id),
+            provider: slot.provider,
+            baseUrl: withV1Prefix(baseUrl),
+            apiKey,
+            upstreamModel: info.id,
+            supportsImageEdits: false,
+          };
+          const list = providersMap.get(matched.id) ?? [];
+          list.push(alt);
+          providersMap.set(matched.id, list);
+          continue;
+        }
         if (isExcludedOwner(slot, info)) continue;
         if (isExcludedTier(slot, info)) continue;
         if (isExcludedSubstring(slot, info)) continue;
@@ -412,7 +453,7 @@ export async function getCatalog(): Promise<Catalog> {
         (pinOrder.get(b.id.toLowerCase()) ?? 9999),
     );
   }
-  const catalog: Catalog = { models: modelsOut, byId };
+  const catalog: Catalog = { models: modelsOut, byId, providersMap };
   return catalog;
 }
 
@@ -423,6 +464,8 @@ export async function getCatalogModel(id: string): Promise<CatalogEntry | null> 
 
 export async function getCatalogModelProviders(id: string): Promise<CatalogEntry[]> {
   const catalog = await getCatalog();
+  const viaMap = catalog.providersMap?.get(id);
+  if (viaMap && viaMap.length > 0) return viaMap;
   return catalog.models.filter((m) => m.id === id);
 }
 
