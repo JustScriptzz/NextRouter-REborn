@@ -1,5 +1,6 @@
 import type { ModelKind } from './types';
 import { recordUsage } from './usage';
+import { proxiedFetch } from './proxy-pool';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -311,7 +312,7 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
-    upstream = await fetch(url, {
+    upstream = await proxiedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -423,7 +424,7 @@ export async function imagesGenerations(opts: ImagesCallOptions): Promise<Respon
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
-    upstream = await fetch(url, {
+    upstream = await proxiedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -459,7 +460,7 @@ export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
-    upstream = await fetch(url, {
+    upstream = await proxiedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -505,7 +506,7 @@ export async function audioSpeech(opts: SpeechCallOptions): Promise<Response> {
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
-    upstream = await fetch(url, {
+    upstream = await proxiedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -552,7 +553,7 @@ export async function audioTranscriptions(opts: TranscriptionCallOptions): Promi
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
-    upstream = await fetch(url, {
+    upstream = await proxiedFetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -595,7 +596,7 @@ export async function embeddingsCall(opts: EmbeddingsCallOptions): Promise<Respo
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
-    upstream = await fetch(url, {
+    upstream = await proxiedFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

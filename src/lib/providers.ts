@@ -1,5 +1,6 @@
 import type { ModelKind } from './types';
 import { withV1Prefix } from './upstream';
+import { proxiedFetch } from './proxy-pool';
 import { kvGetCached } from './kv';
 
 export interface CatalogEntry {
@@ -256,7 +257,7 @@ async function liveGatewayModels(
   let models: LiveModelInfo[] | null = null;
   try {
     const url = `${withV1Prefix(baseUrl)}/models`;
-    const res = await fetch(url, {
+    const res = await proxiedFetch(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
       cache: 'no-store',
       signal: AbortSignal.timeout(LIVE_MODELS_TIMEOUT_MS),

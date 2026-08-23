@@ -16,7 +16,8 @@
     "next": "^15.1.0",
     "postgres": "^3.4.5",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "undici": "^8.10.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
