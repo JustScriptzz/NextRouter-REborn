@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { db } from './db/client';
 import { apiKeys } from './db/schema';
 import type { SessionUser } from './types';
+import { isBannedEmail } from './admin';
 
 const SESSION_COOKIE = 'nr_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
@@ -43,9 +44,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     const { payload } = await jwtVerify(token, getJwtSecret());
     const sub = payload.sub;
     if (!sub) return null;
+    const email = typeof payload.email === 'string' ? payload.email : '';
+    if (isBannedEmail(email)) return null;
     return {
       id: sub,
-      email: typeof payload.email === 'string' ? payload.email : '',
+      email,
       username: typeof payload.username === 'string' ? payload.username : '',
     };
   } catch {
@@ -80,5 +83,6 @@ export async function getUserFromApiKey(
     .catch(() => null);
   if (!row || row.revokedAt) return null;
   const user = row.user;
+  if (isBannedEmail(user.email)) return null;
   return { id: user.id, email: user.email, username: user.username };
 }

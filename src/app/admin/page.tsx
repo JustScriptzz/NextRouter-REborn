@@ -8,6 +8,7 @@ import { db } from '@/lib/db/client';
 import { dailyUsage, users } from '@/lib/db/schema';
 import AdminRefresh from './AdminRefresh';
 import AdminConfig from './AdminConfig';
+import AdminUserManagement from './AdminUserManagement';
 
 export const metadata: Metadata = {
   title: 'Admin',
@@ -215,20 +216,15 @@ export default async function AdminPage({
           {tab === 'access' && (
             <>
               <AdminConfig sections={['unlimited_emails']} />
-              <h2 className="mb-3 mt-8 text-lg font-semibold text-zinc-100">Users</h2>
-              <div className="card overflow-hidden p-0">
-                <ul className="divide-y divide-white/5">
-                  {topUsers.map((u) => (
-                    <li key={u.email} className="flex items-center justify-between px-5 py-2.5 text-sm">
-                      <span>
-                        <span className="text-zinc-200">@{u.username}</span>{' '}
-                        <span className="text-xs text-zinc-500">{u.email}</span>
-                      </span>
-                      <span className="font-mono text-xs text-zinc-400">{Number(u.tokens).toLocaleString()} tk</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <h2 className="mb-3 mt-8 text-lg font-semibold text-zinc-100">Users — manage</h2>
+              <AdminUserManagement
+                initialUsers={topUsers.map((u) => ({
+                  username: u.username,
+                  email: u.email,
+                  tokens: Number(u.tokens),
+                  calls: Number(u.calls),
+                }))}
+              />
             </>
           )}
           {tab === 'broadcast' && <AdminConfig sections={['banner']} />}
