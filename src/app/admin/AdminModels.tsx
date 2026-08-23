@@ -94,10 +94,26 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
         </select>
       </div>
 
-      <div className="flex flex-wrap gap-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{blocked.length} blocked</span>
         <span className="rounded-full bg-violet-500/15 px-3 py-1 text-violet-300">{pinned.length} pinned</span>
         <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{rules.length} rules</span>
+        <button
+          onClick={async () => {
+            if (!confirm(`Block every model where aquadevs is the only provider? This will add ${catalog.filter((m) => m.provider === 'aquadevs').length} models to the block list.`)) return;
+            const res = await fetch('/api/admin/models/block-aquadevs-only', { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+              setBlocked((prev) => {
+                const set = new Set([...prev, ...(data.blocked ?? [])]);
+                return Array.from(set);
+              });
+            }
+          }}
+          className="rounded-full bg-amber-500/15 px-3 py-1 font-medium text-amber-300 hover:bg-amber-500/25"
+        >
+          Block all aquadevs-only
+        </button>
       </div>
 
       <div className="card p-5">
