@@ -4,7 +4,7 @@ import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
 import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
-import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
+import { chatCompletions, isNoLoopStatus, UpstreamRequestError } from '@/lib/upstream';
 import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
     );
     let lastError: unknown = null;
     for (let round = 1; Date.now() < deadline; round++) {
+      let sawLoopableCause = false;
       for (const pipe of catalogPipes) {
         if (Date.now() >= deadline) break;
         try {
@@ -78,10 +79,14 @@ export async function POST(req: Request) {
           if (isAbortError(error)) {
             return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
           }
+          if (!(error instanceof UpstreamRequestError && isNoLoopStatus(error.status))) {
+            sawLoopableCause = true;
+          }
           lastError = error;
         }
       }
       if (Date.now() >= deadline) break;
+      if (!sawLoopableCause) break;
       await sleep(Math.min(backoffFor(round), Math.max(1, deadline - Date.now())));
     }
     if (lastError instanceof UpstreamRequestError) {
@@ -220,6 +225,9 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Prom
       return result;
     } catch (error) {
       if (isAbortError(error)) {
+        throw error;
+      }
+      if (error instanceof UpstreamRequestError && isNoLoopStatus(error.status)) {
         throw error;
       }
       lastError = error;
