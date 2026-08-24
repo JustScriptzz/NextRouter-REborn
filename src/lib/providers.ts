@@ -134,6 +134,7 @@ interface GatewaySlot {
   excludeSubstrings?: string[];
   excludeIds?: string[];
   onlyIfContains?: string[];
+  requiresKey?: boolean;
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -184,6 +185,7 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'NVIDIA_MODELS',
     defaultBaseUrl: 'https://integrate.api.nvidia.com/v1',
     matchExistingOnly: true,
+    requiresKey: true,
   },
   {
     provider: 'cloudflare',
@@ -191,6 +193,7 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'CLOUDFLARE_AI_KEY',
     modelsEnv: 'CLOUDFLARE_AI_MODELS',
     defaultBaseUrl: '',
+    requiresKey: true,
   },
   {
     provider: 'aquadevs',
@@ -348,6 +351,7 @@ export async function getCatalog(): Promise<Catalog> {
     const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
     if (!baseUrl) continue;
     const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+    if (slot.requiresKey && !apiKey) continue;
 
     if (slot.disableLive) {
       for (const upstreamModel of listFromEnv(slot.modelsEnv).length
