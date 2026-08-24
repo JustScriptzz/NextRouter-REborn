@@ -6,10 +6,6 @@ const PER_PIPE_ATTEMPTS = 2;
 const BASE_DELAY_MS = 1000;
 const MAX_DELAY_MS = 8000;
 
-function isRetryableStatus(status: number): boolean {
-  return status >= 500 || status === 408 || status === 425 || status === 429;
-}
-
 function isAbortError(error: unknown): boolean {
   return (
     typeof error === 'object' &&
@@ -44,17 +40,16 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
   const deadlineAt = opts.requestStart + opts.budgetMs;
   let lastError: unknown = null;
   for (let round = 1; Date.now() < deadlineAt; round++) {
-    let sawRetryableCause = false;
     for (const pipe of opts.pipes) {
       if (Date.now() >= deadlineAt) break;
       for (let attempt = 1; attempt <= PER_PIPE_ATTEMPTS; attempt++) {
         try {
           const res = await opts.call(pipe);
-          if (!res.ok && isRetryableStatus(res.status)) {
+          if (!res.ok) {
             const detail = await res.text().catch(() => '');
             throw new UpstreamRequestError(
               res.status,
-              detail ? detail.slice(0, 300) : 'Upstream retryable failure',
+              detail ? detail.slice(0, 300) : 'Upstream request failed',
             );
           }
           return res;
@@ -63,16 +58,12 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
             return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
           }
           lastError = error;
-          const retryable =
-            !(error instanceof UpstreamRequestError) || isRetryableStatus(error.status);
-          if (retryable) sawRetryableCause = true;
-          if (!retryable || attempt === PER_PIPE_ATTEMPTS || Date.now() >= deadlineAt) break;
+          if (attempt === PER_PIPE_ATTEMPTS || Date.now() >= deadlineAt) break;
           await sleep(Math.min(backoffFor(attempt), Math.max(1, deadlineAt - Date.now())));
         }
       }
     }
     if (Date.now() >= deadlineAt) break;
-    if (!sawRetryableCause) break;
     await sleep(Math.min(backoffFor(round), Math.max(1, deadlineAt - Date.now())));
   }
   if (!lastError) {

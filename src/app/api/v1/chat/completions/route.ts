@@ -210,18 +210,15 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Prom
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const result = await fn();
-      if (result instanceof Response && !result.ok && isRetryable(result.status)) {
+      if (result instanceof Response && !result.ok) {
         const detail = await result.text().catch(() => '');
         throw new UpstreamRequestError(
           result.status,
-          detail ? detail.slice(0, 300) : 'Upstream retryable failure',
+          detail ? detail.slice(0, 300) : 'Upstream request failed',
         );
       }
       return result;
     } catch (error) {
-      if (error instanceof UpstreamRequestError && !isRetryable(error.status)) {
-        throw error;
-      }
       if (isAbortError(error)) {
         throw error;
       }
