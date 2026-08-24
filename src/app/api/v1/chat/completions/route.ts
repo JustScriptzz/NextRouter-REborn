@@ -2,6 +2,7 @@ import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
+import { isAuthLikeStatus, isPipeQuarantined, quarantinePipe } from '@/lib/pipe-health';
 import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
@@ -54,7 +55,20 @@ export async function POST(req: Request) {
     );
     let lastError: unknown = null;
     for (let round = 1; Date.now() < deadline; round++) {
-      for (const pipe of catalogPipes) {
+      const activePipes = catalogPipes.filter(
+        (p) => !isPipeQuarantined(p.baseUrl, p.upstreamModel),
+      );
+      if (activePipes.length === 0) {
+        if (!lastError) {
+          return jsonErrorCors(
+            503,
+            'All provider pipes for this model are temporarily disabled',
+            'upstream_error',
+          );
+        }
+        break;
+      }
+      for (const pipe of activePipes) {
         if (Date.now() >= deadline) break;
         try {
           return await withRetry(
@@ -77,6 +91,9 @@ export async function POST(req: Request) {
         } catch (error) {
           if (isAbortError(error)) {
             return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+          }
+          if (error instanceof UpstreamRequestError && isAuthLikeStatus(error.status)) {
+            quarantinePipe(pipe.baseUrl, pipe.upstreamModel);
           }
           lastError = error;
         }
