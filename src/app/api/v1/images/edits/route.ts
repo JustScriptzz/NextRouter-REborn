@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     return cycleProviderPipes({
       pipes: editPipes,
       requestStart,
-      budgetMs: 52000,
+      budgetMs: 110000,
       call: (pipe) =>
         imagesEdits({
           baseUrl: pipe.baseUrl,
@@ -145,4 +145,4 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
 }
 
-export const maxDuration = 60;
+export const maxDuration = 150;

@@ -125,14 +125,15 @@ interface GatewaySlot {
   baseUrlEnv: string;
   apiKeyEnv: string;
   modelsEnv: string;
-  defaultBaseUrl: string;
-  disableLive?: boolean;
+  defaultBaseUrl?: string;
   staticModels?: string[];
+  disableLive?: boolean;
+  matchExistingOnly?: boolean;
   excludeOwners?: string[];
   excludeTiers?: string[];
   excludeSubstrings?: string[];
+  excludeIds?: string[];
   onlyIfContains?: string[];
-  matchExistingOnly?: boolean;
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -142,6 +143,7 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'LOGFARE_API_KEY',
     modelsEnv: 'LOGFARE_MODELS',
     defaultBaseUrl: '',
+    excludeIds: ['qwen3-embedding-8b'],
   },
   {
     provider: 'scriptzz',
@@ -212,6 +214,12 @@ function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
   if (!info.owner) return false;
   const owner = info.owner.toLowerCase();
   return slot.excludeOwners.some((o) => o.toLowerCase() === owner);
+}
+
+function isExcludedId(slot: GatewaySlot, id: string): boolean {
+  if (!slot.excludeIds || slot.excludeIds.length === 0) return false;
+  const lower = id.toLowerCase();
+  return slot.excludeIds.some((x) => x.toLowerCase() === lower);
 }
 
 function isExcludedTier(slot: GatewaySlot, info: LiveModelInfo): boolean {
@@ -391,6 +399,7 @@ export async function getCatalog(): Promise<Catalog> {
           providersMap.set(matched.id, list);
           continue;
         }
+        if (isExcludedId(slot, info.id)) continue;
         if (isExcludedOwner(slot, info)) continue;
         if (isExcludedTier(slot, info)) continue;
         if (isExcludedSubstring(slot, info)) continue;
