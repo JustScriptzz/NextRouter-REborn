@@ -313,10 +313,22 @@ export async function getCatalog(): Promise<Catalog> {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const add = (entry: CatalogEntry) => {
     const normalized = entry.id.replace(/-/g, '');
-    if (byId.has(entry.id) || normalizedIds.has(normalized)) return;
-    byId.set(entry.id, entry);
-    normalizedIds.set(normalized, entry.id);
-    providersMap.set(entry.id, [entry]);
+    const ownerId = byId.has(entry.id) ? entry.id : normalizedIds.get(normalized);
+    if (!ownerId) {
+      byId.set(entry.id, entry);
+      normalizedIds.set(normalized, entry.id);
+      providersMap.set(entry.id, [entry]);
+      return;
+    }
+    const existing = byId.get(ownerId);
+    if (!existing || existing.type !== entry.type) return;
+    if (ownerId !== entry.id) entry = { ...entry, id: ownerId };
+    const list = providersMap.get(ownerId) ?? [existing];
+    if (list.some((e) => e.provider === entry.provider && e.upstreamModel === entry.upstreamModel)) {
+      return;
+    }
+    list.push(entry);
+    providersMap.set(ownerId, list);
   };
 
   for (const slot of GATEWAYS) {

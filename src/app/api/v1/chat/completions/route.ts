@@ -42,48 +42,28 @@ export async function POST(req: Request) {
   req.signal.addEventListener('abort', () => controller.abort());
   const signal = controller.signal;
 
-  const catalogEntry = await getCatalogModel(modelId);
-  if (catalogEntry) {
-    if (catalogEntry.type !== 'text') {
+  const catalogPipes = await getCatalogModelProviders(modelId);
+  const primaryPipe = catalogPipes[0];
+  if (primaryPipe) {
+    if (primaryPipe.type !== 'text') {
       return jsonErrorCors(400, `Model "${modelId}" is not a text model`);
     }
-    try {
-      return await withRetry(
-        () =>
-          chatCompletions({
-            baseUrl: catalogEntry.baseUrl,
-            apiKey: catalogEntry.apiKey,
-            upstreamModel: catalogEntry.upstreamModel,
-            publicModelId: catalogEntry.id,
-            body,
-            signal,
-            userId: user.id,
-            remainingBudget: remaining,
-          }),
-        { deadlineAt: requestStart + RETRY_TIME_BUDGET_MS },
-      );
-    } catch (error) {
-      if (error instanceof UpstreamRequestError && !isRetryable(error.status)) {
-        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
-      }
-      if (isAbortError(error)) {
-        return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
-      }
-
-      // Same model ID, next provider that carries it (redundant pipe, never a different model)
-      const providerAlternates = (await getCatalogModelProviders(modelId)).filter(
-        (e) => e.provider !== catalogEntry.provider,
-      );
-      for (const alt of providerAlternates) {
-        if (Date.now() >= requestStart + REQUEST_HARD_DEADLINE_MS) break;
+    const deadline = Math.min(
+      requestStart + RETRY_TIME_BUDGET_MS,
+      requestStart + REQUEST_HARD_DEADLINE_MS,
+    );
+    let lastError: unknown = null;
+    for (let round = 1; Date.now() < deadline; round++) {
+      for (const pipe of catalogPipes) {
+        if (Date.now() >= deadline) break;
         try {
           return await withRetry(
             () =>
               chatCompletions({
-                baseUrl: alt.baseUrl,
-                apiKey: alt.apiKey,
-                upstreamModel: alt.upstreamModel,
-                publicModelId: alt.id,
+                baseUrl: pipe.baseUrl,
+                apiKey: pipe.apiKey,
+                upstreamModel: pipe.upstreamModel,
+                publicModelId: pipe.id,
                 body,
                 signal,
                 userId: user.id,
@@ -91,22 +71,23 @@ export async function POST(req: Request) {
               }),
             {
               maxAttempts: PROVIDER_FAILOVER_ATTEMPTS,
-              deadlineAt: Math.min(
-                requestStart + REQUEST_HARD_DEADLINE_MS,
-                Date.now() + PROVIDER_FAILOVER_BUDGET_MS,
-              ),
+              deadlineAt: Math.min(deadline, Date.now() + PROVIDER_FAILOVER_BUDGET_MS),
             },
           );
-        } catch {
-          continue;
+        } catch (error) {
+          if (isAbortError(error)) {
+            return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+          }
+          lastError = error;
         }
       }
-
-      if (error instanceof UpstreamRequestError) {
-        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
-      }
-      return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+      if (Date.now() >= deadline) break;
+      await sleep(Math.min(backoffFor(round), Math.max(1, deadline - Date.now())));
     }
+    if (lastError instanceof UpstreamRequestError) {
+      return jsonErrorCors(lastError.status, scrubMessage(lastError.message), 'upstream_error');
+    }
+    return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
   }
 
   const custom = await findCustomModelForCaller(modelId, user);
