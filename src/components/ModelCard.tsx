@@ -9,8 +9,82 @@ export interface CatalogModelDTO {
   isFallback: boolean;
 }
 
+export interface ModelStatusLite {
+  avail: number | null;
+  avgLatencyMs: number | null;
+  tokPerSec: number | null;
+  last: boolean[];
+  updatedAt: number | null;
+}
+
 interface ModelCardProps {
   model: CatalogModelDTO;
+  status?: ModelStatusLite;
+}
+
+function statusColor(avail: number | null): 'green' | 'amber' | 'red' | 'gray' {
+  if (avail === null) return 'gray';
+  if (avail >= 0.999) return 'green';
+  if (avail >= 0.5) return 'amber';
+  return 'red';
+}
+
+const DOT_CLASS: Record<string, string> = {
+  green: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]',
+  amber: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]',
+  red: 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]',
+  gray: 'bg-zinc-600',
+};
+
+function StatusStrip({ status }: { status: ModelStatusLite }) {
+  const color = statusColor(status.avail);
+  const lat = status.avgLatencyMs !== null ? (status.avgLatencyMs / 1000).toFixed(1) : null;
+  const slots: Array<boolean | null> = [];
+  for (let i = 0; i < 20; i++) {
+    const fromEnd = (status.last?.length ?? 0) - 20 + i;
+    slots.push(fromEnd >= 0 ? status.last[fromEnd] : null);
+  }
+  return (
+    <div className="relative mt-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] leading-tight text-zinc-500">
+        <span>
+          Availability{' '}
+          <span
+            className={`font-bold ${
+              color === 'green'
+                ? 'text-emerald-400'
+                : color === 'amber'
+                  ? 'text-amber-400'
+                  : color === 'red'
+                    ? 'text-red-400'
+                    : 'text-zinc-500'
+            }`}
+          >
+            {status.avail === null ? '—' : `${(status.avail * 100).toFixed(1)}%`}
+          </span>
+        </span>
+        <span>
+          Latency <span className="font-semibold text-zinc-300">{lat ? `${lat}s` : '—'}</span>
+        </span>
+        <span>
+          Speed{' '}
+          <span className="font-semibold text-zinc-300">
+            {status.tokPerSec !== null ? `${status.tokPerSec} tok/s` : '—'}
+          </span>
+        </span>
+      </div>
+      <div className="mt-1.5 flex gap-[3px]">
+        {slots.map((v, i) => (
+          <div
+            key={i}
+            className={`h-2.5 w-1.5 rounded-[2px] ${
+              v === null ? 'bg-white/10' : v ? 'bg-emerald-500' : 'bg-red-500'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 const TYPE_STYLES: Record<
@@ -89,8 +163,9 @@ const TYPE_STYLES: Record<
   },
 };
 
-export default function ModelCard({ model }: ModelCardProps) {
+export default function ModelCard({ model, status }: ModelCardProps) {
   const [copied, setCopied] = useState(false);
+  const color = statusColor(status?.avail ?? null);
 
   useEffect(() => {
     if (!copied) return;
@@ -142,14 +217,16 @@ export default function ModelCard({ model }: ModelCardProps) {
               </span>
             )}
           </div>
-          <h2 className="mt-2.5 truncate font-mono text-sm font-semibold text-zinc-100" title={model.id}>
-            {model.id}
+          <h2 className="mt-2.5 flex items-center gap-2 truncate font-mono text-sm font-semibold text-zinc-100" title={model.id}>
+            <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${DOT_CLASS[color]}`} />
+            <span className="truncate">{model.id}</span>
           </h2>
         </div>
       </div>
       {model.title && (
         <p className="relative mt-1.5 line-clamp-2 text-sm leading-snug text-zinc-500">{model.title}</p>
       )}
+      {status && status.updatedAt !== null && <StatusStrip status={status} />}
       <button
         type="button"
         onClick={copyId}

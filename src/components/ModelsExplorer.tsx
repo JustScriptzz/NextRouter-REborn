@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import ModelCard, { type CatalogModelDTO } from '@/components/ModelCard';
+import { useEffect, useMemo, useState } from 'react';
+import ModelCard, { type CatalogModelDTO, type ModelStatusLite } from '@/components/ModelCard';
 
 const KIND_ORDER = ['text', 'image', 'tts', 'stt', 'embedding', 'video'];
 
@@ -17,6 +17,38 @@ const KIND_LABELS: Record<string, string> = {
 export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [statusMap, setStatusMap] = useState<Record<string, ModelStatusLite>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch('/api/status', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const map: Record<string, ModelStatusLite> = {};
+        for (const m of data.models ?? []) {
+          map[m.id] = {
+            avail: m.avail,
+            avgLatencyMs: m.avgLatencyMs,
+            tokPerSec: m.tokPerSec,
+            last: m.last ?? [],
+            updatedAt: m.updatedAt,
+          };
+        }
+        setStatusMap(map);
+      } catch {
+        /* keep previous */
+      }
+    }
+    load();
+    const t = setInterval(load, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -115,7 +147,7 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
               className="anim-fade-up"
               style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
             >
-              <ModelCard model={m} />
+              <ModelCard model={m} status={statusMap[m.id]} />
             </div>
           ))}
         </div>
