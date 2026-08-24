@@ -1,5 +1,4 @@
 import type { CatalogEntry } from './providers';
-import { isAuthLikeStatus, isPipeQuarantined, quarantinePipe } from './pipe-health';
 import { UpstreamRequestError } from './upstream';
 import { jsonErrorCors } from './http';
 
@@ -48,7 +47,6 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
     let sawRetryableCause = false;
     for (const pipe of opts.pipes) {
       if (Date.now() >= deadlineAt) break;
-      if (isPipeQuarantined(pipe.baseUrl, pipe.upstreamModel)) continue;
       for (let attempt = 1; attempt <= PER_PIPE_ATTEMPTS; attempt++) {
         try {
           const res = await opts.call(pipe);
@@ -65,9 +63,6 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
             return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
           }
           lastError = error;
-          if (error instanceof UpstreamRequestError && isAuthLikeStatus(error.status)) {
-            quarantinePipe(pipe.baseUrl, pipe.upstreamModel);
-          }
           const retryable =
             !(error instanceof UpstreamRequestError) || isRetryableStatus(error.status);
           if (retryable) sawRetryableCause = true;
@@ -76,8 +71,6 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
         }
       }
     }
-    const anyActive = opts.pipes.some((p) => !isPipeQuarantined(p.baseUrl, p.upstreamModel));
-    if (!anyActive) break;
     if (Date.now() >= deadlineAt) break;
     if (!sawRetryableCause) break;
     await sleep(Math.min(backoffFor(round), Math.max(1, deadlineAt - Date.now())));
