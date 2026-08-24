@@ -179,6 +179,7 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'NVIDIA_API_KEY',
     modelsEnv: 'NVIDIA_MODELS',
     defaultBaseUrl: 'https://integrate.api.nvidia.com/v1',
+    matchExistingOnly: true,
   },
   {
     provider: 'cloudflare',
