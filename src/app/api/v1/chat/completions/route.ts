@@ -2,6 +2,7 @@ import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
+import { recordModelResult } from '@/lib/model-stats';
 import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { chatCompletions, isNoLoopStatus, UpstreamRequestError } from '@/lib/upstream';
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
       let sawLoopableCause = false;
       for (const pipe of catalogPipes) {
         if (Date.now() >= deadline) break;
+        const pipeStart = Date.now();
         try {
           return await withRetry(
             () =>
@@ -79,6 +81,7 @@ export async function POST(req: Request) {
           if (isAbortError(error)) {
             return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
           }
+          recordModelResult(pipe.id, false, Date.now() - pipeStart);
           if (!(error instanceof UpstreamRequestError && isNoLoopStatus(error.status))) {
             sawLoopableCause = true;
           }

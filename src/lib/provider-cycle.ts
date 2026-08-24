@@ -1,4 +1,5 @@
 import type { CatalogEntry } from './providers';
+import { recordModelResult } from './model-stats';
 import { isNoLoopStatus, UpstreamRequestError } from './upstream';
 import { jsonErrorCors } from './http';
 
@@ -44,19 +45,25 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
     for (const pipe of opts.pipes) {
       if (Date.now() >= deadlineAt) break;
       for (let attempt = 1; attempt <= PER_PIPE_ATTEMPTS; attempt++) {
+        const attemptStart = Date.now();
         try {
           const res = await opts.call(pipe);
           if (!res.ok) {
             const detail = await res.text().catch(() => '');
+            recordModelResult(pipe.id, false, Date.now() - attemptStart);
             throw new UpstreamRequestError(
               res.status,
               detail ? detail.slice(0, 300) : 'Upstream request failed',
             );
           }
+          recordModelResult(pipe.id, true, Date.now() - attemptStart);
           return res;
         } catch (error) {
           if (isAbortError(error)) {
             return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+          }
+          if (!(error instanceof UpstreamRequestError)) {
+            recordModelResult(pipe.id, false, Date.now() - attemptStart);
           }
           lastError = error;
           const noLoop = error instanceof UpstreamRequestError && isNoLoopStatus(error.status);

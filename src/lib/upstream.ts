@@ -1,5 +1,6 @@
 import type { ModelKind } from './types';
 import { recordUsage } from './usage';
+import { recordModelResult } from './model-stats';
 import { proxiedFetch } from './proxy-pool';
 
 const enc = new TextEncoder();
@@ -139,6 +140,7 @@ export interface BudgetOptions {
   inputTokens: number;
   upstreamModel: string;
   publicModelId: string;
+  startedAt?: number;
 }
 
 function countStreamContent(text: string): number {
@@ -163,6 +165,7 @@ function countStreamContent(text: string): number {
 
 function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array, Uint8Array> {
   const { userId, remainingBudget, inputTokens, upstreamModel, publicModelId } = opts;
+  const startedAt = opts.startedAt ?? Date.now();
   let pending = '';
   let outputChars = 0;
   let recorded = false;
@@ -173,6 +176,7 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
     const outputTokens = Math.ceil(outputChars / 4);
     const total = inputTokens + outputTokens;
     await recordUsage(userId, total);
+    recordModelResult(publicModelId, true, Date.now() - startedAt, outputTokens, Date.now() - startedAt);
   }
 
   function countContent(text: string): void {
@@ -313,6 +317,7 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId, remainingBudget } =
     opts;
   const url = joinEndpoint(baseUrl, 'chat/completions');
+  const startedAt = Date.now();
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
@@ -348,7 +353,14 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
       throw new UpstreamRequestError(503, 'Service temporarily unavailable');
     }
     const counted = guarded.pipeThrough(
-      createBudgetTransform({ userId, remainingBudget, inputTokens, upstreamModel, publicModelId }),
+      createBudgetTransform({
+        userId,
+        remainingBudget,
+        inputTokens,
+        upstreamModel,
+        publicModelId,
+        startedAt,
+      }),
     );
     return new Response(counted, {
       status: 200,
@@ -371,6 +383,7 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
       ?.completion_tokens === 'number'
       ? (rewritten as { usage: { completion_tokens: number } }).usage.completion_tokens
       : estimateChatOutputTokens(rewritten);
+  recordModelResult(publicModelId, true, Date.now() - startedAt, outputTokens, Date.now() - startedAt);
   await recordUsage(userId, inputTokens + outputTokens);
   return Response.json(rewritten, {
     status: 200,
