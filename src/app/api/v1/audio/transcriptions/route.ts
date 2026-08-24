@@ -2,14 +2,16 @@ import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
 import { jsonErrorCors } from '@/lib/http';
-import { getCatalogModel } from '@/lib/providers';
+import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { audioTranscriptions, UpstreamRequestError } from '@/lib/upstream';
+import { cycleProviderPipes } from '@/lib/provider-cycle';
 import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
+  const requestStart = Date.now();
   const user = await getUserFromApiKey(req.headers.get('authorization'));
   if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
 
@@ -42,27 +44,23 @@ export async function POST(req: Request) {
   req.signal.addEventListener('abort', () => controller.abort());
   const signal = controller.signal;
 
-  const catalogEntry = await getCatalogModel(modelId);
-  if (catalogEntry) {
-    if (catalogEntry.type !== 'stt') {
-      return jsonErrorCors(400, `Model "${modelId}" is not a transcription model`);
-    }
-    try {
-      return await audioTranscriptions({
-        baseUrl: catalogEntry.baseUrl,
-        apiKey: catalogEntry.apiKey,
-        upstreamModel: catalogEntry.upstreamModel,
-        publicModelId: catalogEntry.id,
-        signal,
-        userId: user.id,
-        formData,
-      });
-    } catch (error) {
-      if (error instanceof UpstreamRequestError) {
-        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
-      }
-      return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
-    }
+  const sttPipes = (await getCatalogModelProviders(modelId)).filter((e) => e.type === 'stt');
+  if (sttPipes.length > 0) {
+    return cycleProviderPipes({
+      pipes: sttPipes,
+      requestStart,
+      budgetMs: 52000,
+      call: (pipe) =>
+        audioTranscriptions({
+          baseUrl: pipe.baseUrl,
+          apiKey: pipe.apiKey,
+          upstreamModel: pipe.upstreamModel,
+          publicModelId: pipe.id,
+          signal,
+          userId: user.id,
+          formData,
+        }),
+    });
   }
 
   const custom = await findCustomModelForCaller(modelId, user);
