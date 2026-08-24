@@ -114,6 +114,25 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
         >
           Block all aquadevs-only
         </button>
+        <button
+          onClick={async () => {
+            if (!confirm('Disable every model whose providers are ALL limited (aquadevs, nvidia, cloudflare)? Models with at least one unlimited provider stay available.')) return;
+            const res = await fetch('/api/admin/models/block-limited-single-provider', { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+              setBlocked((prev) => {
+                const set = new Set([...prev, ...(data.blocked ?? [])]);
+                return Array.from(set);
+              });
+              alert(`Disabled ${data.added ?? 0} models (${data.total ?? '?'} total blocked).`);
+            } else {
+              alert('Failed to disable limited-only models.');
+            }
+          }}
+          className="rounded-full bg-red-500/15 px-3 py-1 font-medium text-red-300 hover:bg-red-500/25"
+        >
+          Disable limited-only models
+        </button>
       </div>
 
       <div className="card p-5">

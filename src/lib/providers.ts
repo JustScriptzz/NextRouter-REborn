@@ -35,6 +35,8 @@ const MODEL_ALIASES = new Map<string, string>([
   ['gemini-3-flash', 'gemini-3.6'],
 ]);
 
+export const LIMITED_PROVIDERS = ['aquadevs', 'nvidia', 'cloudflare'];
+
 function resolveAlias(id: string): string {
   const lower = id.toLowerCase();
   return MODEL_ALIASES.get(lower) ?? id;
@@ -537,16 +539,33 @@ export async function getCatalog(): Promise<Catalog> {
 
 export async function getCatalogModel(id: string): Promise<CatalogEntry | null> {
   const target = resolveAlias(id);
-  const catalog = await getCatalog();
+  const [catalog, blocked] = await Promise.all([getCatalog(), kvGetCached('blocked_models')]);
+  if (blocked.length > 0) {
+    const lower = id.toLowerCase();
+    const targetLower = target.toLowerCase();
+    if (blocked.some((b) => b.toLowerCase() === targetLower || b.toLowerCase() === lower)) {
+      return null;
+    }
+  }
   return catalog.byId.get(target) ?? catalog.byId.get(id) ?? null;
 }
 
 export async function getCatalogModelProviders(id: string): Promise<CatalogEntry[]> {
   const target = resolveAlias(id);
-  const catalog = await getCatalog();
-  const viaMap = catalog.providersMap?.get(target) ?? catalog.providersMap?.get(id);
-  if (viaMap && viaMap.length > 0) return viaMap;
-  return catalog.models.filter((m) => m.id === target || m.id === id);
+  const [catalog, blocked] = await Promise.all([getCatalog(), kvGetCached('blocked_models')]);
+  let viaMap =
+    catalog.providersMap?.get(target) ?? catalog.providersMap?.get(id) ?? undefined;
+  if (!viaMap || viaMap.length === 0) {
+    viaMap = catalog.models.filter((m) => m.id === target || m.id === id);
+  }
+  if (blocked.length > 0) {
+    const lower = id.toLowerCase();
+    const targetLower = target.toLowerCase();
+    const blockedSet = new Set(blocked.map((b) => b.toLowerCase()));
+    if (blockedSet.has(targetLower) || blockedSet.has(lower)) return [];
+    return viaMap.filter((e) => !blockedSet.has(e.id.toLowerCase()));
+  }
+  return viaMap;
 }
 
 export async function getFallbackModelId(): Promise<string | null> {
