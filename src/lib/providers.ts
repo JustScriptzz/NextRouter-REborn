@@ -196,12 +196,11 @@ const GATEWAYS: GatewaySlot[] = [
     excludeTiers: ['premium'],
   },
   {
-    provider: 'ollamafree',
-    baseUrlEnv: 'OLLAMAFREE_BASE_URL',
-    apiKeyEnv: 'OLLAMAFREE_API_KEY',
-    modelsEnv: 'OLLAMAFREE_MODELS',
-    defaultBaseUrl: '',
-    matchExistingOnly: true,
+    provider: 'ollama',
+    baseUrlEnv: 'OLLAMA_BASE_URL',
+    apiKeyEnv: 'OLLAMA_API_KEY',
+    modelsEnv: 'OLLAMA_MODELS',
+    defaultBaseUrl: 'https://ollama.com',
   },
 ];
 

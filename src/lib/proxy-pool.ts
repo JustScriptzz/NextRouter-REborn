@@ -17,7 +17,7 @@ const globalForProxyPool = globalThis as unknown as {
   __outboundProxyPool?: PoolState;
 };
 
-const DEFAULT_ROTATE_HOSTS = ['api.kilo.ai', 'ollamafree.ai'];
+const DEFAULT_ROTATE_HOSTS = ['api.kilo.ai'];
 const DEFAULT_COOLDOWN_MS = 10 * 60 * 1000;
 const NET_FAIL_COOLDOWN_MS = 30 * 1000;
 
