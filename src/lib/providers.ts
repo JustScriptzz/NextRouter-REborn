@@ -27,6 +27,7 @@ interface LiveModelInfo {
   owner: string | null;
   modelType: string | null;
   tier: string | null;
+  isFree: boolean;
 }
 
 const MODEL_ALIASES = new Map<string, string>([
@@ -134,6 +135,7 @@ interface GatewaySlot {
   excludeSubstrings?: string[];
   excludeIds?: string[];
   onlyIfContains?: string[];
+  onlyIfFree?: boolean;
   requiresKey?: boolean;
 }
 
@@ -177,6 +179,7 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'KILO_MODELS',
     defaultBaseUrl: 'https://api.kilo.ai/api/gateway',
     onlyIfContains: [':free', 'kilo-auto/free'],
+    onlyIfFree: true,
   },
   {
     provider: 'nvidia',
@@ -299,7 +302,8 @@ async function liveGatewayModels(
           const modelType =
             typeof entry.type === 'string' && entry.type ? entry.type : null;
           const tier = typeof entry.tier === 'string' && entry.tier ? entry.tier : null;
-          collected.push({ id, endpoints, displayName, owner, modelType, tier });
+          const isFree = entry.isFree === true;
+          collected.push({ id, endpoints, displayName, owner, modelType, tier, isFree });
         }
         if (collected.length > 0) models = collected.slice(0, LIVE_MODELS_MAX);
       }
@@ -404,6 +408,7 @@ export async function getCatalog(): Promise<Catalog> {
           continue;
         }
         if (isExcludedId(slot, info.id)) continue;
+        if (slot.onlyIfFree && !info.isFree && !isAllowedBySubstring(slot, info)) continue;
         if (isExcludedOwner(slot, info)) continue;
         if (isExcludedTier(slot, info)) continue;
         if (isExcludedSubstring(slot, info)) continue;
