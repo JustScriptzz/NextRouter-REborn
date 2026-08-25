@@ -1,13 +1,17 @@
 import { kvGetCached, kvSet } from './kv';
 
-const STATS_KEY = 'model_stats';
-const RING = 20;
+const STATS_KEY = 'model_stats_v2';
+const RING = 120;
+const WINDOW_MS = 24 * 60 * 60 * 1000;
 const PERSIST_INTERVAL_MS = 15000;
 
+interface StatEvent {
+  o: 0 | 1;
+  t: number;
+}
+
 export interface ModelStat {
-  ok: number;
-  fail: number;
-  last: boolean[];
+  events: StatEvent[];
   latSum: number;
   latN: number;
   tokSum: number;
@@ -30,9 +34,7 @@ function statsMap(): StatsMap {
 function entry(id: string): ModelStat {
   const m = statsMap();
   return (m[id] ??= {
-    ok: 0,
-    fail: 0,
-    last: [],
+    events: [],
     latSum: 0,
     latN: 0,
     tokSum: 0,
@@ -50,10 +52,9 @@ export function recordModelResult(
 ): void {
   if (!id) return;
   const e = entry(id);
-  if (ok) e.ok += 1;
-  else e.fail += 1;
-  e.last.push(ok);
-  if (e.last.length > RING) e.last.shift();
+  const now = Date.now();
+  e.events.push({ o: ok ? 1 : 0, t: now });
+  if (e.events.length > RING) e.events.splice(0, e.events.length - RING);
   if (ok) {
     e.latSum += Math.max(0, latencyMs);
     e.latN += 1;
@@ -62,7 +63,7 @@ export function recordModelResult(
       e.secSum += elapsedMs / 1000;
     }
   }
-  e.updatedAt = Date.now();
+  e.updatedAt = now;
   maybePersist();
 }
 
@@ -98,21 +99,31 @@ export async function getModelStats(): Promise<PublicModelStat[]> {
       if (stored && stored[0]) {
         const parsed = JSON.parse(stored[0]) as StatsMap;
         for (const [id, s] of Object.entries(parsed)) {
-          if (!statsMap()[id]) statsMap()[id] = s;
+          if (!statsMap()[id] && Array.isArray(s.events)) {
+            statsMap()[id] = s;
+          }
         }
       }
     } catch {
       /* no persisted stats yet */
     }
   }
-  return Object.entries(statsMap()).map(([id, s]) => ({
-    id,
-    ok: s.ok,
-    fail: s.fail,
-    avail: s.ok + s.fail > 0 ? s.ok / (s.ok + s.fail) : null,
-    avgLatencyMs: s.latN > 0 ? Math.round(s.latSum / s.latN) : null,
-    tokPerSec: s.secSum > 0 ? Math.round((s.tokSum / s.secSum) * 10) / 10 : null,
-    last: [...s.last],
-    updatedAt: s.updatedAt || null,
-  }));
+
+  const cutoff = Date.now() - WINDOW_MS;
+  return Object.entries(statsMap()).map(([id, s]) => {
+    const recent = s.events.filter((e) => e.t >= cutoff);
+    const okCount = recent.reduce((acc, e) => acc + e.o, 0);
+    const failCount = recent.length - okCount;
+    const last: boolean[] = s.events.slice(-20).map((e) => e.o === 1);
+    return {
+      id,
+      ok: okCount,
+      fail: failCount,
+      avail: recent.length > 0 ? okCount / recent.length : null,
+      avgLatencyMs: s.latN > 0 ? Math.round(s.latSum / s.latN) : null,
+      tokPerSec: s.secSum > 0 ? Math.round((s.tokSum / s.secSum) * 10) / 10 : null,
+      last,
+      updatedAt: s.updatedAt || null,
+    };
+  });
 }
