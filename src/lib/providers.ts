@@ -34,6 +34,13 @@ const MODEL_ALIASES = new Map<string, string>([
   ['os-alpha', 'x-preview-f-free'],
   ['os_alpha', 'x-preview-f-free'],
   ['gemini-3-flash', 'gemini-3.6'],
+  ['minimax/minimax-m3:free', 'minimax-m3'],
+  ['minimax/minimax-m2.7:free', 'minimax-m2.7'],
+  ['deepseek-v4-pro:0813', 'deepseek-v4-pro-0813'],
+  ['deepseek-v4-flash:0731', 'deepseek-v4-flash-0731'],
+  ['nvidia/nemotron-3-super-120b-a12b:free', 'nemotron-3-super'],
+  ['nvidia/nemotron-3-ultra-550b-a55b:free', 'nemotron-3-ultra'],
+  ['cohere/north-mini-code:free', 'north-mini-code'],
 ]);
 
 export const LIMITED_PROVIDERS = ['aquadevs', 'nvidia', 'cloudflare'];

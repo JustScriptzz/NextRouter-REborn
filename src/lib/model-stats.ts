@@ -17,7 +17,10 @@ export interface ModelStat {
   tokSum: number;
   secSum: number;
   updatedAt: number;
+  probeBackoffUntil?: number;
 }
+
+const PROBE_BACKOFF_MS = 6 * 60 * 60 * 1000;
 
 type StatsMap = Record<string, ModelStat>;
 
@@ -49,12 +52,16 @@ export function recordModelResult(
   latencyMs: number,
   tokensOut?: number,
   elapsedMs?: number,
+  status?: number,
 ): void {
   if (!id) return;
   const e = entry(id);
   const now = Date.now();
   e.events.push({ o: ok ? 1 : 0, t: now });
   if (e.events.length > RING) e.events.splice(0, e.events.length - RING);
+  if (status === 429) {
+    e.probeBackoffUntil = now + PROBE_BACKOFF_MS;
+  }
   if (ok) {
     e.latSum += Math.max(0, latencyMs);
     e.latN += 1;
@@ -79,6 +86,16 @@ function maybePersist(): void {
     .finally(() => {
       globalForStats.__modelStatsPersisting = false;
     });
+}
+
+export function isProbeBackedOff(id: string): boolean {
+  const s = statsMap()[id];
+  if (!s?.probeBackoffUntil) return false;
+  if (s.probeBackoffUntil <= Date.now()) {
+    delete s.probeBackoffUntil;
+    return false;
+  }
+  return true;
 }
 
 export interface PublicModelStat {
