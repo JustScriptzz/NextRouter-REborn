@@ -141,6 +141,8 @@ export interface BudgetOptions {
   upstreamModel: string;
   publicModelId: string;
   startedAt?: number;
+  hasEmulatedTools?: boolean;
+  emulatedTools?: Array<{ type: string; function: { name: string; description?: string; parameters?: unknown } }>;
 }
 
 function countStreamContent(text: string): number {
@@ -166,9 +168,12 @@ function countStreamContent(text: string): number {
 function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array, Uint8Array> {
   const { userId, remainingBudget, inputTokens, upstreamModel, publicModelId } = opts;
   const startedAt = opts.startedAt ?? Date.now();
+  const hasEmulatedTools = !!opts.hasEmulatedTools;
+  const emulatedTools = opts.emulatedTools ?? [];
   let pending = '';
   let outputChars = 0;
   let recorded = false;
+  let emulatedContentAccum = '';
 
   async function settle(): Promise<void> {
     if (recorded) return;
@@ -181,6 +186,22 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
 
   function countContent(text: string): void {
     outputChars += countStreamContent(text);
+  }
+
+  function extractContentDeltas(sseText: string): string {
+    let acc = '';
+    const lines = sseText.split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const payload = line.slice(6).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const j = JSON.parse(payload) as Record<string, unknown>;
+        const delta = (j.choices as Array<Record<string, unknown>> | undefined)?.[0]?.delta as Record<string, unknown> | undefined;
+        if (delta && typeof delta.content === 'string') acc += delta.content as string;
+      } catch {}
+    }
+    return acc;
   }
 
   function capChunk(controller: TransformStreamDefaultController<Uint8Array>): void {
@@ -210,6 +231,14 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
     const complete = pending.slice(0, lastBreak + 1);
     pending = pending.slice(lastBreak + 1);
     const rewritten = rewriteModelName(complete, upstreamModel, publicModelId);
+    if (hasEmulatedTools) {
+      emulatedContentAccum += extractContentDeltas(rewritten);
+      countContent(rewritten);
+      if (Math.ceil(outputChars / 4) >= remainingBudget) {
+        capChunk(controller);
+      }
+      return;
+    }
     countContent(rewritten);
     if (Math.ceil(outputChars / 4) >= remainingBudget) {
       capChunk(controller);
@@ -228,6 +257,67 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
       }
     },
     async flush(controller) {
+      if (hasEmulatedTools) {
+        if (pending) {
+          const rewritten = rewriteModelName(pending, upstreamModel, publicModelId);
+          emulatedContentAccum += extractContentDeltas(rewritten);
+          countContent(rewritten);
+          pending = '';
+        }
+        // Try to parse accumulated content as tool calls
+        if (emulatedContentAccum.trim()) {
+          try {
+            const { tryParseToolCalls } = await import('./tool-emulation');
+            const parsed = tryParseToolCalls(emulatedContentAccum, emulatedTools as never);
+            if (parsed && parsed.length > 0) {
+              // Emit as tool_calls instead of content
+              for (let i = 0; i < parsed.length; i++) {
+                const tc = parsed[i];
+                const toolChunk = {
+                  id: `chatcmpl-${Date.now()}`,
+                  object: 'chat.completion.chunk',
+                  created: Math.floor(Date.now() / 1000),
+                  model: publicModelId,
+                  choices: [
+                    {
+                      index: 0,
+                      delta: { role: 'assistant', content: null, tool_calls: [{ index: i, id: tc.id, type: 'function', function: { name: tc.function.name, arguments: tc.function.arguments } }] },
+                      finish_reason: null,
+                    },
+                  ],
+                };
+                controller.enqueue(enc.encode(`data: ${JSON.stringify(toolChunk)}\n\n`));
+              }
+              const doneChunk = {
+                id: `chatcmpl-${Date.now()}`,
+                object: 'chat.completion.chunk',
+                created: Math.floor(Date.now() / 1000),
+                model: publicModelId,
+                choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }],
+              };
+              controller.enqueue(enc.encode(`data: ${JSON.stringify(doneChunk)}\n\ndata: [DONE]\n\n`));
+              await settle();
+              return;
+            }
+          } catch {}
+        }
+        // No tool calls detected — emit as normal content
+        if (emulatedContentAccum) {
+          const contentChunk = {
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: publicModelId,
+            choices: [{ index: 0, delta: { role: 'assistant', content: emulatedContentAccum }, finish_reason: null }],
+          };
+          controller.enqueue(enc.encode(`data: ${JSON.stringify(contentChunk)}\n\n`));
+          controller.enqueue(enc.encode('data: [DONE]\n\n'));
+        } else {
+          controller.enqueue(enc.encode('data: [DONE]\n\n'));
+        }
+        await settle();
+        return;
+      }
       if (pending) {
         const rewritten = rewriteModelName(pending, upstreamModel, publicModelId);
         countContent(rewritten);
@@ -313,11 +403,13 @@ async function peekSseForUpstreamError(
   });
 }
 
-export async function chatCompletions(opts: ChatCallOptions): Promise<Response> {
-  const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId, remainingBudget } =
-    opts;
+async function doChatFetch(
+  opts: ChatCallOptions,
+  bodyToSend: Record<string, unknown>,
+  signal: AbortSignal,
+): Promise<Response> {
+  const { baseUrl, apiKey, upstreamModel } = opts;
   const url = joinEndpoint(baseUrl, 'chat/completions');
-  const startedAt = Date.now();
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
   try {
@@ -327,7 +419,7 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ ...body, model: upstreamModel }),
+      body: JSON.stringify({ ...bodyToSend, model: upstreamModel }),
       signal: conn.signal,
     });
   } catch (error) {
@@ -336,12 +428,60 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
     throw new UpstreamRequestError(502, 'Upstream request failed');
   }
   conn.clear();
+  return upstream;
+}
+
+export async function chatCompletions(opts: ChatCallOptions): Promise<Response> {
+  const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId, remainingBudget } = opts;
+
+  const { hasTools, injectToolsIntoMessages, tryParseToolCalls, isToolNotSupportedError, convertEmulatedResponse } =
+    await import('./tool-emulation');
+
+  const originalHasTools = hasTools(body);
+  const originalTools = originalHasTools ? (body.tools as Array<{ type: string; function: { name: string; description?: string; parameters?: unknown } }>) : [];
+
+  // Helper to handle a successful non-streaming response: check for emulated tool calls in content
+  function maybeConvertEmulated(data: Record<string, unknown>): Record<string, unknown> {
+    if (!originalHasTools) return data;
+    const choices = data.choices as Array<Record<string, unknown>> | undefined;
+    const msg = choices?.[0]?.message as Record<string, unknown> | undefined;
+    if (!msg || msg.tool_calls) return data;
+    const content = typeof msg.content === 'string' ? msg.content : '';
+    if (!content) return data;
+    const parsed = tryParseToolCalls(content, originalTools);
+    if (!parsed) return data;
+    return convertEmulatedResponse(data, parsed, publicModelId);
+  }
+
+  const startedAt = Date.now();
+  let upstream: Response;
+  let usedEmulation = false;
+  let bodyToSend: Record<string, unknown> = body;
+
+  upstream = await doChatFetch(opts, bodyToSend, signal);
+
+  // If native tool support failed, retry with emulation
+  if (!upstream.ok && originalHasTools) {
+    const clone = upstream.clone();
+    const text = await clone.text().catch(() => '');
+    let errMsg = '';
+    try {
+      const parsed = JSON.parse(text) as { error?: { message?: string } };
+      errMsg = parsed.error?.message ?? '';
+    } catch {}
+    if (isToolNotSupportedError(upstream.status, errMsg)) {
+      bodyToSend = injectToolsIntoMessages(body);
+      usedEmulation = true;
+      upstream = await doChatFetch(opts, bodyToSend, signal);
+    }
+  }
 
   if (!upstream.ok) {
     return upstreamErrorResponse(upstream);
   }
 
-  const inputTokens = estimateChatInputTokens(body);
+  const effectiveBody = usedEmulation ? bodyToSend : body;
+  const inputTokens = estimateChatInputTokens(effectiveBody);
 
   if (body.stream === true) {
     const stream = upstream.body;
@@ -360,6 +500,8 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
         upstreamModel,
         publicModelId,
         startedAt,
+        hasEmulatedTools: usedEmulation,
+        emulatedTools: originalTools,
       }),
     );
     return new Response(counted, {
@@ -377,10 +519,13 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   if (!data) {
     throw new UpstreamRequestError(502, 'Upstream returned an invalid response');
   }
-  const rewritten = rewriteModelField(data, upstreamModel, publicModelId);
+  let rewritten = rewriteModelField(data, upstreamModel, publicModelId);
+  // If we used emulation or native returned content that looks like tool calls, convert
+  if (originalHasTools) {
+    rewritten = maybeConvertEmulated(rewritten);
+  }
   const outputTokens =
-    typeof (rewritten as { usage?: { completion_tokens?: unknown } }).usage
-      ?.completion_tokens === 'number'
+    typeof (rewritten as { usage?: { completion_tokens?: unknown } }).usage?.completion_tokens === 'number'
       ? (rewritten as { usage: { completion_tokens: number } }).usage.completion_tokens
       : estimateChatOutputTokens(rewritten);
   recordModelResult(publicModelId, true, Date.now() - startedAt, outputTokens, Date.now() - startedAt);

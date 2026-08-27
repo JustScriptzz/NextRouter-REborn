@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 type Model = { id: string; title: string; type: string; isFallback: boolean };
-type Msg = { role: 'system' | 'user' | 'assistant'; content: string };
+type ToolCall = { id: string; type: 'function'; function: { name: string; arguments: string } };
+type Msg = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; tool_calls?: ToolCall[]; tool_call_id?: string; name?: string };
 
 const TABS = [
   { id: 'chat', label: 'Chat' },
@@ -31,6 +32,9 @@ export default function PlaygroundClient() {
   const [error, setError] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [modelSearch, setModelSearch] = useState('');
+  const [toolsJson, setToolsJson] = useState('[\n  {\n    "type": "function",\n    "function": {\n      "name": "get_weather",\n      "description": "Get weather for a location",\n      "parameters": {\n        "type": "object",\n        "properties": { "location": { "type": "string", "description": "City name" } },\n        "required": ["location"]\n      }\n    }\n  }\n]');
+  const [toolChoice, setToolChoice] = useState('auto');
+  const [showTools, setShowTools] = useState(false);
 
   // image state
   const [imgPrompt, setImgPrompt] = useState('A cinematic photo of a cat astronaut');
@@ -106,6 +110,14 @@ export default function PlaygroundClient() {
   }, []);
 
   const filteredTextModels = models.filter((m) => m.type === 'text' && m.id.toLowerCase().includes(modelSearch.toLowerCase()));
+  const parsedTools = (() => {
+    try {
+      const p = JSON.parse(toolsJson);
+      return Array.isArray(p) && p.length > 0 ? p : null;
+    } catch {
+      return null;
+    }
+  })();
   const curlPreview =
     tab === 'chat'
       ? `curl https://nextrouter-vert.vercel.app/api/v1/chat/completions \\
@@ -113,7 +125,8 @@ export default function PlaygroundClient() {
   -H "Content-Type: application/json" \\
   -d '{
     "model": "${selectedModel || 'kiro-auto'}",
-    "messages": [{"role": "user", "content": "Hello!"}],
+    "messages": [{"role": "user", "content": "Hello!"}]${parsedTools ? `,
+    "tools": ${JSON.stringify(parsedTools, null, 2).split('\n').join('\n    ')},` : ''}
     "stream": ${stream},
     "temperature": ${temperature}
   }'`
@@ -137,13 +150,41 @@ export default function PlaygroundClient() {
     setError('');
     setLoading(true);
 
-    const payload = {
+    let parsedToolsForRequest: unknown = null;
+    let toolChoiceForRequest: unknown = undefined;
+    if (showTools) {
+      try {
+        const p = JSON.parse(toolsJson);
+        if (Array.isArray(p) && p.length > 0) {
+          parsedToolsForRequest = p;
+          if (toolChoice === 'none') toolChoiceForRequest = 'none';
+          else if (toolChoice === 'required') toolChoiceForRequest = 'required';
+          else if (toolChoice !== 'auto' && toolChoice.startsWith('{')) {
+            try { toolChoiceForRequest = JSON.parse(toolChoice); } catch { toolChoiceForRequest = 'auto'; }
+          } else if (toolChoice !== 'auto') {
+            toolChoiceForRequest = { type: 'function', function: { name: toolChoice } };
+          }
+        }
+      } catch {}
+    }
+
+    const payload: Record<string, unknown> = {
       model: selectedModel,
-      messages: history.map((m) => ({ role: m.role, content: m.content })),
+      messages: history.map((m) => {
+        const out: Record<string, unknown> = { role: m.role, content: m.content };
+        if (m.tool_calls) out.tool_calls = m.tool_calls;
+        if (m.tool_call_id) out.tool_call_id = m.tool_call_id;
+        if (m.name) out.name = m.name;
+        return out;
+      }),
       temperature,
       max_tokens: maxTokens,
       stream,
     };
+    if (parsedToolsForRequest) {
+      payload.tools = parsedToolsForRequest;
+      if (toolChoiceForRequest !== undefined) payload.tool_choice = toolChoiceForRequest;
+    }
 
     try {
       if (!stream) {
@@ -154,9 +195,14 @@ export default function PlaygroundClient() {
         });
         const j = await res.json();
         if (!res.ok) throw new Error(j.error?.message || 'Request failed');
-        const content = j.choices?.[0]?.message?.content ?? JSON.stringify(j, null, 2);
-        const reasoning = j.choices?.[0]?.message?.reasoning;
-        setMessages((m) => [...m, { role: 'assistant', content: reasoning ? `**Reasoning:** ${reasoning}\n\n${content}` : content }]);
+        const msg = j.choices?.[0]?.message as { content?: string | null; tool_calls?: ToolCall[]; reasoning?: string } | undefined;
+        if (msg?.tool_calls && msg.tool_calls.length > 0) {
+          setMessages((m) => [...m, { role: 'assistant', content: msg.content ?? '', tool_calls: msg.tool_calls }]);
+        } else {
+          const content = msg?.content ?? JSON.stringify(j, null, 2);
+          const reasoning = msg?.reasoning;
+          setMessages((m) => [...m, { role: 'assistant', content: reasoning ? `**Reasoning:** ${reasoning}\n\n${content}` : content ?? '' }]);
+        }
       } else {
         const res = await fetch('/api/v1/chat/completions', {
           method: 'POST',
@@ -172,6 +218,7 @@ export default function PlaygroundClient() {
         const decoder = new TextDecoder();
         let acc = '';
         let reasoningAcc = '';
+        let toolCallsAcc: Record<number, { id: string; function: { name: string; arguments: string } }> = {};
         setMessages((m) => [...m, { role: 'assistant', content: '' }]);
         let buffer = '';
         while (true) {
@@ -186,14 +233,29 @@ export default function PlaygroundClient() {
             if (data === '[DONE]') break;
             try {
               const j = JSON.parse(data);
-              const delta = j.choices?.[0]?.delta;
+              const delta = j.choices?.[0]?.delta as { content?: string; reasoning?: string; tool_calls?: Array<{ index: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }> } | undefined;
               if (delta?.reasoning) reasoningAcc += delta.reasoning;
               if (delta?.content) acc += delta.content;
-              if (delta?.reasoning || delta?.content) {
-                const display = reasoningAcc ? `*Thinking:* ${reasoningAcc}\n\n${acc}` : acc;
+              if (delta?.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                  const idx = tc.index ?? 0;
+                  if (!toolCallsAcc[idx]) toolCallsAcc[idx] = { id: tc.id ?? `call_${idx}`, function: { name: '', arguments: '' } };
+                  if (tc.id) toolCallsAcc[idx].id = tc.id;
+                  if (tc.function?.name) toolCallsAcc[idx].function.name = tc.function.name;
+                  if (tc.function?.arguments) toolCallsAcc[idx].function.arguments += tc.function.arguments;
+                }
+              }
+              const hasToolCalls = Object.keys(toolCallsAcc).length > 0;
+              if (delta?.reasoning || delta?.content || delta?.tool_calls) {
                 setMessages((m) => {
                   const copy = [...m];
-                  copy[copy.length - 1] = { role: 'assistant', content: display || '...' };
+                  if (hasToolCalls) {
+                    const tcs: ToolCall[] = Object.values(toolCallsAcc).map((v) => ({ id: v.id, type: 'function' as const, function: v.function }));
+                    copy[copy.length - 1] = { role: 'assistant', content: acc, tool_calls: tcs };
+                  } else {
+                    const display = reasoningAcc ? `*Thinking:* ${reasoningAcc}\n\n${acc}` : acc;
+                    copy[copy.length - 1] = { role: 'assistant', content: display || '...' };
+                  }
                   return copy;
                 });
               }
@@ -335,25 +397,80 @@ export default function PlaygroundClient() {
           </div>
 
           {tab === 'chat' && (
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold text-zinc-100">Parameters</h3>
-              <label className="mt-3 flex items-center justify-between text-xs text-zinc-400">
-                <span>Temperature {temperature.toFixed(2)}</span>
-                <input type="range" min={0} max={2} step={0.05} value={temperature} onChange={(e) => setTemperature(parseFloat(e.target.value))} className="ml-3 flex-1 accent-violet-500" />
-              </label>
-              <label className="mt-3 block text-xs text-zinc-400">
-                Max tokens
-                <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(parseInt(e.target.value) || 1024)} className="input-dark mt-1 py-1.5 text-xs" />
-              </label>
-              <label className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
-                <input type="checkbox" checked={stream} onChange={(e) => setStream(e.target.checked)} className="accent-violet-500" />
-                Stream response
-              </label>
-              <label className="mt-3 block text-xs text-zinc-400">
-                System prompt
-                <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} placeholder="You are a helpful assistant..." rows={3} className="input-dark mt-1 py-2 text-xs" />
-              </label>
-            </div>
+            <>
+              <div className="card p-4">
+                <h3 className="text-sm font-semibold text-zinc-100">Parameters</h3>
+                <label className="mt-3 flex items-center justify-between text-xs text-zinc-400">
+                  <span>Temperature {temperature.toFixed(2)}</span>
+                  <input type="range" min={0} max={2} step={0.05} value={temperature} onChange={(e) => setTemperature(parseFloat(e.target.value))} className="ml-3 flex-1 accent-violet-500" />
+                </label>
+                <label className="mt-3 block text-xs text-zinc-400">
+                  Max tokens
+                  <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(parseInt(e.target.value) || 1024)} className="input-dark mt-1 py-1.5 text-xs" />
+                </label>
+                <label className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
+                  <input type="checkbox" checked={stream} onChange={(e) => setStream(e.target.checked)} className="accent-violet-500" />
+                  Stream response
+                </label>
+                <label className="mt-3 block text-xs text-zinc-400">
+                  System prompt
+                  <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} placeholder="You are a helpful assistant..." rows={3} className="input-dark mt-1 py-2 text-xs" />
+                </label>
+              </div>
+              <div className="card p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-100">Tools</h3>
+                  <label className="flex items-center gap-2 text-xs text-zinc-400">
+                    <input type="checkbox" checked={showTools} onChange={(e) => setShowTools(e.target.checked)} className="accent-violet-500" />
+                    Enable
+                  </label>
+                </div>
+                {showTools ? (
+                  <>
+                    <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">Works with <span className="text-violet-300">every</span> model — non-native models are auto-emulated via prompt injection.</p>
+                    <textarea value={toolsJson} onChange={(e) => setToolsJson(e.target.value)} rows={12} spellCheck={false} className="input-dark mt-3 font-mono text-[11px] leading-relaxed" placeholder='[{"type":"function","function":{"name":"..."}}]' />
+                    {!parsedTools && <p className="mt-1 text-[11px] text-red-400">Invalid JSON</p>}
+                    <label className="mt-3 block text-xs text-zinc-400">
+                      Tool choice
+                      <select value={toolChoice} onChange={(e) => setToolChoice(e.target.value)} className="input-dark mt-1 py-1.5 text-xs">
+                        <option value="auto">auto</option>
+                        <option value="required">required</option>
+                        <option value="none">none</option>
+                        {parsedTools?.map((t: { function: { name: string } }) => (
+                          <option key={t.function.name} value={t.function.name}>
+                            force {t.function.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() =>
+                          setToolsJson(
+                            JSON.stringify(
+                              [
+                                { type: 'function', function: { name: 'get_weather', description: 'Get weather for a location', parameters: { type: 'object', properties: { location: { type: 'string' } }, required: ['location'] } } },
+                                { type: 'function', function: { name: 'search_web', description: 'Search the web', parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } } },
+                              ],
+                              null,
+                              2,
+                            ),
+                          )
+                        }
+                        className="rounded-lg bg-white/5 px-2.5 py-1 text-xs text-zinc-400 hover:text-white"
+                      >
+                        Example: weather + search
+                      </button>
+                      <button onClick={() => setToolsJson('[]')} className="rounded-lg bg-white/5 px-2.5 py-1 text-xs text-zinc-400 hover:text-white">
+                        Clear
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-500">Enable to test function calling on any model. Try: &quot;What&apos;s the weather in Paris?&quot;</p>
+                )}
+              </div>
+            </>
           )}
 
           {tab === 'image' && (
@@ -394,10 +511,37 @@ export default function PlaygroundClient() {
                   </div>
                 )}
                 {messages.map((m, i) => (
-                  <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user' ? 'bg-violet-600 text-white' : m.role === 'system' ? 'border border-amber-500/20 bg-amber-500/10 text-amber-200' : 'border border-white/10 bg-white/5 text-zinc-100'}`}>
-                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-60">{m.role}</div>
-                      <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                  <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : m.role === 'tool' ? 'justify-start' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user' ? 'bg-violet-600 text-white' : m.role === 'system' ? 'border border-amber-500/20 bg-amber-500/10 text-amber-200' : m.role === 'tool' ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-100' : 'border border-white/10 bg-white/5 text-zinc-100'}`}>
+                      <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide opacity-60">
+                        <span>{m.role}</span>
+                        {m.name && <span className="rounded bg-white/10 px-1.5 py-0.5 normal-case">{m.name}</span>}
+                      </div>
+                      {m.content && <div className="whitespace-pre-wrap break-words">{m.content}</div>}
+                      {m.tool_calls && m.tool_calls.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          {m.tool_calls.map((tc) => (
+                            <div key={tc.id} className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-2.5">
+                              <div className="flex items-center gap-2 text-xs font-semibold text-violet-300">
+                                <span className="rounded bg-violet-500/20 px-1.5 py-0.5 font-mono text-[10px]">{tc.function.name}</span>
+                                <span className="font-mono text-[10px] opacity-60">{tc.id}</span>
+                              </div>
+                              <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap break-words font-mono text-xs text-violet-100">{(() => { try { return JSON.stringify(JSON.parse(tc.function.arguments), null, 2); } catch { return tc.function.arguments; } })()}</pre>
+                              <button
+                                onClick={() => {
+                                  const result = prompt(`Tool result for ${tc.function.name}:`, '{"result": "example"}');
+                                  if (result !== null) {
+                                    setMessages((prev) => [...prev, { role: 'tool', content: result, tool_call_id: tc.id, name: tc.function.name }]);
+                                  }
+                                }}
+                                className="mt-2 rounded-lg bg-white/10 px-2.5 py-1 text-xs text-zinc-300 hover:bg-white/15 hover:text-white"
+                              >
+                                ↳ Send tool result
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
