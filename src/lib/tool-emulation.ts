@@ -9,13 +9,24 @@ function stringifyTool(t: ToolDef): string {
 }
 
 export function buildToolSystemPrompt(tools: ToolDef[], toolChoice?: unknown): string {
+  const example = tools[0]?.function?.name ?? 'get_weather';
+  const exampleArgs = tools[0]?.function?.parameters
+    ? JSON.stringify(((tools[0].function.parameters as Record<string, unknown>).properties as Record<string, unknown> | undefined) ? Object.fromEntries(Object.keys(((tools[0].function.parameters as Record<string, unknown>).properties as Record<string, Record<string, unknown>>)).map((k) => [k, 'example'])) : {}, null, 0)
+    : '{}';
   const lines = [
     'You have access to the following tools. Use them when needed.',
     '',
     ...tools.map((t) => stringifyTool(t)),
     '',
+    'Example:',
+    `User: What's the weather in London?`,
+    `Assistant: {"tool_calls": [{"name": "${example}", "arguments": {"location": "London"}}]}`,
+    '',
+    'User: Tell me a joke.',
+    'Assistant: Why did the chicken cross the road?',
+    '',
     'Rules:',
-    '- When you need to call a tool, respond with ONLY a JSON object on a single line, no markdown, no extra text.',
+    '- When you need to call a tool, respond with ONLY a JSON object on a single line, no markdown, no extra text, no reasoning prefix.',
     '- Format: {"tool_calls": [{"name": "tool_name", "arguments": { ... }}]}',
     '- Arguments must be valid JSON matching the tool parameters.',
     '- You may call multiple tools at once by including multiple entries.',

@@ -436,15 +436,21 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const originalHasTools = hasTools(body);
   const originalTools = originalHasTools ? (body.tools as Array<{ type: string; function: { name: string; description?: string; parameters?: unknown } }>) : [];
 
-  // Helper to handle a successful non-streaming response: check for emulated tool calls in content
+  // Helper to handle a successful non-streaming response: check for emulated tool calls in content or reasoning
   function maybeConvertEmulated(data: Record<string, unknown>): Record<string, unknown> {
     if (!originalHasTools) return data;
     const choices = data.choices as Array<Record<string, unknown>> | undefined;
     const msg = choices?.[0]?.message as Record<string, unknown> | undefined;
     if (!msg || msg.tool_calls) return data;
     const content = typeof msg.content === 'string' ? msg.content : '';
-    if (!content) return data;
-    const parsed = tryParseToolCalls(content, originalTools);
+    const reasoning = typeof (msg as Record<string, unknown>).reasoning === 'string' ? ((msg as Record<string, unknown>).reasoning as string) : '';
+    const candidate = content || reasoning || '';
+    if (!candidate) return data;
+    // Try content first, then reasoning, then combined
+    let parsed = tryParseToolCalls(candidate, originalTools);
+    if (!parsed && reasoning && content !== reasoning) {
+      parsed = tryParseToolCalls(reasoning, originalTools) || tryParseToolCalls(content + '\n' + reasoning, originalTools);
+    }
     if (!parsed) return data;
     return convertEmulatedResponse(data, parsed, publicModelId);
   }
