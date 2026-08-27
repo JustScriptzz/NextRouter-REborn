@@ -338,10 +338,6 @@ function AddModelForm({
       onError('Select at least one accepted input type');
       return;
     }
-    if (!form.fallbackModelId) {
-      onError('Choose a fallback model');
-      return;
-    }
     if (testState !== 'ok') {
       onError('You must test the endpoint successfully before adding the model');
       return;

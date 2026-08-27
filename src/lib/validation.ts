@@ -109,8 +109,8 @@ export function validateCustomModelPayload(raw: unknown): {
   const bearerToken = typeof b.bearerToken === 'string' ? b.bearerToken : '';
 
   const fallbackModelId = typeof b.fallbackModelId === 'string' ? b.fallbackModelId.trim() : '';
-  if (!fallbackModelId || fallbackModelId.length > 128) {
-    return { ok: false, message: 'A fallback model is required' };
+  if (fallbackModelId.length > 128) {
+    return { ok: false, message: 'Fallback model ID is too long' };
   }
 
   return {

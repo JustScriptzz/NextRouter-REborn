@@ -30,8 +30,10 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!validated.ok) return jsonError(400, validated.message);
   const payload = validated.payload;
 
-  const fallback = await getCatalogModel(payload.fallbackModelId);
-  if (!fallback) return jsonError(400, 'The chosen fallback model does not exist');
+  if (payload.fallbackModelId) {
+    const fallback = await getCatalogModel(payload.fallbackModelId);
+    if (!fallback) return jsonError(400, 'The chosen fallback model does not exist');
+  }
 
   const modelId = `${user.username}/${payload.modelName}`;
   const dupes = await db
