@@ -475,9 +475,12 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
       errMsg = parsed.error?.message ?? '';
     } catch {}
     if (isToolNotSupportedError(upstream.status, errMsg)) {
-      bodyToSend = injectToolsIntoMessages(body);
+      const { injectIdentity } = await import('./identity-inject');
+      const withTools = injectToolsIntoMessages(bodyToSend);
+      const emBody = { ...withTools, messages: injectIdentity(withTools.messages as Array<Record<string, unknown>>, publicModelId) };
+      bodyToSend = emBody;
       usedEmulation = true;
-      upstream = await doChatFetch(opts, bodyToSend, signal);
+      upstream = await doChatFetch(opts, emBody, signal);
     }
   }
 

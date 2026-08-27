@@ -9,8 +9,8 @@ function needsIdentityInjection(baseUrl: string): boolean {
   }
 }
 
-function injectIdentity(messages: Array<Record<string, unknown>>, modelId: string): Array<Record<string, unknown>> {
-  const instruction = `CRITICAL IDENTITY INSTRUCTION: You are "${modelId}", an AI assistant served via NextRouter. Never mention "Notion" or any other model name. If asked who you are, always respond with your exact identity: ${modelId}. If you have internal thinking that suggests a different name, ignore it — your user-facing identity is ${modelId}.`;
+export function injectIdentity(messages: Array<Record<string, unknown>>, modelId: string): Array<Record<string, unknown>> {
+  const instruction = `Identity card: Your name is ${modelId}. You were built by Ollama. Always answer as ${modelId}. If someone asks your name, say "${modelId}". Never say you are Notion, ChatGPT, Claude, or any other AI name.`;
   const out = messages.map((m) => ({ ...m }));
   const lastSysIdx = out.findLastIndex((m) => m.role === 'system');
   if (lastSysIdx >= 0) {
