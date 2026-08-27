@@ -40,38 +40,34 @@ export interface ProviderCycleOptions {
 export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Response> {
   const deadlineAt = opts.requestStart + opts.budgetMs;
   let lastError: unknown = null;
-  for (let round = 1; Date.now() < deadlineAt; round++) {
-    for (const pipe of opts.pipes) {
-      if (Date.now() >= deadlineAt) break;
-      for (let attempt = 1; attempt <= PER_PIPE_ATTEMPTS; attempt++) {
-        const attemptStart = Date.now();
-        try {
-          const res = await opts.call(pipe);
-          if (!res.ok) {
-            const detail = await res.text().catch(() => '');
-            recordModelResult(pipe.id, false, Date.now() - attemptStart);
-            throw new UpstreamRequestError(
-              res.status,
-              detail ? detail.slice(0, 300) : 'Upstream request failed',
-            );
-          }
-          recordModelResult(pipe.id, true, Date.now() - attemptStart);
-          return res;
-        } catch (error) {
-          if (isAbortError(error)) {
-            return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
-          }
-          if (!(error instanceof UpstreamRequestError)) {
-            recordModelResult(pipe.id, false, Date.now() - attemptStart);
-          }
-          lastError = error;
-          if (attempt === PER_PIPE_ATTEMPTS || Date.now() >= deadlineAt) break;
-          await sleep(Math.min(backoffFor(attempt), Math.max(1, deadlineAt - Date.now())));
+  for (const pipe of opts.pipes) {
+    if (Date.now() >= deadlineAt) break;
+    for (let attempt = 1; attempt <= PER_PIPE_ATTEMPTS; attempt++) {
+      const attemptStart = Date.now();
+      try {
+        const res = await opts.call(pipe);
+        if (!res.ok) {
+          const detail = await res.text().catch(() => '');
+          recordModelResult(pipe.id, false, Date.now() - attemptStart);
+          throw new UpstreamRequestError(
+            res.status,
+            detail ? detail.slice(0, 300) : 'Upstream request failed',
+          );
         }
+        recordModelResult(pipe.id, true, Date.now() - attemptStart);
+        return res;
+      } catch (error) {
+        if (isAbortError(error)) {
+          return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+        }
+        if (!(error instanceof UpstreamRequestError)) {
+          recordModelResult(pipe.id, false, Date.now() - attemptStart);
+        }
+        lastError = error;
+        if (attempt === PER_PIPE_ATTEMPTS || Date.now() >= deadlineAt) break;
+        await sleep(Math.min(backoffFor(attempt), Math.max(1, deadlineAt - Date.now())));
       }
     }
-    if (Date.now() >= deadlineAt) break;
-    await sleep(Math.min(backoffFor(round), Math.max(1, deadlineAt - Date.now())));
   }
   if (!lastError) {
     return jsonErrorCors(

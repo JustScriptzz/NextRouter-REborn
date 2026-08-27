@@ -11,12 +11,12 @@ import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usa
 export const runtime = 'nodejs';
 
 const RETRY_MAX_ATTEMPTS = 60;
-const RETRY_BASE_DELAY_MS = 2000;
-const RETRY_MAX_DELAY_MS = 10000;
-const RETRY_TIME_BUDGET_MS = 260000;
-const REQUEST_HARD_DEADLINE_MS = 280000;
+const RETRY_BASE_DELAY_MS = 800;
+const RETRY_MAX_DELAY_MS = 3000;
+const RETRY_TIME_BUDGET_MS = 40000;
+const REQUEST_HARD_DEADLINE_MS = 45000;
 const PROVIDER_FAILOVER_ATTEMPTS = 2;
-const PROVIDER_FAILOVER_BUDGET_MS = 25000;
+const PROVIDER_FAILOVER_BUDGET_MS = 8000;
 
 export async function POST(req: Request) {
   const requestStart = Date.now();
@@ -54,38 +54,37 @@ export async function POST(req: Request) {
       requestStart + REQUEST_HARD_DEADLINE_MS,
     );
     let lastError: unknown = null;
-    for (let round = 1; Date.now() < deadline; round++) {
-      for (const pipe of catalogPipes) {
-        if (Date.now() >= deadline) break;
-        const pipeStart = Date.now();
-        try {
-          return await withRetry(
-            () =>
-              chatCompletions({
-                baseUrl: pipe.baseUrl,
-                apiKey: pipe.apiKey,
-                upstreamModel: pipe.upstreamModel,
-                publicModelId: pipe.id,
-                body,
-                signal,
-                userId: user.id,
-                remainingBudget: remaining,
-              }),
-            {
-              maxAttempts: PROVIDER_FAILOVER_ATTEMPTS,
-              deadlineAt: Math.min(deadline, Date.now() + PROVIDER_FAILOVER_BUDGET_MS),
-            },
-          );
-        } catch (error) {
-          if (isAbortError(error)) {
-            return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
-          }
-          recordModelResult(pipe.id, false, Date.now() - pipeStart);
-          lastError = error;
-        }
-      }
+    // Single fast pass: try each provider pipe once, move on quickly, return the
+    // first success. No infinite round-restarting — bounded by a tight budget so
+    // slow/dead pipes return fast instead of hanging the client for minutes.
+    for (const pipe of catalogPipes) {
       if (Date.now() >= deadline) break;
-      await sleep(Math.min(backoffFor(round), Math.max(1, deadline - Date.now())));
+      const pipeStart = Date.now();
+      try {
+        return await withRetry(
+          () =>
+            chatCompletions({
+              baseUrl: pipe.baseUrl,
+              apiKey: pipe.apiKey,
+              upstreamModel: pipe.upstreamModel,
+              publicModelId: pipe.id,
+              body,
+              signal,
+              userId: user.id,
+              remainingBudget: remaining,
+            }),
+          {
+            maxAttempts: PROVIDER_FAILOVER_ATTEMPTS,
+            deadlineAt: Math.min(deadline, Date.now() + PROVIDER_FAILOVER_BUDGET_MS),
+          },
+        );
+      } catch (error) {
+        if (isAbortError(error)) {
+          return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
+        }
+        recordModelResult(pipe.id, false, Date.now() - pipeStart);
+        lastError = error;
+      }
     }
     if (lastError instanceof UpstreamRequestError) {
       return jsonErrorCors(lastError.status, scrubMessage(lastError.message), 'upstream_error');
