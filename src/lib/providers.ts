@@ -403,6 +403,24 @@ export async function getCatalog(): Promise<Catalog> {
 
     const live = await liveGatewayModels(slot);
 
+    if (slot.seedIds) {
+      for (const seedId of slot.seedIds) {
+        if (!byId.has(seedId) && !normalizedIds.has(seedId.replace(/-/g, ''))) {
+          const kind = classifyModel(seedId);
+          add({
+            id: seedId,
+            type: kind,
+            description: describeModel(seedId),
+            provider: slot.provider,
+            baseUrl: withV1Prefix(baseUrl),
+            apiKey,
+            upstreamModel: seedId,
+            supportsImageEdits: false,
+          });
+        }
+      }
+    }
+
     if (live && live.length > 0) {
       for (const info of live) {
         if (slot.matchExistingOnly) {
@@ -477,23 +495,6 @@ export async function getCatalog(): Promise<Catalog> {
         });
       }
 
-      if (slot.seedIds) {
-        for (const seedId of slot.seedIds) {
-          if (!byId.has(seedId) && !normalizedIds.has(seedId.replace(/-/g, ''))) {
-            const kind = classifyModel(seedId);
-            add({
-              id: seedId,
-              type: kind,
-              description: describeModel(seedId),
-              provider: slot.provider,
-              baseUrl: withV1Prefix(baseUrl),
-              apiKey,
-              upstreamModel: seedId,
-              supportsImageEdits: false,
-            });
-          }
-        }
-      }
       continue;
     }
 
