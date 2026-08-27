@@ -92,7 +92,7 @@ function classifyModel(id: string): ModelKind {
   if (/(text-embedding|embedding|e5-|bge-|minilm|rerank|ada-002)/.test(lower)) {
     return 'embedding';
   }
-  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid|meta-image)/.test(lower)) {
+  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid|meta-image|grok-imagine|qwen-image|gpt-image)/.test(lower)) {
     return 'image';
   }
   if (/(whisper|transcri|speech-to-text|stt|recogni|nova-3)/.test(lower)) {
@@ -101,7 +101,7 @@ function classifyModel(id: string): ModelKind {
   if (/(tts|text-to-speech|eleven|aura|kokoro|xtts)/.test(lower)) {
     return 'tts';
   }
-  if (/^(sora|veo|kling|wan)/.test(lower)) {
+  if (/^(sora|veo|kling|wan|qwen-video)|\bvideo\b|-video$/.test(lower)) {
     return 'video';
   }
   return 'text';
@@ -144,6 +144,7 @@ interface GatewaySlot {
   onlyIfContains?: string[];
   onlyIfFree?: boolean;
   requiresKey?: boolean;
+  modelFetchTimeoutMs?: number;
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -195,6 +196,7 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'CRAX_MODELS',
     defaultBaseUrl: 'https://gpt.crax.lol',
     requiresKey: true,
+    modelFetchTimeoutMs: 60000,
   },
   {
     provider: 'nvidia',
@@ -291,7 +293,7 @@ async function liveGatewayModels(
     const res = await proxiedFetch(url, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
       cache: 'no-store',
-      signal: AbortSignal.timeout(LIVE_MODELS_TIMEOUT_MS),
+      signal: AbortSignal.timeout(slot.modelFetchTimeoutMs ?? LIVE_MODELS_TIMEOUT_MS),
     });
     if (res.ok) {
       const body = (await res.json().catch(() => null)) as
