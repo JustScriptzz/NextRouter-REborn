@@ -460,6 +460,9 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   let usedEmulation = false;
   let bodyToSend: Record<string, unknown> = body;
 
+  const { applyIdentityInjection } = await import('./identity-inject');
+  bodyToSend = applyIdentityInjection(bodyToSend, publicModelId, baseUrl);
+
   upstream = await doChatFetch(opts, bodyToSend, signal);
 
   // If native tool support failed, retry with emulation
