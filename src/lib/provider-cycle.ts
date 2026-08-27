@@ -1,6 +1,6 @@
 import type { CatalogEntry } from './providers';
 import { recordModelResult } from './model-stats';
-import { isNoLoopStatus, UpstreamRequestError } from './upstream';
+import { UpstreamRequestError } from './upstream';
 import { jsonErrorCors } from './http';
 
 const PER_PIPE_ATTEMPTS = 2;
@@ -41,7 +41,6 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
   const deadlineAt = opts.requestStart + opts.budgetMs;
   let lastError: unknown = null;
   for (let round = 1; Date.now() < deadlineAt; round++) {
-    let sawLoopableCause = false;
     for (const pipe of opts.pipes) {
       if (Date.now() >= deadlineAt) break;
       for (let attempt = 1; attempt <= PER_PIPE_ATTEMPTS; attempt++) {
@@ -66,15 +65,12 @@ export async function cycleProviderPipes(opts: ProviderCycleOptions): Promise<Re
             recordModelResult(pipe.id, false, Date.now() - attemptStart);
           }
           lastError = error;
-          const noLoop = error instanceof UpstreamRequestError && isNoLoopStatus(error.status);
-          if (!noLoop) sawLoopableCause = true;
-          if (noLoop || attempt === PER_PIPE_ATTEMPTS || Date.now() >= deadlineAt) break;
+          if (attempt === PER_PIPE_ATTEMPTS || Date.now() >= deadlineAt) break;
           await sleep(Math.min(backoffFor(attempt), Math.max(1, deadlineAt - Date.now())));
         }
       }
     }
     if (Date.now() >= deadlineAt) break;
-    if (!sawLoopableCause) break;
     await sleep(Math.min(backoffFor(round), Math.max(1, deadlineAt - Date.now())));
   }
   if (!lastError) {

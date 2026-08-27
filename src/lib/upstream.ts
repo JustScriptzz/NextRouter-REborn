@@ -56,10 +56,6 @@ export class UpstreamRequestError extends Error {
   }
 }
 
-export function isNoLoopStatus(status: number): boolean {
-  return status === 401 || status === 404;
-}
-
 const UPSTREAM_ATTEMPT_TIMEOUT_MS = 75000;
 
 function withAttemptTimeout(signal: AbortSignal): { signal: AbortSignal; clear: () => void } {
