@@ -405,19 +405,20 @@ export async function getCatalog(): Promise<Catalog> {
 
     if (slot.seedIds) {
       for (const seedId of slot.seedIds) {
-        if (!byId.has(seedId) && !normalizedIds.has(seedId.replace(/-/g, ''))) {
-          const kind = classifyModel(seedId);
-          add({
-            id: seedId,
-            type: kind,
-            description: describeModel(seedId),
-            provider: slot.provider,
-            baseUrl: withV1Prefix(baseUrl),
-            apiKey,
-            upstreamModel: seedId,
-            supportsImageEdits: false,
-          });
-        }
+        if (byId.has(seedId)) continue;
+        const kind = classifyModel(seedId);
+        const entry: CatalogEntry = {
+          id: seedId,
+          type: kind,
+          description: describeModel(seedId),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(baseUrl),
+          apiKey,
+          upstreamModel: seedId,
+          supportsImageEdits: false,
+        };
+        byId.set(seedId, entry);
+        providersMap.set(seedId, [entry]);
       }
     }
 
