@@ -145,6 +145,7 @@ interface GatewaySlot {
   onlyIfFree?: boolean;
   requiresKey?: boolean;
   modelFetchTimeoutMs?: number;
+  seedIds?: string[];
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -197,6 +198,14 @@ const GATEWAYS: GatewaySlot[] = [
     defaultBaseUrl: 'https://gpt.crax.lol',
     requiresKey: true,
     modelFetchTimeoutMs: 60000,
+    seedIds: [
+      'qwen-image-2.0-pro',
+      'qwen-image-3.0-pro',
+      'qwen-image-4.0-pro',
+      'grok-imagine-2',
+      'grok-imagine-3',
+      'qwen-video',
+    ],
   },
   {
     provider: 'nvidia',
@@ -466,6 +475,24 @@ export async function getCatalog(): Promise<Catalog> {
           upstreamModel: info.id,
           supportsImageEdits: info.endpoints.includes('images/edits'),
         });
+      }
+
+      if (slot.seedIds) {
+        for (const seedId of slot.seedIds) {
+          if (!byId.has(seedId) && !normalizedIds.has(seedId.replace(/-/g, ''))) {
+            const kind = classifyModel(seedId);
+            add({
+              id: seedId,
+              type: kind,
+              description: describeModel(seedId),
+              provider: slot.provider,
+              baseUrl: withV1Prefix(baseUrl),
+              apiKey,
+              upstreamModel: seedId,
+              supportsImageEdits: false,
+            });
+          }
+        }
       }
       continue;
     }
