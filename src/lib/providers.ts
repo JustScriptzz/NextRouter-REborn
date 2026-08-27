@@ -189,6 +189,14 @@ const GATEWAYS: GatewaySlot[] = [
     onlyIfFree: true,
   },
   {
+    provider: 'crax',
+    baseUrlEnv: 'CRAX_BASE_URL',
+    apiKeyEnv: 'CRAX_API_KEY',
+    modelsEnv: 'CRAX_MODELS',
+    defaultBaseUrl: 'https://gpt.crax.lol',
+    requiresKey: true,
+  },
+  {
     provider: 'nvidia',
     baseUrlEnv: 'NVIDIA_BASE_URL',
     apiKeyEnv: 'NVIDIA_API_KEY',
