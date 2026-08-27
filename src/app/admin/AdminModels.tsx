@@ -17,6 +17,11 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ id: '', type: 'text', baseUrl: '', upstream: '', name: '' });
   const [saving, setSaving] = useState('');
+  const [editType, setEditType] = useState('');
+  const [stackProvider, setStackProvider] = useState('');
+  const [stackUrl, setStackUrl] = useState('');
+  const [stackUpstream, setStackUpstream] = useState('');
+  const [stackKey, setStackKey] = useState('');
 
   const load = async () => {
     const res = await fetch('/api/admin/config');
@@ -209,6 +214,28 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
                   <div className="flex gap-2">
                     <input value={editEndpoint} onChange={(e) => setEditEndpoint(e.target.value)} placeholder="https://new-endpoint/v1" className="input-dark flex-1 py-1.5 font-mono text-xs" />
                     <button onClick={async () => { if (!editEndpoint) return; await addRule(`endpoint | ${m.id} | ${editEndpoint}`); setEditEndpoint(''); }} className="btn-ghost shrink-0 px-2 py-1 text-xs">Move</button>
+                  </div>
+                  <div className="flex gap-2">
+                    <select value={editType} onChange={(e) => setEditType(e.target.value)} className="input-dark flex-1 py-1.5 text-xs">
+                      <option value="">Change type…</option>
+                      <option value="text">Text</option>
+                      <option value="image">Image</option>
+                      <option value="tts">TTS / Speech</option>
+                      <option value="stt">STT / Transcribe</option>
+                      <option value="embedding">Embedding</option>
+                      <option value="video">Video</option>
+                    </select>
+                    <button onClick={async () => { if (!editType || editType === m.type) return; await addRule(`type | ${m.id} | ${editType}`); setEditType(''); load(); }} className="btn-ghost shrink-0 px-2 py-1 text-xs">Set type</button>
+                  </div>
+                  <div className="border-t border-white/10 pt-2 mt-2">
+                    <p className="text-[10px] font-semibold uppercase text-zinc-500 mb-2">Add provider pipe</p>
+                    <div className="grid gap-1.5 grid-cols-2">
+                      <input value={stackProvider} onChange={(e) => setStackProvider(e.target.value)} placeholder="Provider name (e.g. custom)" className="input-dark py-1.5 text-xs" />
+                      <input value={stackUpstream} onChange={(e) => setStackUpstream(e.target.value)} placeholder="Upstream model ID" className="input-dark py-1.5 font-mono text-xs" />
+                      <input value={stackUrl} onChange={(e) => setStackUrl(e.target.value)} placeholder="https://api.example.com/v1" className="input-dark py-1.5 font-mono text-xs" />
+                      <input value={stackKey} onChange={(e) => setStackKey(e.target.value)} placeholder="API key (optional)" className="input-dark py-1.5 font-mono text-xs" />
+                    </div>
+                    <button onClick={async () => { if (!stackProvider || !stackUrl || !stackUpstream) return; await addRule(`stack | ${m.id} | ${stackProvider} | ${stackUrl} | ${stackUpstream}${stackKey ? ' | ' + stackKey : ''}`); setStackProvider(''); setStackUrl(''); setStackUpstream(''); setStackKey(''); load(); }} className="mt-2 btn-ghost w-full px-2 py-1 text-xs">Add pipe</button>
                   </div>
                 </div>
               )}

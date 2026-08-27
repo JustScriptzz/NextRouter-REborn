@@ -541,6 +541,12 @@ export async function getCatalog(): Promise<Catalog> {
     } else if (cmd === 'name' && parts.length >= 3) {
       const target = entries.find((x) => x.id === parts[1]);
       if (target) target.description = parts[2];
+    } else if (cmd === 'type' && parts.length >= 3) {
+      const newType = parts[2].toLowerCase() as ModelKind;
+      if (ALL_KINDS.includes(newType)) {
+        const target = entries.find((x) => x.id === parts[1]);
+        if (target) target.type = newType;
+      }
     }
   }
 
@@ -553,6 +559,29 @@ export async function getCatalog(): Promise<Catalog> {
 
   const blockedModels = await kvGetCached('blocked_models');
   const pinnedModels = await kvGetCached('pinned_models');
+
+  const stackRules = rules.filter((r) => r.startsWith('stack |'));
+  for (const rule of stackRules) {
+    const parts = rule.split('|').map((p) => p.trim());
+    const [,, targetId, stackProvider, stackBaseUrl, stackUpstream, stackApiKey] = parts;
+    if (!targetId || !stackProvider || !stackBaseUrl || !stackUpstream) continue;
+    const existing = providersMap.get(targetId) ?? [];
+    if (existing.length === 0) continue;
+    if (existing.some((e) => e.provider === stackProvider && e.upstreamModel === stackUpstream)) continue;
+    const baseEntry = existing[0];
+    existing.push({
+      id: targetId,
+      type: baseEntry.type,
+      description: baseEntry.description,
+      provider: stackProvider,
+      baseUrl: withV1Prefix(stackBaseUrl),
+      apiKey: stackApiKey ?? '',
+      upstreamModel: stackUpstream,
+      supportsImageEdits: false,
+    });
+    providersMap.set(targetId, existing);
+  }
+
   let modelsOut = [...byId.values()];
   if (blockedModels.length > 0) {
     const blocked = new Set(blockedModels.map((b) => b.toLowerCase()));
