@@ -624,6 +624,55 @@ export async function imagesGenerations(opts: ImagesCallOptions): Promise<Respon
   });
 }
 
+export interface VideosCallOptions {
+  baseUrl: string;
+  apiKey: string;
+  upstreamModel: string;
+  publicModelId: string;
+  body: Record<string, unknown>;
+  signal: AbortSignal;
+  userId: string;
+}
+
+export const VIDEO_TOKEN_COST = 2000;
+
+export async function videosGenerations(opts: VideosCallOptions): Promise<Response> {
+  const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
+  const url = joinEndpoint(baseUrl, 'videos/generations');
+  const conn = withAttemptTimeout(signal);
+  let upstream: Response;
+  try {
+    upstream = await proxiedFetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ ...body, model: upstreamModel }),
+      signal: conn.signal,
+    });
+  } catch (error) {
+    conn.clear();
+    if (signal.aborted) throw error;
+    throw new UpstreamRequestError(502, 'Upstream request failed');
+  }
+  conn.clear();
+  if (!upstream.ok) {
+    return upstreamErrorResponse(upstream);
+  }
+  const data = (await upstream.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!data) {
+    throw new UpstreamRequestError(502, 'Upstream returned an invalid response');
+  }
+  const rewritten = rewriteModelField(data, upstreamModel, publicModelId);
+  // Video generation is more expensive — charge per generation request
+  await recordUsage(userId, VIDEO_TOKEN_COST);
+  return Response.json(rewritten, {
+    status: 200,
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  });
+}
+
 export async function imagesEdits(opts: ImagesCallOptions): Promise<Response> {
   const { baseUrl, apiKey, upstreamModel, publicModelId, body, signal, userId } = opts;
   const url = joinEndpoint(baseUrl, 'images/edits');
