@@ -180,6 +180,7 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'JANKROUTER_API_KEY',
     modelsEnv: 'JANKROUTER_MODELS',
     defaultBaseUrl: 'https://jankrouter.waifly.com/',
+    requiresKey: true,
   },
   {
     provider: 'kilo',
