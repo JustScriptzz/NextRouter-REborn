@@ -12,6 +12,7 @@ interface MeResponse {
 const NAV_ITEMS = [
   { href: '/models', label: 'Models' },
   { href: '/playground', label: 'Playground' },
+  { href: '/limits', label: 'Limits' },
   { href: '/my-models', label: 'My Models' },
   { href: '/keys', label: 'Keys' },
   { href: '/usage', label: 'Usage' },

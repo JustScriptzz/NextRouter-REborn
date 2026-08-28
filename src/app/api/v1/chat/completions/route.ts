@@ -6,7 +6,8 @@ import { recordModelResult } from '@/lib/model-stats';
 import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
 import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
-import { getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
+import { getEffectiveLimits } from '@/lib/user-limits';
+import { getTodayUsage, getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
@@ -30,11 +31,21 @@ export async function POST(req: Request) {
   const modelId = body.model;
 
   const unlimited = isUnlimitedEmail(user.email);
-  const remaining = unlimited ? UNLIMITED_BUDGET : await getUsageRemaining(user.id);
+  const { rpm: userRpm, tokenLimit: userTokenLimit } = unlimited
+    ? { rpm: Number.MAX_SAFE_INTEGER, tokenLimit: UNLIMITED_BUDGET }
+    : await getEffectiveLimits(user.id);
+
+  // Per-user RPM gate (default 15)
+  if (userRpm > 0 && !rateLimiter.allow(`user-rpm:${user.id}`, userRpm)) {
+    return jsonErrorCors(429, 'Rate limit exceeded for your account. Increase your RPM on the Limits page.', 'rate_limit');
+  }
+
+  const { tokens: usedToday } = await getTodayUsage(user.id);
+  const remaining = Math.max(0, userTokenLimit - usedToday);
   if (remaining <= 0) {
     return jsonErrorCors(
       429,
-      'Daily token limit of 500000 tokens reached. It resets at midnight UTC.',
+      `Daily token limit of ${userTokenLimit} tokens reached. It resets at midnight UTC.`,
       'daily_limit',
     );
   }
