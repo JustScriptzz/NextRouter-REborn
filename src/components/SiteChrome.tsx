@@ -12,18 +12,20 @@ interface MeResponse {
 const NAV_ITEMS = [
   { href: '/models', label: 'Models' },
   { href: '/playground', label: 'Playground' },
+  { href: '/messages', label: 'Messages' },
   { href: '/limits', label: 'Limits' },
   { href: '/my-models', label: 'My Models' },
   { href: '/keys', label: 'Keys' },
   { href: '/usage', label: 'Usage' },
   { href: '/docs', label: 'Docs' },
-];
+] as const;
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<{ email: string; username: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [unread, setUnread] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -33,6 +35,23 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       .then((d) => setBanner(d?.message ?? null))
       .catch(() => undefined);
   }, []);
+
+  const loadUnread = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/messages/unread?cb=${Date.now()}`);
+      if (res.ok) {
+        const d = await res.json();
+        setUnread(typeof d.unread === 'number' ? d.unread : 0);
+      }
+    } catch {}
+  }, [user]);
+
+  useEffect(() => {
+    loadUnread();
+    const t = setInterval(loadUnread, 15000);
+    return () => clearInterval(t);
+  }, [loadUnread, user]);
 
   const loadUser = useCallback(() => {
     fetch('/api/auth/me')
@@ -117,13 +136,18 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`rounded-xl px-3.5 py-2 text-sm transition ${
+                  className={`relative rounded-xl px-3.5 py-2 text-sm transition ${
                     active
                       ? 'bg-violet-500/15 font-medium text-violet-200'
                       : 'text-zinc-400 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   {item.label}
+                  {item.href === '/messages' && unread > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-bold text-white">
+                      {unread > 99 ? '99+' : unread}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -223,10 +247,15 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
                     : 'text-zinc-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                {active && (
+{active && (
                   <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-400 to-cyan-400" />
                 )}
                 {item.label}
+                {item.href === '/messages' && unread > 0 && (
+                  <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-bold text-white">
+                    {unread > 99 ? '99+' : unread}
+                  </span>
+                )}
               </Link>
             );
           })}

@@ -11,6 +11,7 @@ import AdminConfig from './AdminConfig';
 import AdminModels from './AdminModels';
 import AdminUserManagement from './AdminUserManagement';
 import AdminRequests from './AdminRequests';
+import AdminMessages from './AdminMessages';
 
 export const metadata: Metadata = {
   title: 'Admin',
@@ -25,6 +26,7 @@ const TABS = [
   { key: 'access', label: 'Access' },
   { key: 'broadcast', label: 'Broadcast' },
   { key: 'requests', label: 'Limits Requests' },
+  { key: 'messages', label: 'Messages' },
 ];
 
 function ago(ts: number | null): string {
@@ -204,7 +206,7 @@ export default async function AdminPage({
         </>
       )}
 
-{(tab === 'models' || tab === 'providers' || tab === 'access' || tab === 'broadcast' || tab === 'requests') && (
+{(tab === 'models' || tab === 'providers' || tab === 'access' || tab === 'broadcast' || tab === 'requests' || tab === 'messages') && (
         <div className="mt-6">
           {tab === 'models' && (
             <AdminModels
@@ -233,6 +235,7 @@ export default async function AdminPage({
           )}
           {tab === 'broadcast' && <AdminConfig sections={['banner']} />}
           {tab === 'requests' && <AdminRequests />}
+          {tab === 'messages' && <AdminMessages />}
         </div>
       )}
     </div>
