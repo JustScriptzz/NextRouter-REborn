@@ -52,7 +52,7 @@ export default async function AdminPage({
   if (!user) {
     return (
       <div className="py-20 text-center text-sm text-zinc-500">
-        Not signed in. <Link href="/login" className="text-violet-300">Log in</Link>
+        Not signed in. <Link href="/login" className="text-white underline">Log in</Link>
       </div>
     );
   }
@@ -114,14 +114,13 @@ export default async function AdminPage({
         <AdminRefresh />
       </div>
 
-      <nav className="mt-6 flex flex-wrap gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+      <nav className="mt-6 flex flex-wrap gap-1 rounded-lg p-1" style={{ border: '0.5px solid #2d2d2d', background: '#0a0a0a' }}>
         {TABS.map((t) => (
           <Link
             key={t.key}
             href={`/admin?tab=${t.key}`}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              tab === t.key ? 'bg-violet-500/20 text-violet-200' : 'text-zinc-400 hover:text-white'
-            }`}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition hover:text-white"
+            style={tab === t.key ? { background: '#1D1D1F', color: '#ffffff', border: '0.5px solid #2d2d2d' } : { color: '#a1a1aa', border: '0.5px solid transparent' }}
           >
             {t.label}
           </Link>

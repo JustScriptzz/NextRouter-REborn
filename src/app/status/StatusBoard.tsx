@@ -95,12 +95,12 @@ function ModelCard({ m }: { m: ModelStatus }) {
       <div className="mt-4 flex items-center justify-between">
         <div className="flex flex-wrap gap-1.5">
           {m.providers.slice(0, 3).map((p) => (
-            <span key={p} className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">{p}</span>
+            <span key={p} className="rounded-full px-3 py-1 text-xs text-zinc-300" style={{ background: '#1D1D1F', border: '0.5px solid #2d2d2d' }}>{p}</span>
           ))}
           {m.providers.length === 0 && <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-500">no data</span>}
         </div>
         {m.free && (
-          <span className="rounded-full bg-rose-500/15 px-4 py-1.5 text-sm text-rose-300">Free</span>
+          <span className="rounded-full px-4 py-1.5 text-sm text-zinc-300" style={{ background: '#1D1D1F', border: '0.5px solid #2d2d2d' }}>Free</span>
         )}
       </div>
     </div>
@@ -178,7 +178,8 @@ export default function StatusBoard() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search models..."
-            className="ml-auto w-56 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm outline-none placeholder:text-zinc-600 focus:border-violet-500/50"
+            className="ml-auto w-56 rounded-full px-4 py-1.5 text-sm outline-none placeholder:text-zinc-600"
+            style={{ background: '#0a0a0a', border: '0.5px solid #2d2d2d', color: '#ffffff' }}
           />
         </div>
 

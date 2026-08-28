@@ -107,7 +107,7 @@ export default function LimitsPage() {
   if (loading) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center py-32">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-violet-400" />
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-white" />
         <p className="mt-4 text-sm text-zinc-500">Loading your limits…</p>
       </div>
     );

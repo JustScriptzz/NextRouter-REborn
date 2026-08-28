@@ -93,8 +93,8 @@ const TYPE_STYLES: Record<
 > = {
   text: {
     label: 'Text',
-    badge: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
-    ring: 'from-violet-500/40 via-violet-500/5 to-transparent',
+    badge: 'bg-[#1D1D1F] text-zinc-300 border-[#2d2d2d]',
+    ring: 'from-white/[0.04] via-transparent to-transparent',
     icon: (
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
         <path d="M4 5h12M4 10h9M4 15h6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
@@ -103,8 +103,8 @@ const TYPE_STYLES: Record<
   },
   image: {
     label: 'Image',
-    badge: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/25',
-    ring: 'from-cyan-500/40 via-cyan-500/5 to-transparent',
+    badge: 'bg-[#1D1D1F] text-zinc-300 border-[#2d2d2d]',
+    ring: 'from-white/[0.04] via-transparent to-transparent',
     icon: (
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
         <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
@@ -115,8 +115,8 @@ const TYPE_STYLES: Record<
   },
   tts: {
     label: 'Speech',
-    badge: 'bg-amber-500/15 text-amber-300 border-amber-500/25',
-    ring: 'from-amber-500/40 via-amber-500/5 to-transparent',
+    badge: 'bg-[#1D1D1F] text-zinc-300 border-[#2d2d2d]',
+    ring: 'from-white/[0.04] via-transparent to-transparent',
     icon: (
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
         <path d="M4 8v4h3l4 3V5L7 8H4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
@@ -126,8 +126,8 @@ const TYPE_STYLES: Record<
   },
   stt: {
     label: 'Transcribe',
-    badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-    ring: 'from-emerald-500/40 via-emerald-500/5 to-transparent',
+    badge: 'bg-[#1D1D1F] text-zinc-300 border-[#2d2d2d]',
+    ring: 'from-white/[0.04] via-transparent to-transparent',
     icon: (
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
         <rect x="7.5" y="3" width="5" height="9" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
@@ -137,8 +137,8 @@ const TYPE_STYLES: Record<
   },
   video: {
     label: 'Video',
-    badge: 'bg-rose-500/15 text-rose-300 border-rose-500/25',
-    ring: 'from-rose-500/40 via-rose-500/5 to-transparent',
+    badge: 'bg-[#1D1D1F] text-zinc-300 border-[#2d2d2d]',
+    ring: 'from-white/[0.04] via-transparent to-transparent',
     icon: (
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
         <rect x="3" y="5" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -148,8 +148,8 @@ const TYPE_STYLES: Record<
   },
   embedding: {
     label: 'Embedding',
-    badge: 'bg-sky-500/15 text-sky-300 border-sky-500/25',
-    ring: 'from-sky-500/40 via-sky-500/5 to-transparent',
+    badge: 'bg-[#1D1D1F] text-zinc-300 border-[#2d2d2d]',
+    ring: 'from-white/[0.04] via-transparent to-transparent',
     icon: (
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
         <circle cx="10" cy="10" r="2.2" stroke="currentColor" strokeWidth="1.5" />
@@ -209,7 +209,7 @@ export default function ModelCard({ model, status }: ModelCardProps) {
               {style.label}
             </span>
             {model.isFallback && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #ffffff' }}>
                 <svg viewBox="0 0 20 20" fill="none" className="h-3 w-3" aria-hidden>
                   <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L2.2 7.7l5.4-.8L10 2z" fill="currentColor" />
                 </svg>
@@ -230,11 +230,12 @@ export default function ModelCard({ model, status }: ModelCardProps) {
       <button
         type="button"
         onClick={copyId}
-        className={`relative mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+        className={`relative mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
           copied
-            ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-            : 'border-zinc-700/80 text-zinc-400 hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-200'
+            ? 'text-white'
+            : 'text-zinc-400 hover:text-white'
         }`}
+        style={copied ? { border: '0.5px solid #ffffff', background: '#ffffff', color: '#000000' } : { border: '0.5px solid #2d2d2d', background: '#0a0a0a' }}
       >
         {copied ? (
           <>

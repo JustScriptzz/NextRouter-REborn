@@ -78,7 +78,7 @@ export default function MyModelsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-violet-400" />
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-white" />
         <p className="mt-4 text-sm text-zinc-500">Loading your models...</p>
       </div>
     );
@@ -90,7 +90,7 @@ export default function MyModelsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50">My Models</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
           Add your own endpoints. Your models are exposed as{' '}
-          <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+          <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
             {username ? `${username}/` : '{username}/'}model-name
           </code>
           .
@@ -143,7 +143,7 @@ export default function MyModelsPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-500/25 bg-violet-500/10 font-mono text-xs font-bold uppercase text-violet-300">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#2d2d2d] bg-[#1D1D1F] font-mono text-xs font-bold uppercase text-white">
                       {m.modelId.charAt(0)}
                     </span>
                     <div className="min-w-0">
@@ -155,9 +155,9 @@ export default function MyModelsPage() {
                   </div>
                   <span
                     className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                      m.visibility === 'public'
-                        ? 'border-violet-500/25 bg-violet-500/15 text-violet-300'
-                        : 'border-white/10 bg-white/5 text-zinc-400'
+m.visibility === 'public'
+                        ? 'border-[#2d2d2d] bg-[#1D1D1F] text-white'
+                        : 'border-[#2d2d2d] bg-white/5 text-zinc-400'
                     }`}
                   >
                     {m.visibility}
@@ -201,9 +201,9 @@ export default function MyModelsPage() {
                     type="button"
                     onClick={() => setEditing(editing === m.modelId ? null : m.modelId)}
                     className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                      editing === m.modelId
-                        ? 'border-violet-500/50 bg-violet-500/10 text-violet-200'
-                        : 'border-zinc-700/80 text-zinc-300 hover:border-zinc-500 hover:text-white'
+editing === m.modelId
+                        ? 'border-[#2d2d2d] bg-[#1D1D1F] text-white'
+                        : 'border-[#2d2d2d] text-zinc-300 hover:border-zinc-500 hover:text-white'
                     }`}
                   >
                     {editing === m.modelId ? 'Close' : 'Edit'}
@@ -417,9 +417,9 @@ function AddModelForm({
                       )
                     }
                     className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${
-                      active
-                        ? 'border-violet-500/60 bg-violet-500/15 text-violet-200 shadow-inner'
-                        : 'border-zinc-700/80 text-zinc-400 hover:border-zinc-500 hover:text-white'
+active
+                        ? 'border-[#2d2d2d] bg-[#1D1D1F] text-white'
+                        : 'border-[#2d2d2d] text-zinc-400 hover:border-zinc-500 hover:text-white'
                     }`}
                   >
                     {opt.label}
@@ -432,7 +432,7 @@ function AddModelForm({
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-zinc-300">Model ID</label>
-              <div className="flex items-center gap-1 rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3 py-0.5 transition focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-500/10">
+              <div className="flex items-center gap-1 rounded-lg border border-[#2d2d2d] bg-[#0a0a0a] px-3 py-0.5 transition focus-within:border-zinc-500 focus-within:ring-4 focus-within:ring-white/5">
                 <span className="font-mono text-sm text-zinc-600">{username}/</span>
                 <input
                   type="text"
@@ -572,7 +572,7 @@ function AddModelForm({
                   ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
                   : testState === 'fail'
                     ? 'border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20'
-                    : 'border-violet-500/50 text-violet-300 hover:bg-violet-500/10'
+                    : 'border-[#2d2d2d] text-zinc-300 hover:bg-white/[0.04]'
               }`}
             >
               {testState === 'testing' && (
@@ -690,7 +690,7 @@ function EditModelForm({
   return (
     <form
       onSubmit={handleSave}
-      className="anim-scale-in mt-4 space-y-4 rounded-xl border border-violet-500/20 bg-black/30 p-4"
+      className="anim-scale-in mt-4 space-y-4 rounded-xl border border-[#2d2d2d] bg-black/30 p-4"
     >
       <div>
         <label className="mb-1 block text-xs font-medium text-zinc-500">Title</label>

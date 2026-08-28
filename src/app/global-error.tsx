@@ -27,10 +27,11 @@ export default function GlobalError({
               {error?.message ?? 'Unknown error'}
               {error?.digest ? `\n\ndigest: ${error.digest}` : ''}
             </pre>
-            <button
+<button
               type="button"
               onClick={reset}
-              className="mt-5 w-full rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-violet-400"
+              className="mt-5 w-full px-4 py-2.5 text-sm font-semibold"
+              style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #ffffff', borderRadius: '8px' }}
             >
               Try again
             </button>

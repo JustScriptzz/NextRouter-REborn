@@ -11,8 +11,9 @@ html {
 }
 
 body {
-  @apply bg-zinc-950 text-zinc-100;
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  @apply bg-[#000000] text-zinc-100;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 code,
@@ -40,7 +41,7 @@ kbd {
   background: rgb(63 63 70);
 }
 
-/* ---------- ambient background ---------- */
+/* ---------- ambient background — industrial minimal ---------- */
 
 .bg-aurora {
   position: fixed;
@@ -48,29 +49,21 @@ kbd {
   z-index: -2;
   overflow: hidden;
   pointer-events: none;
+  background: #000000;
 }
 
 .bg-aurora::before {
   content: '';
   position: absolute;
-  top: -320px;
-  left: 50%;
-  width: 900px;
-  height: 640px;
-  margin-left: -450px;
-  background: radial-gradient(closest-side, rgba(124, 58, 237, 0.22), transparent);
-  filter: blur(40px);
+  inset: 0;
+  background: radial-gradient(ellipse 800px 400px at 50% -10%, rgba(255,255,255,0.04), transparent 60%);
 }
 
 .bg-aurora::after {
   content: '';
   position: absolute;
-  top: -160px;
-  right: -220px;
-  width: 720px;
-  height: 560px;
-  background: radial-gradient(closest-side, rgba(34, 211, 238, 0.13), transparent);
-  filter: blur(48px);
+  inset: 0;
+  background: radial-gradient(ellipse 600px 300px at 90% 10%, rgba(255,255,255,0.02), transparent 70%);
 }
 
 .bg-grid {
@@ -79,49 +72,83 @@ kbd {
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 36px 36px;
-  mask-image: radial-gradient(ellipse 90vh 60vh at 50vw 0vh, black 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 90vh 60vh at 50vw 0vh, black 30%, transparent 75%);
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 90vh 60vh at 50vw 0vh, black 40%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 90vh 60vh at 50vw 0vh, black 40%, transparent 75%);
 }
 
-/* ---------- reusable surfaces ---------- */
+/* ---------- reusable surfaces — industrial minimal ---------- */
 
 .card {
-  @apply rounded-2xl border border-white/10 bg-white/[0.03];
+  @apply bg-[#0a0a0a];
+  border: 0.5px solid #2d2d2d;
+  border-radius: 12px;
 }
 
 .card-hover {
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
 }
 .card-hover:hover {
-  border-color: rgba(167, 139, 250, 0.35);
-  background-color: rgba(255, 255, 255, 0.045);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 40px -12px rgba(124, 58, 237, 0.25);
+  border-color: #3a3a3a;
+  background-color: #111111;
+  transform: translateY(-1px);
 }
 
 .glass-nav {
-  background: rgba(9, 9, 11, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 0.5px solid #2d2d2d;
 }
 
 .text-gradient {
-  background: linear-gradient(100deg, #c4b5fd, #67e8f9);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #ffffff;
 }
 
 .text-shimmer {
-  background: linear-gradient(110deg, #c4b5fd 20%, #ffffff 40%, #67e8f9 60%, #c4b5fd 80%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: shimmerSlide 6s linear infinite;
+  color: #ffffff;
+}
+
+/* ---------- Router Container System — JustScriptzz Signature ---------- */
+.router-container {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 0.5px solid #2d2d2d;
+  background: #000000;
+  color: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.router-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 0.5px solid #2d2d2d;
+  padding-bottom: 12px;
+  font-size: 11px;
+  color: #888888;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.router-content {
+  margin-top: 20px;
+}
+
+.router-footer {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 0.5px solid #2d2d2d;
+  font-size: 10px;
+  color: #666666;
+  text-align: center;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 @keyframes shimmerSlide {
@@ -147,15 +174,40 @@ kbd {
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-violet-400 disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold transition disabled:opacity-60;
+  background: #ffffff;
+  color: #000000;
+  border: 0.5px solid #ffffff;
+  border-radius: 8px;
+}
+.btn-primary:hover {
+  background: #e5e5e5;
+  border-color: #e5e5e5;
 }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700/80 bg-white/[0.02] px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-white disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium transition disabled:opacity-50;
+  background: transparent;
+  color: #a1a1aa;
+  border: 0.5px solid #2d2d2d;
+  border-radius: 8px;
+}
+.btn-ghost:hover {
+  border-color: #3a3a3a;
+  color: #ffffff;
+  background: #1D1D1F;
 }
 
 .input-dark {
-  @apply w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10;
+  @apply w-full px-3.5 py-2.5 text-sm outline-none transition placeholder:text-zinc-600;
+  background: #0a0a0a;
+  color: #ffffff;
+  border: 0.5px solid #2d2d2d;
+  border-radius: 8px;
+}
+.input-dark:focus {
+  border-color: #3a3a3a;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.05);
 }
 
 /* ---------- animations ---------- */

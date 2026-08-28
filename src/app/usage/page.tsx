@@ -41,7 +41,7 @@ export default function UsagePage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-violet-400" />
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-white" />
         <p className="mt-4 text-sm text-zinc-500">Loading usage...</p>
       </div>
     );
@@ -63,7 +63,7 @@ export default function UsagePage() {
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Usage</h1>
           {unlimited && (
-            <span className="rounded-full border border-violet-500/30 bg-violet-500/15 px-3 py-1 text-xs font-bold tracking-wide text-violet-300">
+            <span className="rounded-full px-3 py-1 text-xs font-bold tracking-wide text-white" style={{ border: '0.5px solid #2d2d2d', background: '#1D1D1F' }}>
               UNLIMITED
             </span>
           )}
@@ -81,37 +81,35 @@ export default function UsagePage() {
           value={usage.today.tokens.toLocaleString()}
           sub={unlimited ? 'Unlimited' : `of ${usage.limit.toLocaleString()}`}
           icon={<IconBolt />}
-          accent="text-violet-300"
+          accent="text-zinc-300"
         />
         <StatCard
           label="Calls today"
           value={usage.today.calls.toLocaleString()}
           icon={<IconCall />}
-          accent="text-cyan-300"
+          accent="text-zinc-300"
         />
         <StatCard
           label="All-time tokens"
           value={usage.total.tokens.toLocaleString()}
           icon={<IconStack />}
-          accent="text-fuchsia-300"
+          accent="text-zinc-300"
         />
         <StatCard
           label="All-time calls"
           value={usage.total.calls.toLocaleString()}
           icon={<IconClock />}
-          accent="text-emerald-300"
+          accent="text-zinc-300"
         />
       </div>
 
       {unlimited ? (
-        <div className="card anim-fade-up delay-2 mt-6 border-violet-500/30 bg-violet-500/10 p-5">
+        <div className="card anim-fade-up delay-2 mt-6 p-5" style={{ border: '0.5px solid #2d2d2d', background: '#1D1D1F' }}>
           <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300">
-              ∞
-            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black font-bold">∞</span>
             <div>
-              <div className="text-sm font-semibold text-violet-200">Unlimited — no daily cap</div>
-              <div className="text-xs text-violet-300/70">
+              <div className="text-sm font-semibold text-white">Unlimited — no daily cap</div>
+              <div className="text-xs text-zinc-400">
                 {usage.today.tokens.toLocaleString()} tokens used today · never blocked
               </div>
             </div>
@@ -133,14 +131,14 @@ export default function UsagePage() {
               {pct}%
             </span>
           </div>
-          <div className="h-3 overflow-hidden rounded-full bg-white/5 ring-1 ring-inset ring-white/10">
+          <div className="h-3 overflow-hidden rounded-full" style={{ background: '#1D1D1F', border: '0.5px solid #2d2d2d' }}>
             <div
               className={`h-full rounded-full transition-all duration-700 ${
                 pct >= 90
-                  ? 'bg-gradient-to-r from-red-600 to-red-400'
+                  ? 'bg-red-500'
                   : pct >= 60
-                    ? 'bg-gradient-to-r from-amber-600 to-amber-400'
-                    : 'bg-gradient-to-r from-violet-600 to-cyan-400'
+                    ? 'bg-amber-500'
+                    : 'bg-white'
               }`}
               style={{ width: `${Math.max(pct, 1)}%` }}
             />
@@ -163,7 +161,7 @@ export default function UsagePage() {
                   <div key={d.date} className="group flex min-w-0 flex-1 flex-col items-center gap-2">
                     <div className="relative flex w-full flex-1 items-end">
                       <div
-                        className="w-full rounded-t-md bg-gradient-to-t from-violet-600/70 to-cyan-400/70 opacity-80 transition-all group-hover:opacity-100"
+                        className="w-full rounded-t-md bg-white/70 opacity-80 transition-all group-hover:opacity-100"
                         style={{ height: `${h}%` }}
                       />
                       <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-zinc-900 px-2 py-0.5 font-mono text-[10px] text-zinc-300 opacity-0 transition group-hover:opacity-100">

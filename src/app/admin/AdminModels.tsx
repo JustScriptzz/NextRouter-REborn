@@ -101,7 +101,7 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{blocked.length} blocked</span>
-        <span className="rounded-full bg-violet-500/15 px-3 py-1 text-violet-300">{pinned.length} pinned</span>
+        <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{pinned.length} pinned</span>
         <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{rules.length} rules</span>
         <button
           onClick={async () => {
@@ -180,12 +180,12 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
           const isPinned = pinned.includes(m.id);
           const isEditing = editing === m.id;
           return (
-            <div key={m.id} className={`card p-4 ${isBlocked ? 'opacity-50 border-red-500/30' : ''} ${isPinned ? 'border-violet-500/30' : ''}`}>
+            <div key={m.id} className={`card p-4 ${isBlocked ? 'opacity-50' : ''}`} style={{ borderColor: isPinned ? '#ffffff' : undefined }}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-mono text-sm font-medium text-zinc-100">{m.id}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${m.type === 'text' ? 'bg-violet-500/15 text-violet-300' : m.type === 'image' ? 'bg-cyan-500/15 text-cyan-300' : 'bg-white/5 text-zinc-400'}`}>{m.type}</span>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase text-zinc-300" style={{ background: '#1D1D1F', border: '0.5px solid #2d2d2d' }}>{m.type}</span>
                     <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-zinc-500">{m.provider}</span>
                     {isPinned && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">PINNED</span>}
                     {isBlocked && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-300">BLOCKED</span>}

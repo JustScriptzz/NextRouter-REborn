@@ -94,15 +94,14 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
             className="input-dark pl-10"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+        <div className="flex flex-wrap items-center gap-1 rounded-lg p-1" style={{ border: '0.5px solid #2d2d2d', background: '#0a0a0a' }}>
           <button
             type="button"
             onClick={() => setFilter('all')}
             className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
-              filter === 'all'
-                ? 'bg-violet-500/20 text-violet-200 shadow-inner'
-                : 'text-zinc-400 hover:text-white'
+              filter === 'all' ? 'bg-[#1D1D1F] text-white' : 'text-zinc-400 hover:text-white'
             }`}
+            style={filter === 'all' ? { border: '0.5px solid #2d2d2d' } : { border: '0.5px solid transparent' }}
           >
             All
             <span className="ml-1.5 text-xs text-zinc-500">{counts.get('all')}</span>
@@ -113,10 +112,9 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
               type="button"
               onClick={() => setFilter(kind)}
               className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
-                filter === kind
-                  ? 'bg-violet-500/20 text-violet-200 shadow-inner'
-                  : 'text-zinc-400 hover:text-white'
+                filter === kind ? 'bg-[#1D1D1F] text-white' : 'text-zinc-400 hover:text-white'
               }`}
+              style={filter === kind ? { border: '0.5px solid #2d2d2d' } : { border: '0.5px solid transparent' }}
             >
               {KIND_LABELS[kind] ?? kind}
               <span className="ml-1.5 text-xs text-zinc-500">{counts.get(kind)}</span>
@@ -134,7 +132,8 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
               setQuery('');
               setFilter('all');
             }}
-            className="mt-3 text-sm font-medium text-violet-300 hover:text-violet-200"
+            className="mt-3 border-0 bg-transparent text-sm font-medium text-zinc-400 hover:text-white"
+            style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
           >
             Clear filters
           </button>
@@ -142,11 +141,7 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((m, i) => (
-            <div
-              key={m.id}
-              className="anim-fade-up"
-              style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
-            >
+            <div key={m.id} className="anim-fade-up" style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}>
               <ModelCard model={m} status={statusMap[m.id]} />
             </div>
           ))}

@@ -25,13 +25,9 @@ export default async function ModelsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Models</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
           Every model below is callable through{' '}
-          <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
-            /api/v1/chat/completions
-          </code>{' '}
+          <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>/api/v1/chat/completions</code>{' '}
           or{' '}
-          <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-cyan-300">
-            /api/v1/images/generations
-          </code>
+          <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>/api/v1/images/generations</code>
           . Lists refresh live from each provider.
         </p>
       </div>

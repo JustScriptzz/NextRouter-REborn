@@ -67,7 +67,7 @@ export default function AdminRequests() {
       )}
 
       {selected && (
-        <div className="rounded-xl border border-violet-500/30 bg-black/40 p-5">
+        <div className="rounded-xl p-5" style={{ border: '0.5px solid #2d2d2d', background: '#0a0a0a' }}>
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold text-zinc-100">Request from @{selected.username}</h3>
             <button onClick={() => { setSelected(null); setAcceptRpm(''); setAcceptTokens(''); setRejectNote(''); }} className="text-xs text-zinc-500 hover:text-white">Close</button>
@@ -170,7 +170,7 @@ export default function AdminRequests() {
                 <td className="px-4 py-2 text-zinc-500">{new Date(r.createdAt).toLocaleString()}</td>
                 <td className="px-4 py-2 text-right">
                   {r.status === 'pending' && (
-                    <button onClick={() => { setSelected(r); setAcceptRpm(r.requestedRpm != null ? String(r.requestedRpm) : ''); setAcceptTokens(r.requestedTokens != null ? String(r.requestedTokens) : ''); }} className="rounded bg-violet-600/20 px-2.5 py-1 text-[10px] font-bold text-violet-200 hover:bg-violet-600/40">
+                    <button onClick={() => { setSelected(r); setAcceptRpm(r.requestedRpm != null ? String(r.requestedRpm) : ''); setAcceptTokens(r.requestedTokens != null ? String(r.requestedTokens) : ''); }} className="rounded px-2.5 py-1 text-[10px] font-bold text-white hover:bg-white" style={{ background: '#1D1D1F', border: '0.5px solid #2d2d2d' }}>
                       Analyze
                     </button>
                   )}

@@ -87,11 +87,11 @@ for await (const chunk of res.body) {
         <div className="card p-5">
           <p className="text-sm leading-relaxed text-zinc-300">
             All{' '}
-            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+            <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               /api/v1
             </code>{' '}
             endpoints require{' '}
-            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+            <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               Authorization: Bearer &lt;key&gt;
             </code>
             . Generate keys on the Keys page. Keys are shown once — keep them safe.
@@ -131,7 +131,7 @@ for await (const chunk of res.body) {
           <p className="text-sm leading-relaxed text-zinc-300">
             Owners can add their own endpoints on the My Models page. Public custom models can be
             called by anyone as{' '}
-            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+            <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               {'{owner-username}/{model-name}'}
             </code>
             . Private models only work with the owner&apos;s keys.
@@ -167,14 +167,14 @@ function Section({
 }
 
 function Bullet() {
-  return <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />;
+  return <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white" />;
 }
 
 function Endpoint({ method, path, desc }: { method: string; path: string; desc: string }) {
   const isGet = method === 'GET';
   const color = isGet
-    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
-    : 'border-violet-500/30 bg-violet-500/10 text-violet-300';
+    ? 'border-[#2d2d2d] bg-[#1D1D1F] text-zinc-300'
+    : 'border-[#2d2d2d] bg-[#1D1D1F] text-zinc-300';
   return (
     <div className="group flex items-start gap-4 p-4 transition hover:bg-white/[0.02]">
       <span

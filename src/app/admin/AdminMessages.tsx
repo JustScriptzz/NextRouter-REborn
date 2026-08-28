@@ -70,14 +70,17 @@ export default function AdminMessages() {
           <button
             key={t.userId}
             onClick={() => open(t.userId)}
-            className={`w-full rounded-xl border p-3 text-left transition ${
-              activeUserId === t.userId ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'
+            className={`w-full rounded-lg border p-3 text-left transition ${
+              activeUserId === t.userId ? 'bg-[#1D1D1F]' : 'hover:bg-white/[0.03]'
             }`}
+            style={{ borderColor: activeUserId === t.userId ? '#2d2d2d' : '#2d2d2d', background: activeUserId === t.userId ? '#1D1D1F' : '#0a0a0a' }}
+            onMouseEnter={(e) => { if (activeUserId !== t.userId) (e.currentTarget as HTMLElement).style.background = '#111111'; }}
+            onMouseLeave={(e) => { if (activeUserId !== t.userId) (e.currentTarget as HTMLElement).style.background = '#0a0a0a'; }}
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-zinc-100">@{t.username}</span>
               {t.unread > 0 && (
-                <span className="rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white">{t.unread}</span>
+                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-black">{t.unread}</span>
               )}
             </div>
             <div className="truncate text-xs text-zinc-500">{t.email}</div>
@@ -99,8 +102,8 @@ export default function AdminMessages() {
               {messages.map((m) => (
                 <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
-                    m.role === 'user' ? 'border border-white/10 bg-white/5 text-zinc-100' : 'bg-violet-600 text-white'
-                  }`}>
+                    m.role === 'user' ? 'text-zinc-100' : 'text-black'
+                  }`} style={m.role === 'user' ? { border: '0.5px solid #2d2d2d', background: '#0a0a0a' } : { background: '#ffffff', fontWeight: 500 }}>
                     <div className="mb-0.5 text-[10px] font-semibold uppercase opacity-60">
                       {m.role === 'user' ? 'User' : 'You'}
                     </div>

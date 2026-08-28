@@ -102,18 +102,18 @@ export default function KeysPage() {
           <h1 className="text-3xl font-bold tracking-tight text-zinc-50">API Keys</h1>
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">
             Keys authenticate calls to the{' '}
-            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+            <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               /api/v1
             </code>{' '}
             endpoints via the{' '}
-            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-violet-300">
+            <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               Authorization: Bearer
             </code>{' '}
             header.
           </p>
         </div>
         <span className="hidden shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-xs font-medium text-zinc-400 sm:inline-flex">
-          <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5 text-violet-300" aria-hidden>
+          <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5 text-white" aria-hidden>
             <circle cx="7" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.6" />
             <path d="M9.5 9.5L17 17M14 14l2-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
@@ -197,8 +197,8 @@ export default function KeysPage() {
               style={{ animationDelay: `${Math.min(i * 50, 250)}ms` }}
             >
               <div className="flex min-w-0 items-center gap-3.5">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4.5 w-4.5 h-[18px] w-[18px] text-violet-300" aria-hidden>
+<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#2d2d2d] bg-[#1D1D1F]">
+                  <svg viewBox="0 0 20 20" fill="none" className="h-[18px] w-[18px] text-white" aria-hidden>
                     <circle cx="7" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.6" />
                     <path d="M9.5 9.5L17 17M14 14l2-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                   </svg>
@@ -236,7 +236,7 @@ export default function KeysPage() {
 function LoadingScreen({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-24">
-      <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-violet-400" />
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-white" />
       <p className="mt-4 text-sm text-zinc-500">{label}...</p>
     </div>
   );

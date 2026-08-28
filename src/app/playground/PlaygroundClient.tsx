@@ -341,7 +341,7 @@ export default function PlaygroundClient() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${tab === t.id ? 'bg-violet-500/20 text-violet-200' : 'text-zinc-400 hover:text-white'}`}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${tab === t.id ? 'bg-[#1D1D1F] text-white' : 'text-zinc-400 hover:text-white'}`} style={tab === t.id ? { border: '0.5px solid #2d2d2d' } : undefined}
           >
             {t.label}
           </button>
@@ -381,7 +381,7 @@ export default function PlaygroundClient() {
                           else if (tab === 'image') setImgModel(m.id);
                           else setTtsModel(m.id);
                         }}
-                        className={`w-full truncate rounded-lg px-2.5 py-2 text-left font-mono text-xs transition ${active ? 'bg-violet-500/20 text-violet-200' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`}
+                        className={`w-full truncate rounded-lg px-2.5 py-2 text-left font-mono text-xs transition ${active ? 'bg-[#1D1D1F] text-white' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`} style={active ? { border: '0.5px solid #2d2d2d' } : undefined}
                       >
                         {m.id}
                       </button>
@@ -402,14 +402,14 @@ export default function PlaygroundClient() {
                 <h3 className="text-sm font-semibold text-zinc-100">Parameters</h3>
                 <label className="mt-3 flex items-center justify-between text-xs text-zinc-400">
                   <span>Temperature {temperature.toFixed(2)}</span>
-                  <input type="range" min={0} max={2} step={0.05} value={temperature} onChange={(e) => setTemperature(parseFloat(e.target.value))} className="ml-3 flex-1 accent-violet-500" />
+                  <input type="range" min={0} max={2} step={0.05} value={temperature} onChange={(e) => setTemperature(parseFloat(e.target.value))} className="ml-3 flex-1 accent-white" />
                 </label>
                 <label className="mt-3 block text-xs text-zinc-400">
                   Max tokens
                   <input type="number" value={maxTokens} onChange={(e) => setMaxTokens(parseInt(e.target.value) || 1024)} className="input-dark mt-1 py-1.5 text-xs" />
                 </label>
                 <label className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
-                  <input type="checkbox" checked={stream} onChange={(e) => setStream(e.target.checked)} className="accent-violet-500" />
+                  <input type="checkbox" checked={stream} onChange={(e) => setStream(e.target.checked)} className="accent-white" />
                   Stream response
                 </label>
                 <label className="mt-3 block text-xs text-zinc-400">
@@ -421,13 +421,13 @@ export default function PlaygroundClient() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-zinc-100">Tools</h3>
                   <label className="flex items-center gap-2 text-xs text-zinc-400">
-                    <input type="checkbox" checked={showTools} onChange={(e) => setShowTools(e.target.checked)} className="accent-violet-500" />
+                    <input type="checkbox" checked={showTools} onChange={(e) => setShowTools(e.target.checked)} className="accent-white" />
                     Enable
                   </label>
                 </div>
                 {showTools ? (
                   <>
-                    <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">Works with <span className="text-violet-300">every</span> model — non-native models are auto-emulated via prompt injection.</p>
+                    <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">Works with <span className="text-white">every</span> model — non-native models are auto-emulated via prompt injection.</p>
                     <textarea value={toolsJson} onChange={(e) => setToolsJson(e.target.value)} rows={12} spellCheck={false} className="input-dark mt-3 font-mono text-[11px] leading-relaxed" placeholder='[{"type":"function","function":{"name":"..."}}]' />
                     {!parsedTools && <p className="mt-1 text-[11px] text-red-400">Invalid JSON</p>}
                     <label className="mt-3 block text-xs text-zinc-400">
@@ -501,7 +501,7 @@ export default function PlaygroundClient() {
               <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5" style={{ maxHeight: '560px' }}>
                 {messages.length === 0 && (
                   <div className="flex h-full flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-violet-300">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#2d2d2d] bg-[#1D1D1F] text-white">
                       <svg viewBox="0 0 20 20" fill="none" className="h-6 w-6" aria-hidden>
                         <path d="M4 6.5A2.5 2.5 0 016.5 4h4A2.5 2.5 0 0113 6.5v3A2.5 2.5 0 0110.5 12h-1L6 15v-3H4A2.5 2.5 0 011.5 9.5v-3A2.5 2.5 0 014 4z" stroke="currentColor" strokeWidth="1.5" />
                       </svg>
@@ -512,7 +512,7 @@ export default function PlaygroundClient() {
                 )}
                 {messages.map((m, i) => (
                   <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : m.role === 'tool' ? 'justify-start' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user' ? 'bg-violet-600 text-white' : m.role === 'system' ? 'border border-amber-500/20 bg-amber-500/10 text-amber-200' : m.role === 'tool' ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-100' : 'border border-white/10 bg-white/5 text-zinc-100'}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user' ? 'text-black' : m.role === 'system' ? 'border border-[#2d2d2d] bg-[#1D1D1F] text-amber-200' : m.role === 'tool' ? 'border border-[#2d2d2d] bg-[#1D1D1F] text-emerald-100' : 'border border-[#2d2d2d] bg-white/5 text-zinc-100'}`} style={m.role === 'user' ? { background: '#ffffff' } : undefined}>
                       <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide opacity-60">
                         <span>{m.role}</span>
                         {m.name && <span className="rounded bg-white/10 px-1.5 py-0.5 normal-case">{m.name}</span>}
@@ -521,12 +521,12 @@ export default function PlaygroundClient() {
                       {m.tool_calls && m.tool_calls.length > 0 && (
                         <div className="mt-2 space-y-2">
                           {m.tool_calls.map((tc) => (
-                            <div key={tc.id} className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-2.5">
-                              <div className="flex items-center gap-2 text-xs font-semibold text-violet-300">
-                                <span className="rounded bg-violet-500/20 px-1.5 py-0.5 font-mono text-[10px]">{tc.function.name}</span>
+                            <div key={tc.id} className="rounded-xl p-2.5" style={{ border: '0.5px solid #2d2d2d', background: '#1D1D1F' }}>
+                              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
+                                <span className="rounded bg-[#0a0a0a] px-1.5 py-0.5 font-mono text-[10px]">{tc.function.name}</span>
                                 <span className="font-mono text-[10px] opacity-60">{tc.id}</span>
                               </div>
-                              <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap break-words font-mono text-xs text-violet-100">{(() => { try { return JSON.stringify(JSON.parse(tc.function.arguments), null, 2); } catch { return tc.function.arguments; } })()}</pre>
+                              <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap break-words font-mono text-xs text-zinc-300">{(() => { try { return JSON.stringify(JSON.parse(tc.function.arguments), null, 2); } catch { return tc.function.arguments; } })()}</pre>
                               <button
                                 onClick={() => {
                                   const result = prompt(`Tool result for ${tc.function.name}:`, '{"result": "example"}');

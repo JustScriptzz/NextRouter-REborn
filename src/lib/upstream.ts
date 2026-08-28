@@ -56,7 +56,7 @@ export class UpstreamRequestError extends Error {
   }
 }
 
-const UPSTREAM_ATTEMPT_TIMEOUT_MS = 75000;
+const UPSTREAM_ATTEMPT_TIMEOUT_MS = 60000;
 
 function withAttemptTimeout(signal: AbortSignal): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();

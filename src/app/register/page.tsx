@@ -19,36 +19,30 @@ export default async function RegisterPage() {
 function RegisterForm() {
   return (
     <div className="anim-fade-up mx-auto mt-10 w-full max-w-4xl sm:mt-16">
-      <div className="card overflow-hidden shadow-2xl shadow-black/40">
+      <div className="card overflow-hidden">
         <div className="grid md:grid-cols-2">
-          <div className="relative hidden overflow-hidden border-r border-white/10 bg-gradient-to-br from-cyan-500/15 via-zinc-950 to-violet-600/20 p-10 md:block">
-            <div className="anim-floaty pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-violet-500/15 blur-3xl" />
+          <div className="relative hidden overflow-hidden p-10 md:block" style={{ borderRight: '0.5px solid #2d2d2d', background: '#0a0a0a' }}>
             <Link href="/" className="relative flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 font-mono text-sm font-bold text-white shadow-lg shadow-violet-600/30">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg font-mono text-sm font-bold" style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #2d2d2d' }}>
                 NR
               </span>
-              <span className="text-gradient text-lg font-bold">NextRouter REborn</span>
+              <span className="text-lg font-bold text-white" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>
+                NextRouter REborn
+              </span>
             </Link>
             <div className="relative mt-24">
-              <h2 className="text-2xl font-bold leading-snug text-zinc-100">
+              <h2 className="text-2xl font-bold leading-snug text-white">
                 Create your account
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-zinc-400">
                 Your username becomes your public model prefix — anything you publish is callable
                 as{' '}
-                <span className="font-mono text-violet-300">username/my-model</span>.
+                <span className="font-mono text-white" style={{ background: '#1D1D1F', padding: '0 4px' }}>username/my-model</span>.
               </p>
               <ul className="mt-6 space-y-2 text-sm text-zinc-400">
-                <li className="flex items-center gap-2">
-                  <Tick /> Free API key in seconds
-                </li>
-                <li className="flex items-center gap-2">
-                  <Tick /> 500K tokens daily, no card required
-                </li>
-                <li className="flex items-center gap-2">
-                  <Tick /> Publish or keep models private
-                </li>
+                <li className="flex items-center gap-2"><Tick /> Free API key in seconds</li>
+                <li className="flex items-center gap-2"><Tick /> 500K tokens daily, no card required</li>
+                <li className="flex items-center gap-2"><Tick /> Publish or keep models private</li>
               </ul>
             </div>
           </div>
@@ -68,7 +62,7 @@ function RegisterForm() {
 
 function Tick() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden>
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0 text-white" aria-hidden>
       <path d="M4 10.5l4 4 8-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

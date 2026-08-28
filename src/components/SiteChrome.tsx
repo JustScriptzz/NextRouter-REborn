@@ -98,7 +98,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
             type="button"
             aria-label="Open menu"
             onClick={() => setOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] transition hover:border-violet-500/40 md:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:border-zinc-500 md:hidden" style={{ border: '0.5px solid #2d2d2d', background: '#0a0a0a' }}
           >
             <span className="relative block h-4 w-5">
               <span
@@ -120,10 +120,10 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
           </button>
 
           <Link href="/" className="group flex shrink-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 font-mono text-sm font-bold text-white shadow-lg shadow-violet-600/30 transition group-hover:shadow-violet-500/50">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg font-mono text-sm font-bold transition" style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #2d2d2d' }}>
               NR
             </span>
-            <span className="text-gradient hidden text-base font-bold leading-tight sm:block">
+            <span className="hidden text-base font-bold leading-tight tracking-tight text-white sm:block" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>
               NextRouter REborn
             </span>
           </Link>
@@ -136,15 +136,16 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative rounded-xl px-3.5 py-2 text-sm transition ${
+                  className={`relative rounded-lg px-3.5 py-2 text-sm transition ${
                     active
-                      ? 'bg-violet-500/15 font-medium text-violet-200'
-                      : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                      ? 'bg-[#1D1D1F] font-medium text-white'
+                      : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'
                   }`}
+                  style={{ border: active ? '0.5px solid #2d2d2d' : '0.5px solid transparent' }}
                 >
                   {item.label}
                   {item.href === '/messages' && unread > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-bold text-white">
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-black">
                       {unread > 99 ? '99+' : unread}
                     </span>
                   )}
@@ -154,11 +155,12 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
             {isAdmin && (
               <Link
                 href="/admin"
-                className={`rounded-xl px-3.5 py-2 text-sm transition ${
+                className={`rounded-lg px-3.5 py-2 text-sm transition ${
                   pathname === '/admin'
-                    ? 'bg-cyan-500/15 font-medium text-cyan-200'
-                    : 'text-cyan-300/80 hover:bg-white/5 hover:text-cyan-200'
+                    ? 'bg-[#1D1D1F] font-medium text-white'
+                    : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'
                 }`}
+                style={{ border: pathname === '/admin' ? '0.5px solid #2d2d2d' : '0.5px solid transparent' }}
               >
                 Admin
               </Link>
@@ -174,7 +176,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
                 >
                   @{user.username}
                 </span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/15 text-sm font-semibold uppercase text-violet-300">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold uppercase" style={{ border: '0.5px solid #2d2d2d', background: '#1D1D1F', color: '#ffffff' }}>
                   {user.username.charAt(0)}
                 </span>
                 <button
@@ -200,7 +202,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       </header>
 
       {banner && (
-        <div className="border-b border-violet-500/20 bg-violet-500/10 px-4 py-2 text-center text-xs font-medium text-violet-200">
+        <div className="border-b px-4 py-2 text-center text-xs font-medium tracking-wide" style={{ borderColor: '#2d2d2d', background: '#1D1D1F', color: '#ffffff' }}>
           {banner}
         </div>
       )}
@@ -213,17 +215,18 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
         />
       )}
       <aside
-        className={`glass-nav fixed bottom-0 left-0 top-0 z-50 flex w-72 flex-col border-r border-white/10 shadow-2xl shadow-black/50 transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed bottom-0 left-0 top-0 z-50 flex w-72 flex-col shadow-2xl shadow-black/50 transition-transform duration-300 ease-out md:hidden ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{ background: '#000000', borderRight: '0.5px solid #2d2d2d' }}
       >
-        <div className="border-b border-white/10 p-5">
+        <div className="p-5" style={{ borderBottom: '0.5px solid #2d2d2d' }}>
           <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 font-mono text-sm font-bold text-white shadow-lg shadow-violet-600/30">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-bold" style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #2d2d2d' }}>
               NR
             </span>
             <span>
-              <span className="text-gradient block text-base font-bold leading-tight">
+              <span className="block text-base font-bold leading-tight text-white" style={{ letterSpacing: '-0.02em' }}>
                 NextRouter REborn
               </span>
               <span className="block text-[11px] leading-tight text-zinc-500">
@@ -241,18 +244,16 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative block rounded-xl px-3 py-2.5 text-sm transition ${
+                className={`relative block rounded-lg px-3 py-2.5 text-sm transition ${
                   active
-                    ? 'bg-violet-500/15 font-medium text-violet-200'
-                    : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#1D1D1F] font-medium text-white'
+                    : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'
                 }`}
+                style={{ border: active ? '0.5px solid #2d2d2d' : '0.5px solid transparent' }}
               >
-{active && (
-                  <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-violet-400 to-cyan-400" />
-                )}
                 {item.label}
                 {item.href === '/messages' && unread > 0 && (
-                  <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-bold text-white">
+                  <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-black">
                     {unread > 99 ? '99+' : unread}
                   </span>
                 )}
@@ -261,11 +262,11 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
           })}
         </nav>
 
-        <div className="border-t border-white/10 p-4">
+        <div className="p-4" style={{ borderTop: '0.5px solid #2d2d2d' }}>
           {user ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-violet-500/30 bg-violet-500/15 text-sm font-semibold uppercase text-violet-300">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase" style={{ border: '0.5px solid #2d2d2d', background: '#1D1D1F', color: '#ffffff' }}>
                   {user.username.charAt(0)}
                 </span>
                 <div className="min-w-0 text-sm">
@@ -298,14 +299,14 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
         {children}
       </main>
 
-      {/* footer */}
-      <footer className="border-t border-white/5 py-6">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 text-xs text-zinc-600 sm:flex-row sm:px-6">
-          <span>NextRouter REborn — unified AI gateway</span>
+      {/* footer — JustScriptzz Signature */}
+      <footer className="py-6" style={{ borderTop: '0.5px solid #2d2d2d', background: '#000000' }}>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 text-xs sm:flex-row sm:px-6" style={{ color: '#666666', fontFamily: 'monospace', letterSpacing: '0.06em' }}>
+          <span>NextRouter REborn — Engineered by JustScriptzz</span>
           <span className="flex items-center gap-1.5">
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
             </span>
             All systems operational
           </span>

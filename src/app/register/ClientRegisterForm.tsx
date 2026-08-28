@@ -139,7 +139,7 @@ export function ClientRegisterForm() {
       </button>
       <p className="text-center text-sm text-zinc-500">
         Already have an account?{' '}
-        <a href="/login" className="font-medium text-violet-400 transition hover:text-violet-300">
+        <a href="/login" className="font-medium text-white transition hover:text-zinc-300">
           Log in
         </a>
       </p>

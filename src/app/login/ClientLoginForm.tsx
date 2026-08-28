@@ -88,7 +88,7 @@ export function ClientLoginForm() {
               }
               if (webUrl) window.open(webUrl, '_blank', 'noopener');
             }}
-            className="text-xs font-medium text-violet-400 transition hover:text-violet-300"
+            className="text-xs font-medium text-white transition hover:text-zinc-300"
           >
             Forgot password?
           </button>
@@ -121,7 +121,7 @@ export function ClientLoginForm() {
       </button>
       <p className="text-center text-sm text-zinc-500">
         No account?{' '}
-        <a href="/register" className="font-medium text-violet-400 transition hover:text-violet-300">
+        <a href="/register" className="font-medium text-white transition hover:text-zinc-300">
           Sign up
         </a>
       </p>
