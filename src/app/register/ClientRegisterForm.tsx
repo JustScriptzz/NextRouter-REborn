@@ -8,6 +8,22 @@ import { apiErrorMessage } from '@/lib/api-error';
 
 const ALTCHA_ENABLED = process.env.NEXT_PUBLIC_ALTCHA_ENABLED === 'true';
 
+const MAIL_LINKS: Record<string, string> = {
+  gmail: 'https://mail.google.com/mail/u/0/#inbox',
+  outlook: 'https://outlook.live.com/mail/0/inbox',
+  yahoo: 'https://mail.yahoo.com',
+  proton: 'https://mail.proton.me',
+};
+
+function mailDomain(email: string): string {
+  const m = email.split('@')[1] ?? '';
+  if (m.includes('gmail') || m.includes('googlemail')) return 'gmail';
+  if (m.includes('outlook') || m.includes('hotmail') || m.includes('live')) return 'outlook';
+  if (m.includes('yahoo')) return 'yahoo';
+  if (m.includes('proton')) return 'proton';
+  return '';
+}
+
 export function ClientRegisterForm() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -16,6 +32,10 @@ export function ClientRegisterForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  const [message, setMessage] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
 
   useEffect(() => {
     if (!ALTCHA_ENABLED) return;
@@ -51,11 +71,70 @@ export function ClientRegisterForm() {
         setError(apiErrorMessage(data, 'Registration failed'));
         return;
       }
+      if (data?.verification === 'required') {
+        setVerificationRequired(true);
+        setMessage(data.message ?? 'Check your inbox for a verification link.');
+        return;
+      }
+      // No verification flow (straight login) — go to models
       router.push('/models');
       router.refresh();
     } finally {
       setLoading(false);
     }
+  }
+
+  async function resend() {
+    setResending(true);
+    setResendMsg('');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setResendMsg(
+        (data as { message?: string }).message ??
+        ((data as { error?: { message?: string } }).error?.message ?? (res.ok ? 'Sent.' : 'Could not resend.')),
+      );
+    } catch {
+      setResendMsg('Network error.');
+    }
+    setResending(false);
+  }
+
+  if (verificationRequired) {
+    const domain = mailDomain(email);
+    const inboxUrl = MAIL_LINKS[domain];
+    return (
+      <div className="space-y-5 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full" style={{ border: '0.5px solid #2d2d2d', background: '#1D1D1F' }}>
+          <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 text-white" aria-hidden>
+            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M4 7l8 6 8-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-100">Check your inbox</h2>
+          <p className="mt-1 text-sm text-zinc-400">{message}</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            Sent to <span className="font-mono text-zinc-300">{email}</span>
+          </p>
+        </div>
+        {inboxUrl && (
+          <a href={inboxUrl} target="_blank" rel="noreferrer" className="btn-primary inline-flex">
+            Open inbox
+          </a>
+        )}
+        <div>
+          <button onClick={resend} disabled={resending} className="btn-ghost">
+            {resending ? 'Sending…' : 'Resend verification email'}
+          </button>
+          {resendMsg && <p className="mt-2 text-xs text-zinc-400">{resendMsg}</p>}
+        </div>
+      </div>
+    );
   }
 
   return (

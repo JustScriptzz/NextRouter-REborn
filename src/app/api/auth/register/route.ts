@@ -1,11 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
-import { createSession } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 import { jsonError, jsonOk } from '@/lib/http';
 import { isDisposableEmail } from '@/lib/email-blocklist';
 import { verifySolution } from '@/lib/altcha';
+import { isSmtpConfigured, sendVerifyEmail } from '@/lib/mail';
+import { createPendingVerification, deletePending, isEmailVerified } from '@/lib/verify';
 
 export const runtime = 'nodejs';
 
@@ -31,27 +32,49 @@ export async function POST(req: Request) {
   if (password.length < 8) {
     return jsonError(400, 'Password must be at least 8 characters');
   }
-
   if (!verifySolution(body.altchaPayload)) {
     return jsonError(403, 'Captcha verification failed. Please try again.');
   }
 
-  const existingUsername = await db
-    .select()
-    .from(users)
-    .where(eq(users.username, username))
-    .limit(1);
+  const existingUsername = await db.select().from(users).where(eq(users.username, username)).limit(1);
   if (existingUsername.length > 0) return jsonError(409, 'Username is already taken');
 
   const existingEmail = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existingEmail.length > 0) return jsonError(409, 'Email is already registered');
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const [user] = await db
-    .insert(users)
-    .values({ username, email, passwordHash })
-    .returning();
+  if (await isEmailVerified(email)) return jsonError(409, 'Email is already registered');
 
-  await createSession({ id: user!.id, email: user!.email, username: user!.username });
-  return jsonOk({ user: { id: user!.id, email: user!.email, username: user!.username } });
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  if (!isSmtpConfigured()) {
+    if (process.env.ALLOW_UNVERIFIED_LOGIN !== 'true') {
+      return jsonError(
+        503,
+        'Email verification is enabled but no mail server (SMTP) is configured yet.',
+      );
+    }
+    // Opt-in straight login: create the account directly (no email verification).
+    const [user] = await db.insert(users).values({ username, email, passwordHash }).returning();
+    return jsonOk({
+      user: { id: user!.id, email: user!.email, username: user!.username },
+      verification: 'disabled',
+    });
+  }
+
+  const { token } = await createPendingVerification(email, username, passwordHash);
+  const send = await sendVerifyEmail(email, token);
+
+  if (!send.ok) {
+    await deletePending(email).catch(() => undefined);
+    return jsonError(502, `Failed to send verification email: ${send.error ?? 'unknown error'}`);
+  }
+
+  return jsonOk(
+    {
+      verification: 'required',
+      message:
+        'Almost there! Check your inbox for a verification link. Your account is created once you click it.',
+    },
+    201,
+  );
 }
