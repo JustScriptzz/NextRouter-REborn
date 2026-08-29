@@ -74,10 +74,15 @@ for await (const chunk of res.body) {
             path="/api/v1/audio/transcriptions"
             desc="Speech-to-text for stt models. Multipart form upload with a file field."
           />
-          <Endpoint
+<Endpoint
             method="POST"
             path="/api/v1/embeddings"
             desc="Text embeddings. OpenAI-compatible body."
+          />
+          <Endpoint
+            method="POST"
+            path="/api/v1/videos/generations"
+            desc="Video generation from a text prompt. Body: { model, prompt }. Returns a video URL or base64."
           />
           <Endpoint method="GET" path="/api/v1/models" desc="Lists available model IDs." />
         </div>

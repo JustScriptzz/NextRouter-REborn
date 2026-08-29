@@ -9,6 +9,7 @@ type Msg = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; to
 const TABS = [
   { id: 'chat', label: 'Chat' },
   { id: 'image', label: 'Image' },
+  { id: 'video', label: 'Video' },
   { id: 'audio', label: 'Audio' },
 ] as const;
 
@@ -51,6 +52,13 @@ export default function PlaygroundClient() {
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsError, setTtsError] = useState('');
 
+  // video state
+  const [vidPrompt, setVidPrompt] = useState('A rocket launching through clouds in cinematic style');
+  const [vidModel, setVidModel] = useState('');
+  const [vidResult, setVidResult] = useState<string | null>(null);
+  const [vidLoading, setVidLoading] = useState(false);
+  const [vidError, setVidError] = useState('');
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -68,6 +76,8 @@ export default function PlaygroundClient() {
         if (imgFirst) setImgModel(imgFirst.id);
         const ttsFirst = list.find((m) => m.type === 'tts');
         if (ttsFirst) setTtsModel(ttsFirst.id);
+        const vidFirst = list.find((m) => m.type === 'video');
+        if (vidFirst) setVidModel(vidFirst.id);
       })
       .catch(() => {});
   }, []);
@@ -134,7 +144,11 @@ export default function PlaygroundClient() {
         ? `curl https://nextrouter-vert.vercel.app/api/v1/images/generations \\
   -H "Authorization: Bearer ${keyMasked || 'nr_...'} " \\
   -d '{"model":"${imgModel}", "prompt":"${imgPrompt.slice(0, 30)}..."}'`
-        : `curl https://nextrouter-vert.vercel.app/api/v1/audio/speech ...`;
+        : tab === 'video'
+          ? `curl https://nextrouter-vert.vercel.app/api/v1/videos/generations \\
+  -H "Authorization: Bearer ${keyMasked || 'nr_...'} " \\
+  -d '{"model":"${vidModel}", "prompt":"${vidPrompt.slice(0, 30)}..."}'`
+          : `curl https://nextrouter-vert.vercel.app/api/v1/audio/speech ...`;
 
   async function sendChat() {
     if (!input.trim() || !selectedModel || !apiKey) {
@@ -295,6 +309,31 @@ export default function PlaygroundClient() {
     }
   }
 
+  async function generateVideo() {
+    if (!vidPrompt.trim() || !vidModel || !apiKey) return;
+    setVidLoading(true);
+    setVidError('');
+    setVidResult(null);
+    try {
+      const res = await fetch('/api/v1/videos/generations', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: vidModel, prompt: vidPrompt }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error?.message || 'Failed');
+      const url = (j.data?.[0]?.url as string | undefined) ?? undefined;
+      const b64 = (j.data?.[0]?.b64_json as string | undefined) ?? undefined;
+      if (url) setVidResult(url);
+      else if (b64) setVidResult(`data:video/mp4;base64,${b64}`);
+      else setVidResult(null);
+    } catch (e: unknown) {
+      setVidError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVidLoading(false);
+    }
+  }
+
   async function synthesize() {
     if (!ttsText.trim() || !ttsModel || !apiKey) return;
     setTtsLoading(true);
@@ -353,7 +392,7 @@ export default function PlaygroundClient() {
         <div className="space-y-4">
           <div className="card p-4">
             <h3 className="text-sm font-semibold text-zinc-100">
-              {tab === 'chat' ? 'Chat model' : tab === 'image' ? 'Image model' : 'Voice model'}
+              {tab === 'chat' ? 'Chat model' : tab === 'image' ? 'Image model' : tab === 'video' ? 'Video model' : 'Voice model'}
             </h3>
             <input
               placeholder="Search models..."
@@ -362,16 +401,17 @@ export default function PlaygroundClient() {
               className="input-dark mt-3 py-2 text-xs"
             />
             <div className="mt-3 max-h-[320px] space-y-1 overflow-y-auto pr-1">
-              {(tab === 'chat' ? models.filter((m) => m.type === 'text') : tab === 'image' ? models.filter((m) => m.type === 'image') : models.filter((m) => m.type === 'tts')).length === 0 ? (
+              {(tab === 'chat' ? models.filter((m) => m.type === 'text') : tab === 'image' ? models.filter((m) => m.type === 'image') : tab === 'video' ? models.filter((m) => m.type === 'video') : models.filter((m) => m.type === 'tts')).length === 0 ? (
                 <p className="py-6 text-center text-xs text-zinc-500">No models</p>
               ) : (
-                (tab === 'chat' ? models.filter((m) => m.type === 'text') : tab === 'image' ? models.filter((m) => m.type === 'image') : models.filter((m) => m.type === 'tts'))
+                (tab === 'chat' ? models.filter((m) => m.type === 'text') : tab === 'image' ? models.filter((m) => m.type === 'image') : tab === 'video' ? models.filter((m) => m.type === 'video') : models.filter((m) => m.type === 'tts'))
                   .filter((m) => !modelSearch || m.id.toLowerCase().includes(modelSearch.toLowerCase()))
                   .slice(0, 80)
                   .map((m) => {
                     const active =
                       (tab === 'chat' && m.id === selectedModel) ||
                       (tab === 'image' && m.id === imgModel) ||
+                      (tab === 'video' && m.id === vidModel) ||
                       (tab === 'audio' && m.id === ttsModel);
                     return (
                       <button
@@ -379,6 +419,7 @@ export default function PlaygroundClient() {
                         onClick={() => {
                           if (tab === 'chat') setSelectedModel(m.id);
                           else if (tab === 'image') setImgModel(m.id);
+                          else if (tab === 'video') setVidModel(m.id);
                           else setTtsModel(m.id);
                         }}
                         className={`w-full truncate rounded-lg px-2.5 py-2 text-left font-mono text-xs transition ${active ? 'bg-[#1D1D1F] text-white' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`} style={active ? { border: '0.5px solid #2d2d2d' } : undefined}
@@ -586,6 +627,25 @@ export default function PlaygroundClient() {
               {imgError && <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{imgError}</div>}
               {imgResult && <img src={imgResult} alt="Generated" className="mt-4 max-h-[420px] w-full rounded-xl border border-white/10 object-contain" />}
               {!imgResult && !imgLoading && <p className="mt-6 text-center text-xs text-zinc-500">Images are generated via the gateway&apos;s image models.</p>}
+            </div>
+          )}
+
+          {tab === 'video' && (
+            <div className="flex flex-1 flex-col p-4 sm:p-5">
+              <textarea value={vidPrompt} onChange={(e) => setVidPrompt(e.target.value)} placeholder="A prompt for video generation..." rows={3} className="input-dark" />
+              <button onClick={generateVideo} disabled={vidLoading || !vidPrompt.trim()} className="btn-primary mt-3">
+                {vidLoading ? 'Generating...' : 'Generate video'}
+              </button>
+              {vidError && <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{vidError}</div>}
+              {vidResult && (
+                <div className="mt-4 space-y-3">
+                  <video controls src={vidResult} className="w-full rounded-xl border border-white/10" />
+                  <a href={vidResult} target="_blank" rel="noreferrer" className="block text-center text-xs text-zinc-400 underline">
+                    Open video in new tab
+                  </a>
+                </div>
+              )}
+              {!vidResult && !vidLoading && <p className="mt-6 text-center text-xs text-zinc-500">Videos are generated via the gateway&apos;s video models (wan-3.0, qwen-video).</p>}
             </div>
           )}
 
