@@ -24,22 +24,18 @@ const transporter = isSmtpConfigured()
 function htmlTemplate(title: string, bodyHtml: string, actionHref?: string, actionLabel?: string): string {
   return `<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;background:#000000;color:#ffffff;font-family:system-ui,-apple-system,sans-serif;">
+<body style="margin:0;padding:0;background:#000000;color:#ffffff;font-family:system-ui, -apple-system, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:24px auto;border:0.5px solid #2d2d2d;border-radius:12px;background:#0a0a0a;">
     <tr><td style="padding:20px 24px;border-bottom:0.5px solid #2d2d2d;">
-      <span style="font-family:monospace;font-size:12px;letter-spacing:0.08em;color:#888888;">NextRouter REborn — Engineered by JustScriptzz</span>
+      <span style="font-family:monospace;font-size:12px;letter-spacing:0.08em;color:#888888;">NextRouter REborn – Engineered by JustScriptzz</span>
     </td></tr>
     <tr><td style="padding:32px 24px;">
       <h1 style="font-weight:700;font-size:20px;margin:0 0 12px;color:#ffffff;">${title}</h1>
       <div style="font-size:14px;line-height:1.6;color:#a1a1aa;">${bodyHtml}</div>
-      ${
-        actionHref
-          ? `<p style="margin:24px 0 0;"><a href="${actionHref}" style="display:inline-block;background:#ffffff;color:#000000;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">${actionLabel}</a></p>`
-          : ''
-      }
+      ${actionHref ? `<p style="margin:24px 0 0;"><a href="${actionHref}" style="display:inline-block;background:#ffffff;color:#000000;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">${actionLabel}</a></p>` : ''}
     </td></tr>
     <tr><td style="padding:16px 24px;border-top:0.5px solid #2d2d2d;font-size:11px;color:#666666;text-align:center;">
-      NextRouter REborn — unified AI gateway
+      NextRouter REborn – unified AI gateway
     </td></tr>
   </table>
 </body>
@@ -53,6 +49,10 @@ export async function sendVerifyEmail(
   token: string,
 ): Promise<SendMailResult> {
   if (!isSmtpConfigured() || !transporter) {
+    if (process.env.ALLOW_UNVERIFIED_LOGIN === 'true') {
+      console.log('[Mail] SMTP not configured, ALLOW_UNVERIFIED_LOGIN=true, skipping email');
+      return { ok: true, disabled: true };
+    }
     return { ok: false, disabled: true, error: 'SMTP is not configured' };
   }
   const verifyUrl = `${APP_URL}/verify?token=${encodeURIComponent(token)}&email=${encodeURIComponent(to)}`;
@@ -60,7 +60,7 @@ export async function sendVerifyEmail(
     await transporter.sendMail({
       from: MAIL_FROM,
       to,
-      subject: 'Verify your email — NextRouter REborn',
+      subject: 'Verify your email – NextRouter REborn',
       html: htmlTemplate(
         'Please verify your email address',
         `Welcome to NextRouter. To activate your account, click the button below to confirm that this email address belongs to you.`,
@@ -70,6 +70,11 @@ export async function sendVerifyEmail(
     });
     return { ok: true };
   } catch (e) {
+    console.error('[Mail] Failed to send verification email:', e);
+    if (process.env.ALLOW_UNVERIFIED_LOGIN === 'true') {
+      console.warn('[Mail] Falling back due to ALLOW_UNVERIFIED_LOGIN=true');
+      return { ok: true };
+    }
     return { ok: false, error: e instanceof Error ? e.message : 'Mail send failed' };
   }
 }
