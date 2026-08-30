@@ -37,21 +37,26 @@ export async function destroySession(): Promise<void> {
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    const sub = payload.sub;
-    if (!sub) return null;
-    const email = typeof payload.email === 'string' ? payload.email : '';
-    if (isBannedEmail(email)) return null;
-    return {
-      id: sub,
-      email,
-      username: typeof payload.username === 'string' ? payload.username : '',
-    };
-  } catch {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE)?.value;
+    if (!token) return null;
+    try {
+      const { payload } = await jwtVerify(token, getJwtSecret());
+      const sub = payload.sub;
+      if (!sub) return null;
+      const email = typeof payload.email === 'string' ? payload.email : '';
+      if (isBannedEmail(email)) return null;
+      return {
+        id: sub,
+        email,
+        username: typeof payload.username === 'string' ? payload.username : '',
+      };
+    } catch {
+      return null;
+    }
+  } catch (error) {
+    console.error('[Auth] Error in getSessionUser:', error);
     return null;
   }
 }
