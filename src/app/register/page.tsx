@@ -11,8 +11,12 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function RegisterPage() {
-  const user = await getSessionUser();
-  if (user) redirect('/models');
+  try {
+    const user = await getSessionUser();
+    if (user) redirect('/models');
+  } catch (error) {
+    console.error('[RegisterPage] Error checking session:', error);
+  }
   return <RegisterForm />;
 }
 
@@ -35,7 +39,7 @@ function RegisterForm() {
                 Create your account
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-                Your username becomes your public model prefix — anything you publish is callable
+                Your username becomes your public model prefix – anything you publish is callable
                 as{' '}
                 <span className="font-mono text-white" style={{ background: '#1D1D1F', padding: '0 4px' }}>username/my-model</span>.
               </p>
