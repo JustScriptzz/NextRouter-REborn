@@ -6,6 +6,10 @@ node_modules
 .next
 out
 
+# Pterodactyl bundled Node runtime
+.node_runtime
+node-*-linux-x64.tar.xz
+
 # Environment
 .env
 .env.local
