@@ -4,6 +4,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { getSessionUser } from '@/lib/auth';
 import { isAdminEmail } from '@/lib/admin';
 import { getCatalog, getGatewaysHealth } from '@/lib/providers';
+import type { Catalog } from '@/lib/providers';
 import { db } from '@/lib/db/client';
 import { dailyUsage, users } from '@/lib/db/schema';
 import AdminRefresh from './AdminRefresh';
@@ -64,7 +65,7 @@ export default async function AdminPage({
   const tab = TABS.some((t) => t.key === params.tab) ? params.tab! : 'overview';
 
   const health = getGatewaysHealth();
-  let catalog = { models: [], byId: new Map(), providersMap: new Map() };
+  let catalog: Catalog = { models: [], byId: new Map(), providersMap: new Map() };
   let byProvider = new Map<string, number>();
   let catalogIds: string[] = [];
 
