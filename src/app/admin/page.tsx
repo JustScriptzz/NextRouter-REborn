@@ -64,42 +64,55 @@ export default async function AdminPage({
   const tab = TABS.some((t) => t.key === params.tab) ? params.tab! : 'overview';
 
   const health = getGatewaysHealth();
-  const catalog = await getCatalog();
-  const byProvider = new Map<string, number>();
-  for (const m of catalog.models) {
-    byProvider.set(m.provider, (byProvider.get(m.provider) ?? 0) + 1);
+  let catalog = { models: [], byId: new Map(), providersMap: new Map() };
+  let byProvider = new Map<string, number>();
+  let catalogIds: string[] = [];
+
+  try {
+    catalog = await getCatalog();
+    for (const m of catalog.models) {
+      byProvider.set(m.provider, (byProvider.get(m.provider) ?? 0) + 1);
+    }
+    catalogIds = catalog.models.map((m) => m.id).sort();
+  } catch (error) {
+    console.error('[AdminPage] Error loading catalog:', error);
+    // Continue with empty catalog
   }
-  const catalogIds = catalog.models.map((m) => m.id).sort();
 
   let totals = { tokens: 0, calls: 0 };
   let todayTotals = { tokens: 0, calls: 0 };
   let topUsers: Array<{ username: string; email: string; tokens: number; calls: number }> = [];
   let userCount = 0;
   if (tab === 'overview' || tab === 'access') {
-    const t = await db
-      .select({ tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`, calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)` })
-      .from(dailyUsage);
-    totals = { tokens: Number(t[0]?.tokens ?? 0), calls: Number(t[0]?.calls ?? 0) };
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const tt = await db
-      .select({ tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`, calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)` })
-      .from(dailyUsage)
-      .where(eq(dailyUsage.date, todayStr));
-    todayTotals = { tokens: Number(tt[0]?.tokens ?? 0), calls: Number(tt[0]?.calls ?? 0) };
-    topUsers = await db
-      .select({
-        username: users.username,
-        email: users.email,
-        tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`,
-        calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)`,
-      })
-      .from(users)
-      .leftJoin(dailyUsage, eq(dailyUsage.userId, users.id))
-      .groupBy(users.id, users.username, users.email)
-      .orderBy(desc(sql`coalesce(sum(${dailyUsage.tokens}), 0)`))
-      .limit(15);
-    const uc = await db.select({ n: sql<number>`count(*)` }).from(users);
-    userCount = Number(uc[0]?.n ?? 0);
+    try {
+      const t = await db
+        .select({ tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`, calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)` })
+        .from(dailyUsage);
+      totals = { tokens: Number(t[0]?.tokens ?? 0), calls: Number(t[0]?.calls ?? 0) };
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const tt = await db
+        .select({ tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`, calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)` })
+        .from(dailyUsage)
+        .where(eq(dailyUsage.date, todayStr));
+      todayTotals = { tokens: Number(tt[0]?.tokens ?? 0), calls: Number(tt[0]?.calls ?? 0) };
+      topUsers = await db
+        .select({
+          username: users.username,
+          email: users.email,
+          tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`,
+          calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)`,
+        })
+        .from(users)
+        .leftJoin(dailyUsage, eq(dailyUsage.userId, users.id))
+        .groupBy(users.id, users.username, users.email)
+        .orderBy(desc(sql`coalesce(sum(${dailyUsage.tokens}), 0)`))
+        .limit(15);
+      const uc = await db.select({ n: sql<number>`count(*)` }).from(users);
+      userCount = Number(uc[0]?.n ?? 0);
+    } catch (error) {
+      console.error('[AdminPage] Error loading usage stats:', error);
+      // Continue with empty stats
+    }
   }
 
   return (
@@ -108,13 +121,13 @@ export default async function AdminPage({
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Admin</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            {user.email} · catalog total <strong className="text-zinc-200">{catalog.models.length}</strong> models
+            {user.email} • catalog total <strong className="text-zinc-200">{catalog.models.length}</strong> models
           </p>
         </div>
         <AdminRefresh />
       </div>
 
-      <nav className="mt-6 flex flex-wrap gap-1 rounded-lg p-1" style={{ border: '0.5px solid #2d2d2d', background: '#0a0a0a' }}>
+      <nav className="mt-6 flex flex-wrap gap-1 rounded-lg border-[0.5px_solid_#2d2d2d] p-1" style={{ border: '0.5px solid #2d2d2d', background: '#0a0a0a' }}>
         {TABS.map((t) => (
           <Link
             key={t.key}
@@ -204,8 +217,7 @@ export default async function AdminPage({
           </div>
         </>
       )}
-
-{(tab === 'models' || tab === 'providers' || tab === 'access' || tab === 'broadcast' || tab === 'requests' || tab === 'messages') && (
+      {(tab === 'models' || tab === 'providers' || tab === 'access' || tab === 'broadcast' || tab === 'requests' || tab === 'messages') && (
         <div className="mt-6">
           {tab === 'models' && (
             <AdminModels
@@ -221,7 +233,7 @@ export default async function AdminPage({
           {tab === 'access' && (
             <>
               <AdminConfig sections={['unlimited_emails', 'blocked_email_domains']} />
-              <h2 className="mb-3 mt-8 text-lg font-semibold text-zinc-100">Users — manage</h2>
+              <h2 className="mb-3 mt-8 text-lg font-semibold text-zinc-100">Users – manage</h2>
               <AdminUserManagement
                 initialUsers={topUsers.map((u) => ({
                   username: u.username,
