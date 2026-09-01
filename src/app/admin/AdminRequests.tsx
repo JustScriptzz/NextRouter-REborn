@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { apiErrorMessage } from '@/lib/api-error';
+import { apiErrorMessage } from '../../lib/api-error';
 
 type LimitRequest = {
   id: string;
