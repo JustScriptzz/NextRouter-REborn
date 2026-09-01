@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { apiErrorMessage } from '@/lib/api-error';
+import { apiErrorMessage } from '../../lib/api-error';
 
 export function ClientLoginForm() {
   const router = useRouter();
@@ -65,14 +65,12 @@ export function ClientLoginForm() {
                 `Hello NextRouter team,\n\nI need a password reset for my account${email ? ` (${email})` : ''}.\n\nPlease help me reset my password.\n\nThanks!`,
               );
               const mailtoUrl = `mailto:${target}?subject=${subject}&body=${body}`;
-              // Always auto-open the native email compose interface
               const a = document.createElement('a');
               a.href = mailtoUrl;
               a.style.display = 'none';
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
-              // Also open the user's webmail provider in a new tab for convenience
               const domain = email.split('@')[1]?.toLowerCase() ?? '';
               let webUrl: string | null = null;
               if (domain === 'gmail.com' || domain === 'googlemail.com') {
