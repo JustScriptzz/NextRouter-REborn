@@ -6,11 +6,19 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 
-function runStep(cmd, args, label) {
+function runStep(cmd, args, label, extraEnv) {
   return new Promise((resolve) => {
     console.log(`[server-wrapper] ${label}...`);
-    const p = spawn(cmd, args, { stdio: 'inherit' });
+    const p = spawn(cmd, args, {
+      stdio: ['ignore', 'inherit', 'inherit'],
+      env: { ...process.env, ...(extraEnv || {}) },
+    });
+    const timeout = setTimeout(() => {
+      console.error(`[server-wrapper] ${label} timed out after 20s, killing and continuing`);
+      p.kill('SIGKILL');
+    }, 20000);
     p.on('exit', (code) => {
+      clearTimeout(timeout);
       if (code !== 0) {
         console.error(`[server-wrapper] ${label} exited with code ${code} (continuing anyway)`);
       } else {
@@ -19,6 +27,7 @@ function runStep(cmd, args, label) {
       resolve();
     });
     p.on('error', (err) => {
+      clearTimeout(timeout);
       console.error(`[server-wrapper] ${label} error:`, err);
       resolve();
     });
@@ -32,7 +41,8 @@ async function main() {
   }
 
   if (process.env.DATABASE_URL) {
-    // Push drizzle schema to DB (creates tables if missing). Non-interactive.
+    // stdin closed (ignore) so any interactive prompt auto-fails/skips instead of hanging forever.
+    // 20s timeout as a hard safety net so we NEVER block port binding.
     await runStep('npx', ['drizzle-kit', 'push', '--force'], 'Pushing DB schema');
   } else {
     console.log('[server-wrapper] No DATABASE_URL set, skipping schema push');
