@@ -4,7 +4,8 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    startCommand: npm run build && npm run start
+    buildCommand: npm run build
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
