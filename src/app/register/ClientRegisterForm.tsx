@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { createElement } from 'react';
 
-import { apiErrorMessage } from '@/lib/api-error';
+import { apiErrorMessage } from '../../lib/api-error';
 
 const ALTCHA_ENABLED = process.env.NEXT_PUBLIC_ALTCHA_ENABLED === 'true';
 
