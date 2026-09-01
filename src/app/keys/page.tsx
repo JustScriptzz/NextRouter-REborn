@@ -10,7 +10,7 @@ interface ApiKeyDTO {
   lastUsedAt: string | null;
 }
 
-import { apiErrorMessage } from '@/lib/api-error';
+import { apiErrorMessage } from '../../lib/api-error';
 
 export default function KeysPage() {
   const [keys, setKeys] = useState<ApiKeyDTO[]>([]);
