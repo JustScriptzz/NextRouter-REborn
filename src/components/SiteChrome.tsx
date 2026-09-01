@@ -120,9 +120,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
           </button>
 
           <Link href="/" className="group flex shrink-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg font-mono text-sm font-bold transition" style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #2d2d2d' }}>
-              NR
-            </span>
+            <img src="/logo.png" alt="NextRouter REborn" className="h-9 w-9 rounded-lg object-contain transition" style={{ border: '0.5px solid #2d2d2d' }} />
             <span className="hidden text-base font-bold leading-tight tracking-tight text-white sm:block" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>
               NextRouter REborn
             </span>
@@ -222,9 +220,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
       >
         <div className="p-5" style={{ borderBottom: '0.5px solid #2d2d2d' }}>
           <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-bold" style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #2d2d2d' }}>
-              NR
-            </span>
+            <img src="/logo.png" alt="NextRouter REborn" className="h-9 w-9 shrink-0 rounded-lg object-contain" style={{ border: '0.5px solid #2d2d2d' }} />
             <span>
               <span className="block text-base font-bold leading-tight text-white" style={{ letterSpacing: '-0.02em' }}>
                 NextRouter REborn

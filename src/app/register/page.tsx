@@ -27,9 +27,7 @@ function RegisterForm() {
         <div className="grid md:grid-cols-2">
           <div className="relative hidden overflow-hidden p-10 md:block" style={{ borderRight: '0.5px solid #2d2d2d', background: '#0a0a0a' }}>
             <Link href="/" className="relative flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg font-mono text-sm font-bold" style={{ background: '#ffffff', color: '#000000', border: '0.5px solid #2d2d2d' }}>
-                NR
-              </span>
+              <img src="/logo.png" alt="NextRouter REborn" className="h-10 w-10 rounded-lg object-contain" style={{ border: '0.5px solid #2d2d2d' }} />
               <span className="text-lg font-bold text-white" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>
                 NextRouter REborn
               </span>
