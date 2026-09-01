@@ -2,9 +2,13 @@ import { sql } from 'drizzle-orm';
 import { db } from './db/client';
 
 let ensured = false;
+let attemptedEnsure = false;
 
 async function ensureTable(): Promise<void> {
   if (ensured) return;
+  if (attemptedEnsure) return; // Avoid retry loop if already tried
+  
+  attemptedEnsure = true;
   try {
     await db.execute(
       sql`CREATE TABLE IF NOT EXISTS app_config (key text PRIMARY KEY, value jsonb NOT NULL DEFAULT '[]'::jsonb)`,
@@ -12,6 +16,7 @@ async function ensureTable(): Promise<void> {
     ensured = true;
   } catch (error) {
     console.error('[KV] Failed to ensure table:', error);
+    // Don't re-throw - let caller handle it
   }
 }
 
@@ -40,6 +45,7 @@ export async function kvSet(key: string, value: string[]): Promise<void> {
     );
   } catch (error) {
     console.error(`[KV] Failed to set key "${key}":`, error);
+    // Don't re-throw - silently fail
   }
 }
 
