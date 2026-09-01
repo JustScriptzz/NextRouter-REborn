@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: nextrouter
+    runtime: node
+    region: oregon
+    plan: starter
+    startCommand: npm run build && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
