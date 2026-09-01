@@ -1,73 +1,67 @@
-// Graceful KV fallback for when Cloudflare KV is unavailable
-// Falls back to in-memory cache instead of crashing
+import { sql } from 'drizzle-orm';
+import { db } from './db/client';
 
-const memoryCache = new Map<string, any>();
+let ensured = false;
 
-export async function initKV() {
+async function ensureTable(): Promise<void> {
+  if (ensured) return;
   try {
-    // Try to initialize KV tables
-    // If KV is not available (e.g., on Render), this will fail gracefully
-    console.log('[KV] Attempting to initialize KV...');
-    
-    // This would normally call KV setup
-    // But we'll skip it if env says to disable KV
-    if (process.env.KV_DISABLE === '1') {
-      console.warn('[KV] KV disabled via KV_DISABLE=1, using memory cache');
-      return;
-    }
+    await db.execute(
+      sql`CREATE TABLE IF NOT EXISTS app_config (key text PRIMARY KEY, value jsonb NOT NULL DEFAULT '[]'::jsonb)`,
+    );
+    ensured = true;
   } catch (error) {
-    console.warn('[KV] Failed to initialize KV, falling back to memory cache:', error instanceof Error ? error.message : error);
+    console.error('[KV] Failed to ensure table:', error);
   }
 }
 
-export async function getKV(key: string, defaultValue?: any): Promise<any> {
+export async function kvGet(key: string): Promise<string[]> {
   try {
-    // If KV is disabled, use memory cache
-    if (process.env.KV_DISABLE === '1') {
-      return memoryCache.get(key) ?? defaultValue;
-    }
-    // Try to get from KV, fall back to memory cache if it fails
+    await ensureTable();
+    const res = (await db.execute(
+      sql`SELECT value FROM app_config WHERE key = ${key}`,
+    )) as unknown as { rows?: Array<{ value: unknown }> } | Array<{ value: unknown }>;
+    const rows = Array.isArray(res) ? res : res.rows ?? [];
+    const first = rows[0]?.value;
+    if (Array.isArray(first)) return first.filter((v): v is string => typeof v === 'string');
+    return [];
   } catch (error) {
-    console.warn(`[KV] Failed to get key "${key}", using memory cache`);
-    return memoryCache.get(key) ?? defaultValue;
+    console.error(`[KV] Failed to get key "${key}":`, error);
+    return [];
   }
 }
 
-export async function setKV(key: string, value: any): Promise<void> {
+export async function kvSet(key: string, value: string[]): Promise<void> {
   try {
-    // Always update memory cache as fallback
-    memoryCache.set(key, value);
-    
-    if (process.env.KV_DISABLE === '1') {
-      return;
-    }
-    // Try to set in KV, but don't fail if it doesn't work
+    await ensureTable();
+    await db.execute(
+      sql`INSERT INTO app_config (key, value) VALUES (${key}, ${JSON.stringify(value)}::jsonb)
+          ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(value)}::jsonb`,
+    );
   } catch (error) {
-    console.warn(`[KV] Failed to set key "${key}", using memory cache only`);
+    console.error(`[KV] Failed to set key "${key}":`, error);
   }
 }
 
-export async function deleteKV(key: string): Promise<void> {
+let cacheAt = 0;
+const cacheMap = new Map<string, string[]>();
+
+export async function kvGetCached(key: string): Promise<string[]> {
   try {
-    memoryCache.delete(key);
-    
-    if (process.env.KV_DISABLE === '1') {
-      return;
+    if (Date.now() - cacheAt < 20000 && cacheMap.has(key)) {
+      return cacheMap.get(key) ?? [];
     }
-    // Try to delete from KV
+    const value = await kvGet(key);
+    cacheMap.set(key, value);
+    cacheAt = Date.now();
+    return value;
   } catch (error) {
-    console.warn(`[KV] Failed to delete key "${key}"`);
+    console.error(`[KV] Failed to get cached key "${key}":`, error);
+    return [];
   }
 }
 
-export async function ensureTable(name: string): Promise<void> {
-  try {
-    if (process.env.KV_DISABLE === '1') {
-      console.log(`[KV] Table "${name}" disabled, using memory cache`);
-      return;
-    }
-    // Try to create table if it doesn't exist
-  } catch (error) {
-    console.warn(`[KV] Failed to ensure table "${name}", using memory cache`);
-  }
+export function kvInvalidateCache(): void {
+  cacheMap.clear();
+  cacheAt = 0;
 }
