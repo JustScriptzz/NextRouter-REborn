@@ -23,7 +23,7 @@ interface CatalogModelDTO {
   isFallback: boolean;
 }
 
-import { apiErrorMessage } from '@/lib/api-error';
+import { apiErrorMessage } from '../../lib/api-error';
 
 export default function MyModelsPage() {
   const [username, setUsername] = useState('');
