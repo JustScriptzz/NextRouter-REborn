@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'Docs',
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nextrouter-vert.vercel.app';
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nextrouterfree.duckdns.org';
 const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 
 export default function DocsPage() {
@@ -29,6 +29,11 @@ export default function DocsPage() {
 for await (const chunk of res.body) {
   console.log(new TextDecoder().decode(chunk));
 }`;
+
+  const videoExample = `curl ${apiBase}/api/v1/videos/generations \\
+  -H "Authorization: Bearer nr_xxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"video-model-id","prompt":"A cat surfing a wave"}'`;
 
   return (
     <div className="mx-auto max-w-3xl py-10">
@@ -166,6 +171,14 @@ for await (const chunk of res.body) {
 
       <Section title="Streaming example" className="anim-fade-up delay-6">
         <CodeBlock code={streamingExample} label="javascript" />
+      </Section>
+
+      <Section title="Video generation example" className="anim-fade-up delay-7">
+        <CodeBlock code={videoExample} label="bash" />
+        <p className="mt-3 text-sm text-zinc-400">
+          Response contains a video URL or base64 payload, depending on the model. Video
+          generation can take longer than other endpoints — allow extra time before it responds.
+        </p>
       </Section>
     </div>
   );
