@@ -85,6 +85,11 @@ for await (const chunk of res.body) {
             desc="Video generation from a text prompt. Body: { model, prompt }. Returns a video URL or base64."
           />
           <Endpoint method="GET" path="/api/v1/models" desc="Lists available model IDs." />
+          <Endpoint
+            method="GET"
+            path="/api/v1/whoami"
+            desc="Returns info about the authenticated key: user id, username, email, and whether limits are removed."
+          />
         </div>
       </Section>
 
@@ -117,6 +122,14 @@ for await (const chunk of res.body) {
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
+                Requests per minute: <strong className="text-zinc-100">15 RPM</strong> per account
+                by default on <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>/api/v1/chat/completions</code>. Check the Limits
+                page for your current allowance.
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
                 Model-level RPM limits may apply to individual custom models (set by the model
                 owner).
               </span>
@@ -125,6 +138,13 @@ for await (const chunk of res.body) {
               <Bullet />
               <span>
                 Custom models: at most <strong className="text-zinc-100">100 per account</strong>.
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
+                Accounts with limits removed (unlimited) skip both the daily token cap and the
+                per-account RPM gate.
               </span>
             </li>
           </ul>
