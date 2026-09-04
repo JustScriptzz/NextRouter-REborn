@@ -2,9 +2,26 @@ import { kvGetCached } from './kv';
 
 const ADMIN_EMAILS = new Set(['ciullomarco13@gmail.com']);
 
+let dynamicAdmins: string[] = [];
+void kvGetCached('admin_emails').then((v) => {
+  dynamicAdmins = v;
+});
+const ADMIN_REFRESH = setInterval(() => {
+  void kvGetCached('admin_emails').then((v) => {
+    dynamicAdmins = v;
+  });
+}, 20000);
+if (typeof ADMIN_REFRESH.unref === 'function') ADMIN_REFRESH.unref();
+
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
-  return ADMIN_EMAILS.has(email.trim().toLowerCase());
+  const normalized = email.trim().toLowerCase();
+  if (ADMIN_EMAILS.has(normalized)) return true;
+  return dynamicAdmins.map((v) => v.trim().toLowerCase()).includes(normalized);
+}
+
+export async function listAdminEmails(): Promise<string[]> {
+  return [...ADMIN_EMAILS, ...dynamicAdmins];
 }
 
 let dynamicBanned: string[] = [];

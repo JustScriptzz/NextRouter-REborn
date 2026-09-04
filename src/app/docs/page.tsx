@@ -45,6 +45,51 @@ for await (const chunk of res.body) {
         </p>
       </div>
 
+      <Section title="Attribution & Credits" className="anim-fade-up delay-1">
+        <div className="card p-5" style={{ border: '0.5px solid #ffffff30' }}>
+          <p className="text-sm font-semibold text-zinc-100">
+            Any project that uses NextRouter REborn as its AI model provider MUST credit NextRouter
+            and link back to this platform.
+          </p>
+          <ul className="mt-3 space-y-2 text-sm text-zinc-300">
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
+                Display a visible credit line and a working hyperlink to{' '}
+                <a
+                  href={baseUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="underline underline-offset-4 text-zinc-100"
+                >
+                  {baseUrl}
+                </a>{' '}
+                wherever the project showcases its features (e.g. about page, footer, README, or
+                app settings).
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
+                In commercial or distributed products, include the attribution in the app&apos;s
+                settings / about screen, not only in source code.
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Bullet />
+              <span>
+                Do not remove, obfuscate, or claim as your own any NextRouter branding, URLs, or
+                provider references.
+              </span>
+            </li>
+          </ul>
+          <p className="mt-3 text-xs text-zinc-500">
+            This keeps the gateway proudly credited as your underlying model provider. Thanks for
+            routing with NextRouter REborn — Engineered by JustScriptzz.
+          </p>
+        </div>
+      </Section>
+
       <Section title="Quick start" className="anim-fade-up delay-1">
         <CodeBlock code={quickStart} label="bash" />
         <p className="mt-3 text-sm text-zinc-400">

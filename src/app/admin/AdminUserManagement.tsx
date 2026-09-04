@@ -12,6 +12,7 @@ interface UserEntry {
 export default function AdminUserManagement({ initialUsers }: { initialUsers: UserEntry[] }) {
   const [users] = useState<UserEntry[]>(initialUsers);
   const [banned, setBanned] = useState<Set<string>>(new Set());
+  const [admins, setAdmins] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -25,9 +26,34 @@ export default function AdminUserManagement({ initialUsers }: { initialUsers: Us
     }
   };
 
+  const loadAdmins = async () => {
+    const res = await fetch('/api/admin/users/admins');
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setAdmins(new Set((data.admins ?? []).map((e: string) => e.toLowerCase())));
+    }
+  };
+
   useEffect(() => {
     loadBanned();
+    loadAdmins();
   }, []);
+
+  const handleAdminToggle = async (email: string, currentlyAdmin: boolean) => {
+    const res = await fetch('/api/admin/users/admins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, admin: !currentlyAdmin }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setAdmins(new Set((data.admins ?? []).map((e: string) => e.toLowerCase())));
+      setMsg({ type: 'ok', text: `${!currentlyAdmin ? 'Made admin' : 'Removed admin'} ${email}` });
+    } else {
+      setMsg({ type: 'err', text: data?.error ?? 'Failed' });
+    }
+    setTimeout(() => setMsg(null), 2500);
+  };
 
   const handleBanToggle = async (email: string, currentlyBanned: boolean) => {
     const res = await fetch('/api/admin/users/ban', {
@@ -121,12 +147,14 @@ export default function AdminUserManagement({ initialUsers }: { initialUsers: Us
         <ul className="divide-y divide-white/5">
           {filtered.map((u) => {
             const isBanned = banned.has(u.email.toLowerCase());
+            const isAdmin = admins.has(u.email.toLowerCase());
             return (
               <li key={u.email} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-zinc-200">@{u.username}</span>
                     {isBanned && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-red-300">Banned</span>}
+                    {isAdmin && <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-300">Admin</span>}
                   </div>
                   <div className="truncate text-xs text-zinc-500">{u.email} · {Number(u.tokens).toLocaleString()} tk · {Number(u.calls)} calls</div>
                 </div>
@@ -140,6 +168,13 @@ export default function AdminUserManagement({ initialUsers }: { initialUsers: Us
                     className="btn-ghost px-3 py-1.5 text-xs"
                   >
                     Reset pw
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAdminToggle(u.email, isAdmin)}
+                    className={`rounded-xl px-3 py-1.5 text-xs font-medium transition ${isAdmin ? 'bg-violet-500/15 text-violet-300 hover:bg-violet-500/25' : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    {isAdmin ? 'Remove admin' : 'Make admin'}
                   </button>
                   <button
                     type="button"

@@ -138,6 +138,25 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
         >
           Disable limited-only models
         </button>
+        <button
+          onClick={async () => {
+            if (!confirm('Disable every model with availability under 20% (based on the last 24h)?')) return;
+            const res = await fetch('/api/admin/models/block-low-availability', { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+              setBlocked((prev) => {
+                const set = new Set([...prev, ...(data.blocked ?? [])]);
+                return Array.from(set);
+              });
+              alert(`Disabled ${data.added ?? 0} models with <20% availability (${data.total ?? '?'} total blocked).`);
+            } else {
+              alert('Failed to disable low-availability models.');
+            }
+          }}
+          className="rounded-full bg-orange-500/15 px-3 py-1 font-medium text-orange-300 hover:bg-orange-500/25"
+        >
+          Disable &lt;20% availability
+        </button>
       </div>
 
       <div className="card p-5">

@@ -82,41 +82,28 @@ export default function PlaygroundClient() {
       .catch(() => {});
   }, []);
 
-  // load / create API key
+  // load / create API key (persisted in sessionStorage so we don't mint a new one every visit)
   useEffect(() => {
-    fetch('/api/keys')
-      .then((r) => r.json())
-      .then(async (d) => {
-        const keys = d.keys ?? [];
-        if (keys.length > 0) {
-          // try to get a usable key: we only have masked, so create a dedicated playground key
-          const res = await fetch('/api/keys', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'Playground' }),
-          });
-          const j = await res.json();
-          if (j.key) {
-            setApiKey(j.key);
-            setKeyMasked(j.masked);
-          } else {
-            // fallback: tell user to create one
-            setKeyMasked(keys[0].masked);
-          }
-        } else {
-          const res = await fetch('/api/keys', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'Playground' }),
-          });
-          const j = await res.json();
-          if (j.key) {
-            setApiKey(j.key);
-            setKeyMasked(j.masked);
-          }
+    let cancelled = false;
+    const STORAGE_KEY = 'nr_playground_key';
+    const cached = sessionStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      setApiKey(cached);
+    }
+    (async () => {
+      try {
+        const existing = sessionStorage.getItem(STORAGE_KEY);
+        if (existing) return;
+        const res = await fetch('/api/keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Playground' }) });
+        const j = await res.json().catch(() => ({}));
+        if (!cancelled && j.key) {
+          sessionStorage.setItem(STORAGE_KEY, j.key);
+          setApiKey(j.key);
+          setKeyMasked(j.masked);
         }
-      })
-      .catch(() => {});
+      } catch {}
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const filteredTextModels = models.filter((m) => m.type === 'text' && m.id.toLowerCase().includes(modelSearch.toLowerCase()));
@@ -274,6 +261,34 @@ export default function PlaygroundClient() {
                 });
               }
             } catch {}
+          }
+        }
+
+        // If streaming produced nothing (model doesn't do SSE), fall back to non-streaming
+        if (!acc && Object.keys(toolCallsAcc).length === 0) {
+          try {
+            const res2 = await fetch('/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...payload, stream: false }),
+            });
+            const j2 = await res2.json().catch(() => ({}));
+            if (res2.ok) {
+              const msg = j2.choices?.[0]?.message as { content?: string | null; tool_calls?: ToolCall[]; reasoning?: string } | undefined;
+              setMessages((m) => {
+                const copy = [...m];
+                if (msg?.tool_calls && msg.tool_calls.length > 0) {
+                  copy[copy.length - 1] = { role: 'assistant', content: msg.content ?? '', tool_calls: msg.tool_calls };
+                } else {
+                  const content = msg?.content ?? '';
+                  const reasoning = msg?.reasoning;
+                  copy[copy.length - 1] = { role: 'assistant', content: reasoning ? `**Reasoning:** ${reasoning}\n\n${content}` : content || '...' };
+                }
+                return copy;
+              });
+            }
+          } catch (e2) {
+            setError(e2 instanceof Error ? e2.message : 'Failed to fetch non-streaming response');
           }
         }
       }
