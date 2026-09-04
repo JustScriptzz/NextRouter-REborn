@@ -385,7 +385,7 @@ async function liveGatewayModels(
   return models;
 }
 
-export async function getCatalog(): Promise<Catalog> {
+export async function getCatalog(options?: { includeBlocked?: boolean }): Promise<Catalog> {
   const byId = new Map<string, CatalogEntry>();
   const normalizedIds = new Map<string, string>();
   const providersMap = new Map<string, CatalogEntry[]>();
@@ -649,7 +649,7 @@ export async function getCatalog(): Promise<Catalog> {
   }
 
   let modelsOut = [...byId.values()];
-  if (blockedModels.length > 0) {
+  if (blockedModels.length > 0 && !options?.includeBlocked) {
     const blocked = new Set(blockedModels.map((b) => b.toLowerCase()));
     modelsOut = modelsOut.filter((m) => !blocked.has(m.id.toLowerCase()));
   }
