@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   const targets: string[] = [];
   const seen = new Set<string>();
-  for (const id of Object.keys(catalog.byId)) {
+  for (const id of catalog.byId.keys()) {
     const s = statsMap.get(id);
     if (!s || s.updatedAt === null) continue;
     const avail = s.avail;
