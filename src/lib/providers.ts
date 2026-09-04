@@ -252,6 +252,7 @@ const GATEWAYS: GatewaySlot[] = [
       'models/gemini-2.5-pro',
       'models/gemini-2.5-flash-lite',
       'models/gemini-omni-1.1-flash',
+      'models/gemini-omni-flash-preview',
       'models/aqa',
       'models/gemini-2.5-computer-use-preview-10-2025',
       'models/antigravity-preview-05-2026',
