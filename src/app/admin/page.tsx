@@ -66,6 +66,7 @@ export default async function AdminPage({
 
   const health = getGatewaysHealth();
   let catalog: Catalog = { models: [], byId: new Map(), providersMap: new Map() };
+  let catalogWithBlocked: Catalog = catalog;
   let byProvider = new Map<string, number>();
   let catalogIds: string[] = [];
 
@@ -75,6 +76,7 @@ export default async function AdminPage({
       byProvider.set(m.provider, (byProvider.get(m.provider) ?? 0) + 1);
     }
     catalogIds = catalog.models.map((m) => m.id).sort();
+    catalogWithBlocked = tab === 'models' ? await getCatalog({ includeBlocked: true }) : catalog;
   } catch (error) {
     console.error('[AdminPage] Error loading catalog:', error);
     // Continue with empty catalog
@@ -222,7 +224,7 @@ export default async function AdminPage({
         <div className="mt-6">
           {tab === 'models' && (
             <AdminModels
-              catalog={catalog.models.map((m) => ({
+              catalog={catalogWithBlocked.models.map((m) => ({
                 id: m.id,
                 type: m.type,
                 provider: m.provider,
