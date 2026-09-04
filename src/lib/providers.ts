@@ -240,6 +240,14 @@ const GATEWAYS: GatewaySlot[] = [
     modelsEnv: 'OLLAMA_MODELS',
     defaultBaseUrl: 'https://ollama.com',
   },
+  {
+    provider: 'vertex',
+    baseUrlEnv: 'VERTEX_BASE_URL',
+    apiKeyEnv: 'VERTEX_API_KEY',
+    modelsEnv: 'VERTEX_MODELS',
+    defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    requiresKey: true,
+  },
 ];
 
 function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
