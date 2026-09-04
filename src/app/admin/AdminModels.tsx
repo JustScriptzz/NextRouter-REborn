@@ -10,6 +10,7 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
   const [rules, setRules] = useState<string[]>([]);
   const [filter, setFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [blockedOnly, setBlockedOnly] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editId, setEditId] = useState('');
@@ -73,11 +74,12 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
     return catalog.filter((m) => {
+      if (blockedOnly && !blocked.includes(m.id)) return false;
       if (typeFilter !== 'all' && m.type !== typeFilter) return false;
       if (!q) return true;
       return m.id.toLowerCase().includes(q) || m.provider.toLowerCase().includes(q);
     });
-  }, [catalog, filter, typeFilter]);
+  }, [catalog, filter, typeFilter, blockedOnly, blocked]);
 
   const types = Array.from(new Set(catalog.map((m) => m.type)));
 
@@ -100,7 +102,12 @@ export default function AdminModels({ catalog }: { catalog: CatalogEntry[] }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{blocked.length} blocked</span>
+        <button
+          onClick={() => setBlockedOnly((v) => !v)}
+          className={`rounded-full px-3 py-1 font-medium ${blockedOnly ? 'bg-red-500/25 text-red-200' : 'bg-white/5 text-zinc-400 hover:text-white'}`}
+        >
+          {blocked.length} blocked{blockedOnly ? ' — showing only these' : ''}
+        </button>
         <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{pinned.length} pinned</span>
         <span className="rounded-full bg-white/5 px-3 py-1 text-zinc-400">{rules.length} rules</span>
         <button
