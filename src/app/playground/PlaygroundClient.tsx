@@ -29,6 +29,7 @@ export default function PlaygroundClient() {
   const [temperature, setTemperature] = useState(1);
   const [maxTokens, setMaxTokens] = useState(1024);
   const [stream, setStream] = useState(true);
+  const [forceThinking, setForceThinking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -182,6 +183,10 @@ export default function PlaygroundClient() {
       max_tokens: maxTokens,
       stream,
     };
+    if (forceThinking) {
+      payload.include_reasoning = true;
+      payload.reasoning_effort = 'medium';
+    }
     if (parsedToolsForRequest) {
       payload.tools = parsedToolsForRequest;
       if (toolChoiceForRequest !== undefined) payload.tool_choice = toolChoiceForRequest;
@@ -196,12 +201,12 @@ export default function PlaygroundClient() {
         });
         const j = await res.json();
         if (!res.ok) throw new Error(j.error?.message || 'Request failed');
-        const msg = j.choices?.[0]?.message as { content?: string | null; tool_calls?: ToolCall[]; reasoning?: string } | undefined;
+        const msg = j.choices?.[0]?.message as { content?: string | null; tool_calls?: ToolCall[]; reasoning?: string; reasoning_content?: string; thinking?: string } | undefined;
         if (msg?.tool_calls && msg.tool_calls.length > 0) {
           setMessages((m) => [...m, { role: 'assistant', content: msg.content ?? '', tool_calls: msg.tool_calls }]);
         } else {
           const content = msg?.content ?? JSON.stringify(j, null, 2);
-          const reasoning = msg?.reasoning;
+          const reasoning = msg?.reasoning ?? (msg as { reasoning_content?: string } | undefined)?.reasoning_content ?? (msg as { thinking?: string } | undefined)?.thinking;
           setMessages((m) => [...m, { role: 'assistant', content: reasoning ? `**Reasoning:** ${reasoning}\n\n${content}` : content ?? '' }]);
         }
       } else {
@@ -234,8 +239,9 @@ export default function PlaygroundClient() {
             if (data === '[DONE]') break;
             try {
               const j = JSON.parse(data);
-              const delta = j.choices?.[0]?.delta as { content?: string; reasoning?: string; tool_calls?: Array<{ index: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }> } | undefined;
-              if (delta?.reasoning) reasoningAcc += delta.reasoning;
+              const delta = j.choices?.[0]?.delta as { content?: string; reasoning?: string; reasoning_content?: string; thinking?: string; tool_calls?: Array<{ index: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }> } | undefined;
+              const deltaReasoning = delta?.reasoning ?? delta?.reasoning_content ?? delta?.thinking;
+              if (deltaReasoning) reasoningAcc += deltaReasoning;
               if (delta?.content) acc += delta.content;
               if (delta?.tool_calls) {
                 for (const tc of delta.tool_calls) {
@@ -247,7 +253,7 @@ export default function PlaygroundClient() {
                 }
               }
               const hasToolCalls = Object.keys(toolCallsAcc).length > 0;
-              if (delta?.reasoning || delta?.content || delta?.tool_calls) {
+              if (deltaReasoning || delta?.content || delta?.tool_calls) {
                 setMessages((m) => {
                   const copy = [...m];
                   if (hasToolCalls) {
@@ -274,14 +280,14 @@ export default function PlaygroundClient() {
             });
             const j2 = await res2.json().catch(() => ({}));
             if (res2.ok) {
-              const msg = j2.choices?.[0]?.message as { content?: string | null; tool_calls?: ToolCall[]; reasoning?: string } | undefined;
+              const msg = j2.choices?.[0]?.message as { content?: string | null; tool_calls?: ToolCall[]; reasoning?: string; reasoning_content?: string; thinking?: string } | undefined;
               setMessages((m) => {
                 const copy = [...m];
                 if (msg?.tool_calls && msg.tool_calls.length > 0) {
                   copy[copy.length - 1] = { role: 'assistant', content: msg.content ?? '', tool_calls: msg.tool_calls };
                 } else {
                   const content = msg?.content ?? '';
-                  const reasoning = msg?.reasoning;
+                  const reasoning = msg?.reasoning ?? msg?.reasoning_content ?? msg?.thinking;
                   copy[copy.length - 1] = { role: 'assistant', content: reasoning ? `**Reasoning:** ${reasoning}\n\n${content}` : content || '...' };
                 }
                 return copy;
@@ -467,6 +473,10 @@ export default function PlaygroundClient() {
                 <label className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
                   <input type="checkbox" checked={stream} onChange={(e) => setStream(e.target.checked)} className="accent-white" />
                   Stream response
+                </label>
+                <label className="mt-3 flex items-center gap-2 text-xs text-zinc-400" title="Native reasoning if supported, otherwise emulated via <thinking> prompt (non-streaming only)">
+                  <input type="checkbox" checked={forceThinking} onChange={(e) => setForceThinking(e.target.checked)} className="accent-white" />
+                  Force thinking
                 </label>
                 <label className="mt-3 block text-xs text-zinc-400">
                   System prompt

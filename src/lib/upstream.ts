@@ -106,6 +106,99 @@ function scrubUpstreamMessage(message: string): string {
   return message.replace(urlPattern, '').slice(0, 500);
 }
 
+function sanitizeChatBody(body: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...body };
+  if (!Array.isArray(out.tools) || out.tools.length === 0) {
+    delete out.tools;
+    delete out.tool_choice;
+  }
+  delete out.parallel_tool_calls;
+  delete out.response_format;
+  delete (out as Record<string, unknown>).logit_bias;
+  delete (out as Record<string, unknown>).logprobs;
+  delete (out as Record<string, unknown>).top_logprobs;
+  if (typeof out.temperature !== 'number' || !Number.isFinite(out.temperature)) delete out.temperature;
+  if (typeof out.top_p !== 'number' || !Number.isFinite(out.top_p)) delete out.top_p;
+  const mt = out.max_tokens as unknown;
+  if (mt !== undefined && (!Number.isInteger(mt as number) || (mt as number) <= 0)) delete out.max_tokens;
+  const mct = (out as Record<string, unknown>).max_completion_tokens as unknown;
+  if (mct !== undefined && (!Number.isInteger(mct as number) || (mct as number) <= 0)) {
+    delete (out as Record<string, unknown>).max_completion_tokens;
+  }
+  return out;
+}
+
+function getMessageReasoning(msg: Record<string, unknown>): string {
+  if (typeof msg.reasoning === 'string' && msg.reasoning) return msg.reasoning;
+  const rc = (msg as Record<string, unknown>).reasoning_content;
+  if (typeof rc === 'string' && rc) return rc;
+  const th = (msg as Record<string, unknown>).thinking;
+  if (typeof th === 'string' && th) return th;
+  return '';
+}
+
+function normalizeReasoningMessage(data: Record<string, unknown>): Record<string, unknown> {
+  try {
+    const choices = data.choices as Array<Record<string, unknown>> | undefined;
+    const msg = choices?.[0]?.message as Record<string, unknown> | undefined;
+    if (msg && typeof msg.reasoning !== 'string') {
+      const r = getMessageReasoning(msg);
+      if (r) msg.reasoning = r;
+    }
+  } catch {
+    /* keep original */
+  }
+  return data;
+}
+
+function clientRequestedThinking(body: Record<string, unknown>): boolean {
+  if ((body as Record<string, unknown>).include_reasoning === true) return true;
+  if ((body as Record<string, unknown>).reasoning_effort !== undefined) return true;
+  if ((body as Record<string, unknown>).reasoning !== undefined) return true;
+  const th = (body as Record<string, unknown>).thinking as unknown;
+  if (th && typeof th === 'object' && (th as Record<string, unknown>).type === 'enabled') return true;
+  return false;
+}
+
+function injectThinkingPrompt(bodyToSend: Record<string, unknown>): Record<string, unknown> {
+  const instruction =
+    'Think step-by-step inside <thinking>...</thinking> tags first, then give your final answer outside the tags. Keep the thinking concise but show your reasoning.';
+  const messages = (bodyToSend.messages as Array<Record<string, unknown>> | undefined) ?? [];
+  const out = messages.map((m) => ({ ...m }));
+  const sysIdx = out.findIndex((m) => m.role === 'system');
+  if (sysIdx >= 0) {
+    const existing = typeof out[sysIdx].content === 'string' ? (out[sysIdx].content as string) : '';
+    out[sysIdx] = { ...out[sysIdx], content: existing ? `${existing}\n\n${instruction}` : instruction };
+  } else {
+    out.unshift({ role: 'system', content: instruction });
+  }
+  const next: Record<string, unknown> = { ...bodyToSend, messages: out };
+  delete (next as Record<string, unknown>).thinking;
+  return next;
+}
+
+function extractManualThinking(content: string): { reasoning: string; content: string } {
+  const m = content.match(/<thinking>([\s\S]*?)<\/thinking>/i) ?? content.match(/<think>([\s\S]*?)<\/think>/i);
+  if (m) {
+    return { reasoning: m[1].trim(), content: content.replace(m[0], '').trim() };
+  }
+  return { reasoning: '', content };
+}
+
+// Models with no native function-calling on their gateways — skip the native
+// attempt entirely and go straight to prompt-injection emulation.
+function shouldForceToolEmulation(publicModelId: string): boolean {
+  const id = publicModelId.toLowerCase();
+  return id.includes('sonnet-5') || id.includes('claude-5') || id.includes('sonnet-4.5');
+}
+
+function toolChoiceDemandsCall(body: Record<string, unknown>): boolean {
+  const tc = (body as Record<string, unknown>).tool_choice as unknown;
+  if (tc === 'required') return true;
+  if (tc && typeof tc === 'object' && 'function' in (tc as Record<string, unknown>)) return true;
+  return false;
+}
+
 export async function upstreamErrorResponse(
   upstream: Response,
   fallbackMessage = 'Upstream request failed',
@@ -408,6 +501,10 @@ async function doChatFetch(
   const url = joinEndpoint(baseUrl, 'chat/completions');
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
+  const sanitized = sanitizeChatBody(bodyToSend);
+  if ((sanitized as Record<string, unknown>).include_reasoning === undefined) {
+    (sanitized as Record<string, unknown>).include_reasoning = true;
+  }
   try {
     upstream = await proxiedFetch(url, {
       method: 'POST',
@@ -415,7 +512,7 @@ async function doChatFetch(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ ...bodyToSend, model: upstreamModel }),
+      body: JSON.stringify({ ...sanitized, model: upstreamModel }),
       signal: conn.signal,
     });
   } catch (error) {
@@ -438,12 +535,12 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
 
   // Helper to handle a successful non-streaming response: check for emulated tool calls in content or reasoning
   function maybeConvertEmulated(data: Record<string, unknown>): Record<string, unknown> {
-    if (!originalHasTools) return data;
+    if (!originalHasTools) return normalizeReasoningMessage(data);
     const choices = data.choices as Array<Record<string, unknown>> | undefined;
     const msg = choices?.[0]?.message as Record<string, unknown> | undefined;
-    if (!msg || msg.tool_calls) return data;
+    if (!msg || msg.tool_calls) return normalizeReasoningMessage(data);
     const content = typeof msg.content === 'string' ? msg.content : '';
-    const reasoning = typeof (msg as Record<string, unknown>).reasoning === 'string' ? ((msg as Record<string, unknown>).reasoning as string) : '';
+    const reasoning = getMessageReasoning(msg);
     const candidate = content || reasoning || '';
     if (!candidate) return data;
     // Try content first, then reasoning, then combined
@@ -463,7 +560,26 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const { applyIdentityInjection } = await import('./identity-inject');
   bodyToSend = applyIdentityInjection(bodyToSend, publicModelId, baseUrl);
 
-  upstream = await doChatFetch(opts, bodyToSend, signal);
+  // Thinking is always on for non-streaming chats: ask for <thinking> upfront
+  // so it's a single call, then split it into reasoning + content below.
+  // Streaming stays native-only to preserve token-by-token deltas.
+  if (body.stream !== true) {
+    bodyToSend = injectThinkingPrompt(bodyToSend);
+  }
+
+  // Tool calling is always emulated via prompt injection — native function-calling
+  // proved unreliable across these free gateways, so skip the native attempt
+  // entirely whenever tools are present.
+  if (originalHasTools) {
+    const { injectIdentity } = await import('./identity-inject');
+    const withTools = injectToolsIntoMessages(bodyToSend);
+    const emBody = { ...withTools, messages: injectIdentity(withTools.messages as Array<Record<string, unknown>>, publicModelId) };
+    bodyToSend = emBody;
+    usedEmulation = true;
+    upstream = await doChatFetch(opts, emBody, signal);
+  } else {
+    upstream = await doChatFetch(opts, bodyToSend, signal);
+  }
 
   // If native tool support failed, retry with emulation
   if (!upstream.ok && originalHasTools) {
@@ -481,6 +597,44 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
       bodyToSend = emBody;
       usedEmulation = true;
       upstream = await doChatFetch(opts, emBody, signal);
+    }
+  }
+
+  // Gemini-style 400 (bad request on strict params): retry once sanitized,
+  // converting system->user if the upstream complains about system role.
+  if (!upstream.ok && upstream.status === 400 && !usedEmulation) {
+    const clone = upstream.clone();
+    const text = await clone.text().catch(() => '');
+    const lower = text.toLowerCase();
+    if (
+      lower.includes('temperature') ||
+      lower.includes('max_tokens') ||
+      lower.includes('max_completion') ||
+      lower.includes('system') ||
+      lower.includes('tool') ||
+      lower.includes('parallel') ||
+      lower.includes('response_format') ||
+      lower.includes('include_reasoning') ||
+      lower.includes('reasoning') ||
+      lower.includes('unknown') ||
+      lower.includes('unexpected') ||
+      lower.includes('invalid')
+    ) {
+      let retryBody: Record<string, unknown> = sanitizeChatBody(bodyToSend);
+      delete (retryBody as Record<string, unknown>).include_reasoning;
+      if (lower.includes('system') && Array.isArray(retryBody.messages)) {
+        retryBody = {
+          ...retryBody,
+          messages: (retryBody.messages as Array<Record<string, unknown>>).map((m) =>
+            m.role === 'system' ? { ...m, role: 'user' } : m,
+          ),
+        };
+      }
+      const retry = await doChatFetch(opts, retryBody, signal);
+      if (retry.ok) {
+        upstream = retry;
+        bodyToSend = retryBody;
+      }
     }
   }
 
@@ -527,10 +681,60 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   if (!data) {
     throw new UpstreamRequestError(502, 'Upstream returned an invalid response');
   }
+  // Native succeeded but ignored a mandatory tool request — retry once emulated.
+  if (originalHasTools && !usedEmulation && toolChoiceDemandsCall(body)) {
+    const msg0 = (data.choices as Array<Record<string, unknown>> | undefined)?.[0]?.message as
+      | Record<string, unknown>
+      | undefined;
+    if (msg0 && !(msg0 as Record<string, unknown>).tool_calls) {
+      try {
+        const { injectIdentity } = await import('./identity-inject');
+        const withTools = injectToolsIntoMessages(bodyToSend);
+        const emBody = { ...withTools, messages: injectIdentity(withTools.messages as Array<Record<string, unknown>>, publicModelId) };
+        const emRes = await doChatFetch(opts, emBody, signal);
+        if (emRes.ok) {
+          const emData = (await emRes.json().catch(() => null)) as Record<string, unknown> | null;
+          if (emData) {
+            bodyToSend = emBody;
+            usedEmulation = true;
+            let emRewritten = normalizeReasoningMessage(rewriteModelField(emData, upstreamModel, publicModelId));
+            emRewritten = maybeConvertEmulated(emRewritten);
+            const emTokens =
+              typeof (emRewritten as { usage?: { completion_tokens?: unknown } }).usage?.completion_tokens === 'number'
+                ? (emRewritten as { usage: { completion_tokens: number } }).usage.completion_tokens
+                : estimateChatOutputTokens(emRewritten);
+            recordModelResult(publicModelId, true, Date.now() - startedAt, emTokens, Date.now() - startedAt);
+            await recordUsage(userId, inputTokens + emTokens);
+            return Response.json(emRewritten, {
+              status: 200,
+              headers: { 'Access-Control-Allow-Origin': '*' },
+            });
+          }
+        }
+      } catch {
+        /* fall through to native response */
+      }
+    }
+  }
   let rewritten = rewriteModelField(data, upstreamModel, publicModelId);
+  rewritten = normalizeReasoningMessage(rewritten);
   // If we used emulation or native returned content that looks like tool calls, convert
   if (originalHasTools) {
     rewritten = maybeConvertEmulated(rewritten);
+  }
+  // Thinking was requested upfront for non-streaming: split any <thinking>
+  // tags into reasoning + clean content (single call, no retry).
+  {
+    const msg = (rewritten.choices as Array<Record<string, unknown>> | undefined)?.[0]?.message as
+      | Record<string, unknown>
+      | undefined;
+    if (msg && typeof msg.content === 'string' && !getMessageReasoning(msg)) {
+      const split = extractManualThinking(msg.content);
+      if (split.reasoning) {
+        msg.reasoning = split.reasoning;
+        msg.content = split.content || msg.content;
+      }
+    }
   }
   const outputTokens =
     typeof (rewritten as { usage?: { completion_tokens?: unknown } }).usage?.completion_tokens === 'number'
@@ -571,6 +775,8 @@ function estimateChatOutputTokens(data: Record<string, unknown>): number {
           }
         }
       }
+      const reasoning = getMessageReasoning(message);
+      if (reasoning) chars += reasoning.length;
     }
   }
   return Math.max(1, Math.ceil(chars / 4));
