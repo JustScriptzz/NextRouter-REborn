@@ -1,11 +1,16 @@
 import { getUserFromApiKey } from '@/lib/auth';
 import { decryptSecret } from '@/lib/crypto';
 import { findCustomModelForCaller } from '@/lib/customModels';
-import { jsonErrorCors } from '@/lib/http';
-import { recordModelResult } from '@/lib/model-stats';
+import { CORS_HEADERS, jsonError, jsonErrorCors } from '@/lib/http';
+import { isProbeBackedOff, recordModelResult } from '@/lib/model-stats';
 import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
 import { rateLimiter } from '@/lib/rateLimit';
-import { chatCompletions, UpstreamRequestError } from '@/lib/upstream';
+import {
+  chatCompletions,
+  parseRetryAfterMs,
+  parseUpstreamErrorBody,
+  UpstreamRequestError,
+} from '@/lib/upstream';
 import { getEffectiveLimits } from '@/lib/user-limits';
 import { getTodayUsage, getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
 
@@ -68,7 +73,13 @@ export async function POST(req: Request) {
     // Single fast pass: try each provider pipe once, move on quickly, return the
     // first success. No infinite round-restarting — bounded by a tight budget so
     // slow/dead pipes return fast instead of hanging the client for minutes.
-    for (const pipe of catalogPipes) {
+    // Pipes recently backed off after a 429 go last so a throttled key isn't
+    // hammered again while its quota recovers.
+    const orderedPipes = [
+      ...catalogPipes.filter((p) => !isProbeBackedOff(p.id)),
+      ...catalogPipes.filter((p) => isProbeBackedOff(p.id)),
+    ];
+    for (const pipe of orderedPipes) {
       if (Date.now() >= deadline) break;
       const pipeStart = Date.now();
       try {
@@ -93,12 +104,21 @@ export async function POST(req: Request) {
         if (isAbortError(error)) {
           return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
         }
-        recordModelResult(pipe.id, false, Date.now() - pipeStart);
+        // Pass the status through so a 429 starts the 6h probe backoff for
+        // this model instead of only affecting this one request.
+        recordModelResult(
+          pipe.id,
+          false,
+          Date.now() - pipeStart,
+          undefined,
+          undefined,
+          error instanceof UpstreamRequestError ? error.status : undefined,
+        );
         lastError = error;
       }
     }
     if (lastError instanceof UpstreamRequestError) {
-      return jsonErrorCors(lastError.status, scrubMessage(lastError.message), 'upstream_error');
+      return upstreamErrorWithRetryAfter(lastError);
     }
     return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
   }
@@ -138,7 +158,7 @@ export async function POST(req: Request) {
       primaryError = { status: response.status, message: 'Upstream request failed' };
     } catch (error) {
       if (error instanceof UpstreamRequestError && !isRetryable(error.status)) {
-        return jsonErrorCors(error.status, scrubMessage(error.message), 'upstream_error');
+        return upstreamErrorWithRetryAfter(error);
       }
       if (isAbortError(error)) {
         return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
@@ -152,7 +172,7 @@ export async function POST(req: Request) {
   }
 
   if (primaryError && primaryError.status < 500) {
-    return jsonErrorCors(primaryError.status, scrubMessage(primaryError.message), 'upstream_error');
+    return jsonErrorCors(primaryError.status, parseUpstreamErrorBody(primaryError.message), 'upstream_error');
   }
 
   const fallback = await getCatalogModel(custom.fallbackModelId);
@@ -184,12 +204,15 @@ export async function POST(req: Request) {
   }
 
   return primaryError
-    ? jsonErrorCors(primaryError.status, scrubMessage(primaryError.message), 'upstream_error')
+    ? jsonErrorCors(primaryError.status, parseUpstreamErrorBody(primaryError.message), 'upstream_error')
     : jsonErrorCors(502, 'The model failed and no fallback is available', 'upstream_error');
 }
 
 function isRetryable(status: number): boolean {
-  return status >= 500 || status === 408 || status === 425 || status === 429;
+  // 429 is deliberately NOT retryable here: hammering an exhausted quota
+  // only extends the throttle. Fail fast so failover (or the client) can
+  // move on; the 6h probe backoff handles the cool-down.
+  return status >= 500 || status === 408 || status === 425;
 }
 
 function isAbortError(error: unknown): boolean {
@@ -225,10 +248,17 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Prom
       const result = await fn();
       if (result instanceof Response && !result.ok) {
         const detail = await result.text().catch(() => '');
-        throw new UpstreamRequestError(
+        const err = new UpstreamRequestError(
           result.status,
-          detail ? detail.slice(0, 300) : 'Upstream request failed',
+          detail ? parseUpstreamErrorBody(detail) : 'Upstream request failed',
         );
+        // 429 means exhausted quota: never sleep-and-retry it, and carry any
+        // provider Retry-After through so the client can back off too.
+        if (result.status === 429) {
+          err.retryAfterMs = parseRetryAfterMs(result.headers.get('retry-after'));
+          throw err;
+        }
+        throw err;
       }
       return result;
     } catch (error) {
@@ -236,6 +266,10 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Prom
         throw error;
       }
       lastError = error;
+      // Fail fast on 429 — retrying a throttled key only extends the ban.
+      if (error instanceof UpstreamRequestError && error.status === 429) {
+        break;
+      }
       if (attempt === maxAttempts || Date.now() >= deadlineAt) {
         break;
       }
@@ -246,15 +280,23 @@ async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Prom
 }
 
 async function readErrorText(response: Response): Promise<string> {
-  try {
-    const parsed = (await response.json()) as { error?: { message?: unknown } };
-    if (parsed.error?.message && typeof parsed.error.message === 'string') {
-      return parsed.error.message;
-    }
-  } catch {
-    /* keep generic */
+  const text = await response.text().catch(() => '');
+  if (!text) return response.statusText || 'Upstream request failed';
+  return parseUpstreamErrorBody(text);
+}
+
+// 429s carry the provider's Retry-After through as an HTTP header so
+// clients can back off instead of polling into a quota ban.
+function upstreamErrorWithRetryAfter(error: UpstreamRequestError): Response {
+  const message = parseUpstreamErrorBody(error.message);
+  if (error.status === 429 && error.retryAfterMs !== null) {
+    const secs = Math.max(1, Math.ceil(error.retryAfterMs / 1000));
+    return jsonError(429, message, 'upstream_error', {
+      ...CORS_HEADERS,
+      'Retry-After': String(secs),
+    });
   }
-  return response.statusText || 'Upstream request failed';
+  return jsonErrorCors(error.status, message, 'upstream_error');
 }
 
 function scrubMessage(message: string): string {

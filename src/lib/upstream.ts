@@ -50,6 +50,7 @@ export class UpstreamRequestError extends Error {
   constructor(
     public status: number,
     message: string,
+    public retryAfterMs: number | null = null,
   ) {
     super(message);
     this.name = 'UpstreamRequestError';
@@ -104,6 +105,39 @@ export function estimateEmbeddingInputTokens(body: Record<string, unknown>): num
 function scrubUpstreamMessage(message: string): string {
   const urlPattern = new RegExp('https?:\\/\\/\\S+', 'g');
   return message.replace(urlPattern, '').slice(0, 500);
+}
+
+// Unwrap nested gateway envelopes (e.g. a failover layer embedding another
+// {"error":{"message":...}} as its message) and strip URLs. Never returns raw
+// JSON or HTML to callers.
+export function parseUpstreamErrorBody(text: string, fallback = 'Upstream request failed'): string {
+  let current = (text ?? '').trim();
+  for (let depth = 0; depth < 2 && current; depth++) {
+    if (!current.startsWith('{')) break;
+    try {
+      const parsed = JSON.parse(current) as { error?: { message?: unknown } };
+      const inner = parsed?.error?.message;
+      if (typeof inner === 'string' && inner.trim()) {
+        current = inner.trim();
+        continue;
+      }
+      break;
+    } catch {
+      break;
+    }
+  }
+  if (!current || current.startsWith('<')) return fallback;
+  return scrubUpstreamMessage(current) || fallback;
+}
+
+export function parseRetryAfterMs(value: string | null): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const secs = Number(trimmed);
+  if (Number.isFinite(secs) && secs >= 0) return Math.min(secs, 300) * 1000;
+  const when = Date.parse(trimmed);
+  if (!Number.isNaN(when)) return Math.max(0, Math.min(when - Date.now(), 300000));
+  return null;
 }
 
 function sanitizeChatBody(body: Record<string, unknown>): Record<string, unknown> {
@@ -560,10 +594,12 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const { applyIdentityInjection } = await import('./identity-inject');
   bodyToSend = applyIdentityInjection(bodyToSend, publicModelId, baseUrl);
 
-  // Thinking is always on for non-streaming chats: ask for <thinking> upfront
-  // so it's a single call, then split it into reasoning + content below.
-  // Streaming stays native-only to preserve token-by-token deltas.
-  if (body.stream !== true) {
+  // Thinking is opt-in (client sent include_reasoning / reasoning_effort /
+  // thinking flag): ask for <thinking> upfront in a single call, then split
+  // it into reasoning + content below. Streaming stays native-only to
+  // preserve token-by-token deltas. Kept opt-in so plain chats don't burn
+  // extra provider quota on thinking tokens.
+  if (body.stream !== true && clientRequestedThinking(body)) {
     bodyToSend = injectThinkingPrompt(bodyToSend);
   }
 
