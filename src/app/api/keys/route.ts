@@ -7,17 +7,19 @@ import type { ApiKeyInfo } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
+const MAX_KEYS_PER_ACCOUNT = 5;
+
 export async function GET() {
   try {
     const user = await getSessionUser();
     if (!user) return jsonError(401, 'Not signed in');
-    
+
     const rows = await db
       .select()
       .from(apiKeys)
       .where(eq(apiKeys.userId, user.id))
       .orderBy(desc(apiKeys.createdAt));
-    
+
     const keys: ApiKeyInfo[] = rows
       .filter((row) => !row.revokedAt)
       .map((row) => ({
@@ -38,7 +40,19 @@ export async function POST(req: Request) {
   try {
     const user = await getSessionUser();
     if (!user) return jsonError(401, 'Not signed in');
-    
+
+    const existing = await db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.userId, user.id));
+    const activeCount = existing.filter((row) => !row.revokedAt).length;
+    if (activeCount >= MAX_KEYS_PER_ACCOUNT) {
+      return jsonError(
+        429,
+        `You've reached the limit of ${MAX_KEYS_PER_ACCOUNT} API keys per account. Revoke an existing key before creating a new one.`,
+      );
+    }
+
     const body = (await req.json().catch(() => null)) as { name?: unknown } | null;
     const name =
       typeof body?.name === 'string' && body.name.trim()
