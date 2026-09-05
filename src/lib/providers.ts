@@ -241,6 +241,19 @@ const GATEWAYS: GatewaySlot[] = [
     defaultBaseUrl: 'https://ollama.com',
   },
   {
+    // Bring-your-own OpenAI key. Inactive until OPENAI_API_KEY is set —
+    // never commit a key here, set it in Render env vars. Models are
+    // discovered live from {base}/models; OPENAI_MODELS optionally pins
+    // the list (comma-separated upstream IDs) to avoid exposing everything
+    // on the key.
+    provider: 'openai',
+    baseUrlEnv: 'OPENAI_BASE_URL',
+    apiKeyEnv: 'OPENAI_API_KEY',
+    modelsEnv: 'OPENAI_MODELS',
+    defaultBaseUrl: 'https://api.openai.com',
+    requiresKey: true,
+  },
+  {
     provider: 'vertex',
     baseUrlEnv: 'VERTEX_BASE_URL',
     apiKeyEnv: 'VERTEX_API_KEY',
