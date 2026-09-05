@@ -25,6 +25,11 @@ export async function POST(req: Request) {
   }
   const makeAdmin = body?.admin !== false;
 
+  const OWNER_EMAIL = 'ciullomarco13@gmail.com';
+  if (!makeAdmin && email === OWNER_EMAIL) {
+    return jsonError(403, 'The owner account cannot have admin access removed');
+  }
+
   const current = await kvGet('admin_emails');
   const normalized = current.map((v) => v.toLowerCase());
   let next: string[];
