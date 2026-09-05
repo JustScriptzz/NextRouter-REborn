@@ -35,6 +35,23 @@ for await (const chunk of res.body) {
   -H "Content-Type: application/json" \\
   -d '{"model":"video-model-id","prompt":"A cat surfing a wave"}'`;
 
+  const openCodeExample = `{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "nextrouter": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NextRouter",
+      "options": {
+        "baseURL": "${apiBase}/api/v1",
+        "apiKey": "nr_xxxxxxxx"
+      },
+      "models": {
+        "gpt-4o": { "name": "GPT-4o (NextRouter)" }
+      }
+    }
+  }
+}`;
+
   return (
     <div className="mx-auto max-w-3xl py-10">
       <div className="anim-fade-up">
@@ -214,11 +231,46 @@ for await (const chunk of res.body) {
         </div>
       </Section>
 
-      <Section title="Streaming example" className="anim-fade-up delay-6">
+      <Section title="Third-party clients" className="anim-fade-up delay-6">
+        <div className="card divide-y divide-white/5 overflow-hidden">
+          <div className="p-5">
+            <h3 className="text-sm font-semibold text-zinc-100">OpenCode (coding agent)</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+              Add NextRouter as a custom provider in <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>opencode.json</code> using the
+              OpenAI-compatible package. Use any text model ID from the Models page — tool calling
+              is emulated gateway-side, so agentic workflows (file edits, shell calls) work on every model.
+            </p>
+            <div className="mt-3">
+              <CodeBlock code={openCodeExample} label="json" />
+            </div>
+          </div>
+          <div className="p-5">
+            <h3 className="text-sm font-semibold text-zinc-100">SillyTavern</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+              On the API Connections page pick the <strong className="text-zinc-200">Chat Completions</strong> API
+              type with an OpenAI-compatible / custom endpoint, then set the base URL to{' '}
+              <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>{apiBase}/api/v1</code>{' '}
+              with your key, and enter any text model ID from the Models page. Streaming works.
+            </p>
+          </div>
+          <div className="p-5">
+            <h3 className="text-sm font-semibold text-zinc-100">JanitorAI</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+              In JanitorAI&apos;s API settings use an OpenAI-compatible reverse-proxy URL pointing at{' '}
+              <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>{apiBase}/api/v1</code>{' '}
+              with your key, and pick a chat model ID from the Models page. If a character preset
+              sends a model name the catalog doesn&apos;t know, calls fail with &quot;Model not
+              found&quot; — swap it for a listed ID.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Streaming example" className="anim-fade-up delay-7">
         <CodeBlock code={streamingExample} label="javascript" />
       </Section>
 
-      <Section title="Video generation example" className="anim-fade-up delay-7">
+      <Section title="Video generation example" className="anim-fade-up delay-8">
         <CodeBlock code={videoExample} label="bash" />
         <p className="mt-3 text-sm text-zinc-400">
           Response contains a video URL or base64 payload, depending on the model. Video

@@ -288,6 +288,19 @@ const GATEWAYS: GatewaySlot[] = [
       'models/veo-3.1-lite-generate-preview',
     ],
   },
+  {
+    // Custom-op: private upstream (chat at <base>/admin/v1/chat/completions).
+    // NOTE: *.ts.net is Tailscale-only DNS — unreachable from Render. Leave
+    // CUSTOMOP_API_KEY unset (slot stays dormant) until this host is publicly
+    // reachable, otherwise catalog refreshes stall on fetch timeouts.
+    provider: 'customop',
+    baseUrlEnv: 'CUSTOMOP_BASE_URL',
+    apiKeyEnv: 'CUSTOMOP_API_KEY',
+    modelsEnv: 'CUSTOMOP_MODELS',
+    defaultBaseUrl: 'https://serverr.tail2b9fa1.ts.net/admin',
+    requiresKey: true,
+    modelFetchTimeoutMs: 8000,
+  },
 ];
 
 function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
