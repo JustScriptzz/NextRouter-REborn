@@ -135,7 +135,7 @@ export default function AdminUserManagement({ initialUsers }: { initialUsers: Us
 
       <div className="card overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-          <h3 className="text-sm font-semibold text-zinc-100">Users — ban & reset</h3>
+          <h3 className="text-sm font-semibold text-zinc-100">Users — ban & reset <span className="ml-1 font-normal text-zinc-500">({users.length}{users.length >= 500 ? '+' : ''})</span></h3>
           <input
             type="text"
             value={filter}

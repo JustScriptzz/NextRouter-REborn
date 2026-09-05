@@ -30,7 +30,8 @@ export default function UsagePage() {
     }
     const data = await res.json();
     setUsage(data.usage);
-    setUnlimited(!!data.unlimited);
+    // Token caps were removed product-wide: a huge limit means uncapped.
+    setUnlimited(!!data.unlimited || (data.usage?.limit ?? 0) >= 1e15);
     setLoading(false);
   }, []);
 

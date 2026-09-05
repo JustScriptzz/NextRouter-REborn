@@ -61,12 +61,16 @@ const REQUESTS_KEY = 'limit_requests_list';
 const DECISIONS_KEY = 'limit_decisions_map';
 
 // Per-user limits (custom overrides). Absent user => defaults.
+// NOTE: daily token caps were removed product-wide. Legacy stored tokenLimit
+// values (e.g. 500_000 from old granted requests) are deliberately ignored so
+// previously-capped users heal automatically with no data migration.
+// RPM overrides are still honored.
 export async function getEffectiveLimits(userId: string): Promise<UserLimits> {
   const map = await readKV<Record<string, UserLimits>>(USER_LIMITS_KEY, {});
   const l = map[userId];
   return {
     rpm: l?.rpm || DEFAULT_RPM,
-    tokenLimit: l?.tokenLimit || DEFAULT_TOKEN_LIMIT,
+    tokenLimit: DEFAULT_TOKEN_LIMIT,
   };
 }
 

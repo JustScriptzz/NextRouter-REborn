@@ -85,6 +85,7 @@ export default async function AdminPage({
   let totals = { tokens: 0, calls: 0 };
   let todayTotals = { tokens: 0, calls: 0 };
   let topUsers: Array<{ username: string; email: string; tokens: number; calls: number }> = [];
+  let allUsers: Array<{ username: string; email: string; tokens: number; calls: number }> = [];
   let userCount = 0;
   if (tab === 'overview' || tab === 'access') {
     try {
@@ -112,6 +113,28 @@ export default async function AdminPage({
         .limit(15);
       const uc = await db.select({ n: sql<number>`count(*)` }).from(users);
       userCount = Number(uc[0]?.n ?? 0);
+      // Access tab needs EVERY user (ban/reset targets), not just the top 15 —
+      // users with no usage would otherwise never appear in the list.
+      if (tab === 'access') {
+        const rows = await db
+          .select({
+            username: users.username,
+            email: users.email,
+            tokens: sql<number>`coalesce(sum(${dailyUsage.tokens}), 0)`,
+            calls: sql<number>`coalesce(sum(${dailyUsage.calls}), 0)`,
+          })
+          .from(users)
+          .leftJoin(dailyUsage, eq(dailyUsage.userId, users.id))
+          .groupBy(users.id, users.username, users.email)
+          .orderBy(desc(sql`coalesce(sum(${dailyUsage.tokens}), 0)`))
+          .limit(500);
+        allUsers = rows.map((r) => ({
+          username: r.username,
+          email: r.email,
+          tokens: Number(r.tokens),
+          calls: Number(r.calls),
+        }));
+      }
     } catch (error) {
       console.error('[AdminPage] Error loading usage stats:', error);
       // Continue with empty stats
@@ -238,7 +261,7 @@ export default async function AdminPage({
               <AdminConfig sections={['unlimited_emails', 'blocked_email_domains']} />
               <h2 className="mb-3 mt-8 text-lg font-semibold text-zinc-100">Users – manage</h2>
               <AdminUserManagement
-                initialUsers={topUsers.map((u) => ({
+                initialUsers={allUsers.map((u) => ({
                   username: u.username,
                   email: u.email,
                   tokens: Number(u.tokens),
