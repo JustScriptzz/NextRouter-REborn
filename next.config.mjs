@@ -7,21 +7,12 @@ const nextConfig = {
     if (process.env.VERCEL && process.env.RENDER_API_URL) {
       return [
         {
-          source: '/v1/:path*',
-          destination: `${process.env.RENDER_API_URL}/api/v1/:path*`,
-        },
-        {
           source: '/api/:path*',
           destination: `${process.env.RENDER_API_URL}/api/:path*`,
         },
       ];
     }
-    return [
-      {
-        source: '/v1/:path*',
-        destination: '/api/v1/:path*',
-      },
-    ];
+    return [];
   },
 };
 
