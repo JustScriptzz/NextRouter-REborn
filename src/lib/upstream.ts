@@ -535,10 +535,10 @@ async function doChatFetch(
   const url = joinEndpoint(baseUrl, 'chat/completions');
   const conn = withAttemptTimeout(signal);
   let upstream: Response;
+  // NOTE: never auto-add provider-specific params here (e.g. include_reasoning):
+  // strict OpenAI-compatible upstreams 400 on unknown fields, and a 400-retry
+  // that strips the field would just re-add it below. Callers opt in explicitly.
   const sanitized = sanitizeChatBody(bodyToSend);
-  if ((sanitized as Record<string, unknown>).include_reasoning === undefined) {
-    (sanitized as Record<string, unknown>).include_reasoning = true;
-  }
   try {
     upstream = await proxiedFetch(url, {
       method: 'POST',
@@ -595,12 +595,18 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   bodyToSend = applyIdentityInjection(bodyToSend, publicModelId, baseUrl);
 
   // Thinking is opt-in (client sent include_reasoning / reasoning_effort /
-  // thinking flag): ask for <thinking> upfront in a single call, then split
-  // it into reasoning + content below. Streaming stays native-only to
-  // preserve token-by-token deltas. Kept opt-in so plain chats don't burn
-  // extra provider quota on thinking tokens.
-  if (body.stream !== true && clientRequestedThinking(body)) {
-    bodyToSend = injectThinkingPrompt(bodyToSend);
+  // thinking flag): forward include_reasoning and ask for <thinking> upfront
+  // in a single call, then split it into reasoning + content below. Streaming
+  // stays native-only to preserve token-by-token deltas. Kept opt-in so plain
+  // chats don't burn extra provider quota on thinking tokens — and so strict
+  // upstreams that 400 on unknown fields never see the param uninvited.
+  if (clientRequestedThinking(body)) {
+    if ((bodyToSend as Record<string, unknown>).include_reasoning === undefined) {
+      (bodyToSend as Record<string, unknown>).include_reasoning = true;
+    }
+    if (body.stream !== true) {
+      bodyToSend = injectThinkingPrompt(bodyToSend);
+    }
   }
 
   // Tool calling is always emulated via prompt injection — native function-calling
