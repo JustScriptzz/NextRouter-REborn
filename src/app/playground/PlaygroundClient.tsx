@@ -117,7 +117,7 @@ export default function PlaygroundClient() {
   })();
   const curlPreview =
     tab === 'chat'
-      ? `curl https://nextrouter-vert.vercel.app/api/v1/chat/completions \\
+      ? `curl https://nextrouterfree.duckdns.org/v1/chat/completions \\
   -H "Authorization: Bearer ${keyMasked || 'nr_...'} " \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -128,14 +128,14 @@ export default function PlaygroundClient() {
     "temperature": ${temperature}
   }'`
       : tab === 'image'
-        ? `curl https://nextrouter-vert.vercel.app/api/v1/images/generations \\
+        ? `curl https://nextrouterfree.duckdns.org/v1/images/generations \\
   -H "Authorization: Bearer ${keyMasked || 'nr_...'} " \\
   -d '{"model":"${imgModel}", "prompt":"${imgPrompt.slice(0, 30)}..."}'`
         : tab === 'video'
-          ? `curl https://nextrouter-vert.vercel.app/api/v1/videos/generations \\
+          ? `curl https://nextrouterfree.duckdns.org/v1/videos/generations \\
   -H "Authorization: Bearer ${keyMasked || 'nr_...'} " \\
   -d '{"model":"${vidModel}", "prompt":"${vidPrompt.slice(0, 30)}..."}'`
-          : `curl https://nextrouter-vert.vercel.app/api/v1/audio/speech ...`;
+          : `curl https://nextrouterfree.duckdns.org/v1/audio/speech ...`;
 
   async function sendChat() {
     if (!input.trim() || !selectedModel || !apiKey) {
