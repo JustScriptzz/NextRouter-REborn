@@ -84,6 +84,7 @@ export default function PlaygroundClient() {
   }, []);
 
   // load / create API key (persisted in sessionStorage so we don't mint a new one every visit)
+  const [keyError, setKeyError] = useState('');
   useEffect(() => {
     let cancelled = false;
     const STORAGE_KEY = 'nr_playground_key';
@@ -101,8 +102,12 @@ export default function PlaygroundClient() {
           sessionStorage.setItem(STORAGE_KEY, j.key);
           setApiKey(j.key);
           setKeyMasked(j.masked);
+        } else if (!cancelled) {
+          setKeyError((j as { error?: { message?: string } }).error?.message ?? 'Could not create a Playground key.');
         }
-      } catch {}
+      } catch {
+        if (!cancelled) setKeyError('Could not reach /api/keys — are you signed in?');
+      }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -140,7 +145,7 @@ export default function PlaygroundClient() {
 
   async function sendChat() {
     if (!input.trim() || !selectedModel || !apiKey) {
-      if (!apiKey) setError('No API key available — create one in /keys (a Playground key should be auto-created).');
+      if (!apiKey) setError(keyError ? `No API key: ${keyError}` : 'No API key available — create one in /keys (a Playground key should be auto-created).');
       return;
     }
     const userMsg: Msg = { role: 'user', content: input.trim() };
@@ -388,7 +393,7 @@ export default function PlaygroundClient() {
           <p className="mt-1 text-sm text-zinc-400">Try any model live — chat, image and audio. Your Playground API key is auto-created.</p>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <span className="rounded-full bg-white/5 px-3 py-1.5 font-mono text-zinc-400">{keyMasked || 'no key yet'}</span>
+          <span title={keyError || undefined} className="rounded-full bg-white/5 px-3 py-1.5 font-mono text-zinc-400">{keyMasked || (keyError ? 'key failed — hover me' : 'no key yet')}</span>
           <a href="/keys" className="btn-ghost px-3 py-1.5 text-xs">
             Manage keys
           </a>

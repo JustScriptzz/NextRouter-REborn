@@ -27,6 +27,8 @@ export function buildToolSystemPrompt(tools: ToolDef[], toolChoice?: unknown): s
     '',
     'Rules:',
     '- When you need to call a tool, respond with ONLY a JSON object on a single line, no markdown, no extra text, no reasoning prefix.',
+    '- NEVER narrate ("I will call get_weather now", "Let me check..."). No preamble, no explanation, no confirmation sentence.',
+    '- Your entire response must be exactly one line: {"tool_calls": [{"name": "tool_name", "arguments": { ... }}]}',
     '- Format: {"tool_calls": [{"name": "tool_name", "arguments": { ... }}]}',
     '- Arguments must be valid JSON matching the tool parameters.',
     '- You may call multiple tools at once by including multiple entries.',

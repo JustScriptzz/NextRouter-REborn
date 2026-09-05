@@ -102,22 +102,33 @@ export async function POST(req: Request) {
         );
       } catch (error) {
         if (isAbortError(error)) {
+          console.warn('[chat] pipe aborted', { model: modelId, provider: pipe.provider });
           return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
         }
         // Pass the status through so a 429 starts the 6h probe backoff for
         // this model instead of only affecting this one request.
+        const pipeStatus = error instanceof UpstreamRequestError ? error.status : undefined;
+        console.warn('[chat] pipe failed', {
+          model: modelId,
+          provider: pipe.provider,
+          upstream: pipe.upstreamModel,
+          status: pipeStatus,
+          message:
+            error instanceof Error ? error.message.slice(0, 160) : String(error).slice(0, 160),
+        });
         recordModelResult(
           pipe.id,
           false,
           Date.now() - pipeStart,
           undefined,
           undefined,
-          error instanceof UpstreamRequestError ? error.status : undefined,
+          pipeStatus,
         );
         lastError = error;
       }
     }
     if (lastError instanceof UpstreamRequestError) {
+      console.warn('[chat] all pipes failed', { model: modelId, status: lastError.status });
       return upstreamErrorWithRetryAfter(lastError);
     }
     return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');

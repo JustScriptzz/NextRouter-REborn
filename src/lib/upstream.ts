@@ -219,6 +219,55 @@ function extractManualThinking(content: string): { reasoning: string; content: s
   return { reasoning: '', content };
 }
 
+type EmulatedToolDef = { type: string; function: { name: string; description?: string; parameters?: unknown } };
+type ParsedToolCall = { id: string; type: 'function'; function: { name: string; arguments: string } };
+
+// Second-pass tool extraction: the model narrated ("I'll call get_weather…")
+// instead of emitting machine JSON. Confront it once with its own text and
+// demand the JSON alone. Single extra short call, only ever used when the
+// caller demanded a tool (tool_choice required / forced function).
+async function secondPassToolCalls(
+  baseOpts: ChatCallOptions,
+  messages: Array<Record<string, unknown>>,
+  assistantText: string,
+  tools: EmulatedToolDef[],
+  signal?: AbortSignal,
+): Promise<ParsedToolCall[] | null> {
+  if (signal?.aborted || !assistantText.trim()) return null;
+  const { tryParseToolCalls } = await import('./tool-emulation');
+  const followBody: Record<string, unknown> = {
+    messages: [
+      ...messages,
+      { role: 'assistant', content: assistantText },
+      {
+        role: 'user',
+        content:
+          'You said you would call a tool, but no valid tool call was produced. Reply now with ONLY the single-line JSON object and no other text: {"tool_calls": [{"name": "<tool>", "arguments": {...}}]}',
+      },
+    ],
+    max_tokens: 256,
+    stream: false,
+  };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const effSignal =
+      signal && !signal.aborted ? AbortSignal.any([signal, ctrl.signal]) : ctrl.signal;
+    const res = await doChatFetch(baseOpts, followBody, effSignal);
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    const msg = (data?.choices as Array<Record<string, unknown>> | undefined)?.[0]
+      ?.message as Record<string, unknown> | undefined;
+    const text = typeof msg?.content === 'string' ? (msg.content as string) : '';
+    if (!text) return null;
+    return tryParseToolCalls(text, tools as never);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Models with no native function-calling on their gateways — skip the native
 // attempt entirely and go straight to prompt-injection emulation.
 function shouldForceToolEmulation(publicModelId: string): boolean {
@@ -266,6 +315,15 @@ export interface BudgetOptions {
   startedAt?: number;
   hasEmulatedTools?: boolean;
   emulatedTools?: Array<{ type: string; function: { name: string; description?: string; parameters?: unknown } }>;
+  demandToolCall?: boolean;
+  followUp?: {
+    baseUrl: string;
+    apiKey: string;
+    upstreamModel: string;
+    publicModelId: string;
+    messages: Array<Record<string, unknown>>;
+    signal?: AbortSignal;
+  };
 }
 
 function countStreamContent(text: string): number {
@@ -391,7 +449,32 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
         if (emulatedContentAccum.trim()) {
           try {
             const { tryParseToolCalls } = await import('./tool-emulation');
-            const parsed = tryParseToolCalls(emulatedContentAccum, emulatedTools as never);
+            let parsed = tryParseToolCalls(emulatedContentAccum, emulatedTools as never);
+            // Narrated instead of emitting JSON while a call was demanded?
+            // One follow-up demanding the JSON alone (streaming path).
+            if ((!parsed || parsed.length === 0) && opts.demandToolCall && opts.followUp) {
+              const f = opts.followUp;
+              const followOpts: ChatCallOptions = {
+                baseUrl: f.baseUrl,
+                apiKey: f.apiKey,
+                upstreamModel: f.upstreamModel,
+                publicModelId: f.publicModelId,
+                body: {},
+                signal: f.signal ?? AbortSignal.timeout(30000),
+                userId: opts.userId,
+                remainingBudget: opts.remainingBudget,
+              };
+              parsed = await secondPassToolCalls(
+                followOpts,
+                f.messages,
+                emulatedContentAccum,
+                emulatedTools,
+                f.signal,
+              );
+              if (parsed && parsed.length > 0) {
+                console.info('[tools] streaming second-pass recovered tool call for', f.publicModelId);
+              }
+            }
             if (parsed && parsed.length > 0) {
               // Emit as tool_calls instead of content
               for (let i = 0; i < parsed.length; i++) {
@@ -485,7 +568,21 @@ async function peekSseForUpstreamError(
         const parsed = JSON.parse(payload) as Record<string, unknown>;
         if (parsed && typeof parsed === 'object' && 'error' in parsed) {
           void reader.cancel().catch(() => undefined);
-          return null;
+          // Surface the real failure instead of a generic 503: quota errors
+          // arrive embedded in the stream during throttling episodes.
+          const rawErr = (parsed as Record<string, unknown>).error;
+          const errText =
+            typeof rawErr === 'string'
+              ? rawErr
+              : typeof (rawErr as Record<string, unknown> | null)?.message === 'string'
+                ? ((rawErr as Record<string, unknown>).message as string)
+                : payload.slice(0, 300);
+          const looksRateLimited =
+            /rate.?limit|429|quota|too many|exhausted/i.test(errText);
+          throw new UpstreamRequestError(
+            looksRateLimited ? 429 : 502,
+            parseUpstreamErrorBody(errText),
+          );
         }
       } catch {
         /* not json */
@@ -706,6 +803,18 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
         startedAt,
         hasEmulatedTools: usedEmulation,
         emulatedTools: originalTools,
+        demandToolCall: originalHasTools && toolChoiceDemandsCall(body),
+        followUp: originalHasTools
+          ? {
+              baseUrl,
+              apiKey,
+              upstreamModel,
+              publicModelId,
+              messages:
+                (bodyToSend.messages as Array<Record<string, unknown>> | undefined) ?? [],
+              signal,
+            }
+          : undefined,
       }),
     );
     return new Response(counted, {
@@ -775,6 +884,26 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
       if (split.reasoning) {
         msg.reasoning = split.reasoning;
         msg.content = split.content || msg.content;
+      }
+    }
+  }
+  // Second pass: the caller demanded a tool call but the model narrated
+  // instead of emitting JSON ("I'll call get_weather…"). Confront it once
+  // with its own text and demand the JSON alone.
+  if (originalHasTools && toolChoiceDemandsCall(body)) {
+    const msg = (rewritten.choices as Array<Record<string, unknown>> | undefined)?.[0]?.message as
+      | Record<string, unknown>
+      | undefined;
+    if (msg && !(msg as Record<string, unknown>).tool_calls) {
+      const text =
+        typeof msg.content === 'string' && msg.content
+          ? (msg.content as string)
+          : getMessageReasoning(msg);
+      const messages = (bodyToSend.messages as Array<Record<string, unknown>> | undefined) ?? [];
+      const second = await secondPassToolCalls(opts, messages, text, originalTools, signal);
+      if (second && second.length > 0) {
+        console.info('[tools] second-pass recovered tool call for', publicModelId);
+        rewritten = convertEmulatedResponse(rewritten, second, publicModelId);
       }
     }
   }

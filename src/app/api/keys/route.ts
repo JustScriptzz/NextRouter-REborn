@@ -45,13 +45,6 @@ export async function POST(req: Request) {
       .select()
       .from(apiKeys)
       .where(eq(apiKeys.userId, user.id));
-    const activeCount = existing.filter((row) => !row.revokedAt).length;
-    if (activeCount >= MAX_KEYS_PER_ACCOUNT) {
-      return jsonError(
-        429,
-        `You've reached the limit of ${MAX_KEYS_PER_ACCOUNT} API keys per account. Revoke an existing key before creating a new one.`,
-      );
-    }
 
     const body = (await req.json().catch(() => null)) as { name?: unknown } | null;
     const name =
@@ -59,6 +52,32 @@ export async function POST(req: Request) {
         ? body.name.trim().slice(0, 64)
         : 'Default key';
 
+    const activeCount = existing.filter((row) => !row.revokedAt).length;
+    if (activeCount >= MAX_KEYS_PER_ACCOUNT) {
+      // Playground keys are ephemeral auto-minted sessions: rotate the oldest
+      // one instead of locking the user out of the Playground. Real keys are
+      // never touched — at-cap users without a Playground key still get 429.
+      if (name === 'Playground') {
+        const oldestPlayground = existing
+          .filter((row) => !row.revokedAt && row.name === 'Playground')
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+        if (!oldestPlayground) {
+          return jsonError(
+            429,
+            `You've reached the limit of ${MAX_KEYS_PER_ACCOUNT} API keys per account. Revoke an existing key before creating a new one.`,
+          );
+        }
+        await db
+          .update(apiKeys)
+          .set({ revokedAt: new Date() })
+          .where(eq(apiKeys.id, oldestPlayground.id));
+      } else {
+        return jsonError(
+          429,
+          `You've reached the limit of ${MAX_KEYS_PER_ACCOUNT} API keys per account. Revoke an existing key before creating a new one.`,
+        );
+      }
+    }
     const generated = generateApiKey();
     await db.insert(apiKeys).values({
       userId: user.id,
