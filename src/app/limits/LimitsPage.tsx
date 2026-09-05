@@ -14,7 +14,7 @@ const ALTCHA_ENABLED = process.env.NEXT_PUBLIC_ALTCHA_ENABLED === 'true';
 
 function fmt(n: number | null | undefined): string {
   if (n === null || n === undefined) return '∞';
-  if (!Number.isFinite(n)) return '∞';
+  if (!Number.isFinite(n) || n >= 1e15) return '∞';
   return Number(n).toLocaleString();
 }
 
@@ -24,7 +24,6 @@ export default function LimitsPage() {
   const formRef = useRef<HTMLDivElement>(null);
 
   const [rpmChoice, setRpmChoice] = useState<'' | number>(20);
-  const [tokensChoice, setTokensChoice] = useState<'' | number>(1_000_000);
   const [why, setWhy] = useState('');
   const [models, setModels] = useState('');
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
@@ -84,7 +83,6 @@ export default function LimitsPage() {
       body: JSON.stringify({
         altcha: altchaPayload,
         rpm: rpmChoice === '' ? null : Number(rpmChoice),
-        tokens: tokensChoice === '' ? null : Number(tokensChoice),
         why,
         models,
       }),
@@ -149,16 +147,16 @@ export default function LimitsPage() {
       </div>
 
       <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${(info.remaining ?? 0) <= 0 ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-white/10 bg-white/[0.03] text-zinc-400'}`}>
-        Remaining today: <span className="font-mono font-bold text-zinc-100">{info.remaining !== undefined ? Number(info.remaining).toLocaleString() : '—'}</span> tokens
+        Remaining today: <span className="font-mono font-bold text-zinc-100">{info.remaining !== undefined ? fmt(info.remaining) : '—'}</span> tokens
       </div>
 
       <div className="card mt-6 p-5">
-        <h2 className="text-base font-semibold text-zinc-100">Request an increase</h2>
+        <h2 className="text-base font-semibold text-zinc-100">Request a higher RPM</h2>
         <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-          Tell us how far up you'd like to go — up to unlimited (∞). It'll be reviewed, and you'll see the result here next time you come back.
+          Daily tokens are unlimited by default. If you need a higher requests-per-minute rate, tell us how far up you'd like to go — it'll be reviewed, and you'll see the result here next time you come back.
         </p>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-zinc-400">Increase RPM</label>
             <select value={rpmChoice === '' ? '' : String(rpmChoice)} onChange={(e) => setRpmChoice(e.target.value === '' ? '' : Number(e.target.value))} className="input-dark">
@@ -169,16 +167,6 @@ export default function LimitsPage() {
               <option value="600">600</option>
               <option value="1000">1000</option>
               <option value="5000">5000</option>
-              <option value="">∞ (unlimited)</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-400">Increase daily tokens</label>
-            <select value={tokensChoice === '' ? '' : String(tokensChoice)} onChange={(e) => setTokensChoice(e.target.value === '' ? '' : Number(e.target.value))} className="input-dark">
-              <option value="1000000">1,000,000</option>
-              <option value="5000000">5,000,000</option>
-              <option value="10000000">10,000,000</option>
-              <option value="50000000">50,000,000</option>
               <option value="">∞ (unlimited)</option>
             </select>
           </div>
