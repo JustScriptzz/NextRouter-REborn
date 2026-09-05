@@ -1,7 +1,7 @@
 import { kvGetCached, kvSet, kvInvalidateCache } from './kv';
 
 const DEFAULT_RPM = 15;
-const DEFAULT_TOKEN_LIMIT = 500_000;
+const DEFAULT_TOKEN_LIMIT = Number.MAX_SAFE_INTEGER; // daily token limit removed
 
 export interface UserLimits {
   rpm: number;
