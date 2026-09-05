@@ -1,14 +1,10 @@
-import { getUserFromApiKey } from '@/lib/auth';
 import { listPublicCustomModels } from '@/lib/customModels';
 import { getCatalog } from '@/lib/providers';
-import { jsonErrorCors, jsonOkCors } from '@/lib/http';
+import { jsonOkCors } from '@/lib/http';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: Request) {
-  const user = await getUserFromApiKey(req.headers.get('authorization'));
-  if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
-
+export async function GET() {
   const catalog = await getCatalog();
   const publicCustom = await listPublicCustomModels();
   const created = Math.floor(Date.now() / 1000);
