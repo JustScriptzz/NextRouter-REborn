@@ -4,7 +4,7 @@ import { dailyUsage } from './db/schema';
 import type { UsagePoint, UsageSummary } from './types';
 import { kvGetCached } from './kv';
 
-export const DAILY_TOKEN_LIMIT = 500_000;
+export const DAILY_TOKEN_LIMIT = Number.MAX_SAFE_INTEGER; // daily token limit removed
 
 export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
