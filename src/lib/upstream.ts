@@ -507,16 +507,22 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
             }
           } catch {}
         }
-        // No tool calls detected — emit as normal content
+        // No tool calls detected — emit as normal content. Always strip
+        // <thinking> wrappers so Gemini-style models that wrap their reply
+        // don't lose visible text.
         if (emulatedContentAccum) {
-          const contentChunk = {
-            id: `chatcmpl-${Date.now()}`,
-            object: 'chat.completion.chunk',
-            created: Math.floor(Date.now() / 1000),
-            model: publicModelId,
-            choices: [{ index: 0, delta: { role: 'assistant', content: emulatedContentAccum }, finish_reason: null }],
-          };
-          controller.enqueue(enc.encode(`data: ${JSON.stringify(contentChunk)}\n\n`));
+          const split = extractManualThinking(emulatedContentAccum);
+          const visible = split.reasoning ? split.content : emulatedContentAccum;
+          if (visible) {
+            const contentChunk = {
+              id: `chatcmpl-${Date.now()}`,
+              object: 'chat.completion.chunk',
+              created: Math.floor(Date.now() / 1000),
+              model: publicModelId,
+              choices: [{ index: 0, delta: { role: 'assistant', content: visible }, finish_reason: null }],
+            };
+            controller.enqueue(enc.encode(`data: ${JSON.stringify(contentChunk)}\n\n`));
+          }
           controller.enqueue(enc.encode('data: [DONE]\n\n'));
         } else {
           controller.enqueue(enc.encode('data: [DONE]\n\n'));
@@ -873,17 +879,23 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   if (originalHasTools) {
     rewritten = maybeConvertEmulated(rewritten);
   }
-  // Thinking was requested upfront for non-streaming: split any <thinking>
-  // tags into reasoning + clean content (single call, no retry).
+  // <thinking>...</thinking> wrap handling:
+  // - If the user asked for reasoning, surface the tag contents as `reasoning`.
+  // - ALWAYS strip the tag pair from `content` so a model that wraps its full
+  //   reply (or just a leading sentence) doesn't lose visible text. This is the
+  //   common Gemini / OpenRouter pattern and the previous version truncated the
+  //   reply for 3.5–3.8-flash.
   {
     const msg = (rewritten.choices as Array<Record<string, unknown>> | undefined)?.[0]?.message as
       | Record<string, unknown>
       | undefined;
-    if (msg && typeof msg.content === 'string' && !getMessageReasoning(msg)) {
+    if (msg && typeof msg.content === 'string' && msg.content && !getMessageReasoning(msg)) {
       const split = extractManualThinking(msg.content);
       if (split.reasoning) {
-        msg.reasoning = split.reasoning;
-        msg.content = split.content || msg.content;
+        if (clientRequestedThinking(body)) {
+          msg.reasoning = split.reasoning;
+        }
+        msg.content = split.content;
       }
     }
   }
