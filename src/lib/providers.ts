@@ -364,6 +364,10 @@ async function liveGatewayModels(
       cache: 'no-store',
       signal: AbortSignal.timeout(slot.modelFetchTimeoutMs ?? LIVE_MODELS_TIMEOUT_MS),
     });
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => '');
+      console.warn(`[gateway] ${slot.provider} model fetch non-ok:`, res.status, bodyText.slice(0, 300));
+    }
     if (res.ok) {
       const body = (await res.json().catch(() => null)) as
         | { data?: Array<Record<string, unknown>> }
