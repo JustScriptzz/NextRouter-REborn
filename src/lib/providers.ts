@@ -290,9 +290,7 @@ const GATEWAYS: GatewaySlot[] = [
   },
   {
     // Custom-op: private upstream (chat at <base>/admin/v1/chat/completions).
-    // NOTE: *.ts.net is Tailscale-only DNS — unreachable from Render. Leave
-    // CUSTOMOP_API_KEY unset (slot stays dormant) until this host is publicly
-    // reachable, otherwise catalog refreshes stall on fetch timeouts.
+    // Publicly reachable via Tailscale Funnel.
     provider: 'customop',
     baseUrlEnv: 'CUSTOMOP_BASE_URL',
     apiKeyEnv: 'CUSTOMOP_API_KEY',
