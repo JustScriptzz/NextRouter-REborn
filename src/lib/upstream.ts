@@ -509,7 +509,9 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
         }
         // No tool calls detected — emit as normal content. Always strip
         // <thinking> wrappers so Gemini-style models that wrap their reply
-        // don't lose visible text.
+        // don't lose visible text. The terminal chunk must always carry a
+        // finish_reason or OpenAI-compatible clients (and our own error
+        // surfaces) complain "Stream ended without finish_reason".
         if (emulatedContentAccum) {
           const split = extractManualThinking(emulatedContentAccum);
           const visible = split.reasoning ? split.content : emulatedContentAccum;
@@ -523,20 +525,77 @@ function createBudgetTransform(opts: BudgetOptions): TransformStream<Uint8Array,
             };
             controller.enqueue(enc.encode(`data: ${JSON.stringify(contentChunk)}\n\n`));
           }
-          controller.enqueue(enc.encode('data: [DONE]\n\n'));
+          const stopChunk = {
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: publicModelId,
+            choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+          };
+          controller.enqueue(enc.encode(`data: ${JSON.stringify(stopChunk)}\n\ndata: [DONE]\n\n`));
         } else {
-          controller.enqueue(enc.encode('data: [DONE]\n\n'));
+          // Visible content was empty (only <thinking> came back). Close the
+          // stream with stop_reason so the client doesn't see a no-finish error.
+          const stopChunk = {
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model: publicModelId,
+            choices: [{ index: 0, delta: { role: 'assistant', content: '' }, finish_reason: 'stop' }],
+          };
+          controller.enqueue(enc.encode(`data: ${JSON.stringify(stopChunk)}\n\ndata: [DONE]\n\n`));
         }
         await settle();
         return;
+      }
+      // Non-tool streaming: upstreams may omit a terminal finish_reason chunk
+      // (some send a `data: [DONE]` immediately after content deltas). Append
+      // a stop chunk if we haven't seen one yet, otherwise the client errors
+      // with "Stream ended without finish_reason".
+      let sawFinish = false;
+      for (let i = pending.length - 1; i >= 0; i--) {
+        if (pending[i] === '}') {
+          const endIdx = i + 1;
+          const lastObj = pending.slice(0, endIdx);
+          try {
+            const lastJson = JSON.parse(lastObj) as Record<string, unknown>;
+            const fr = (lastJson.choices as Array<Record<string, unknown>> | undefined)?.[0]
+              ?.finish_reason;
+            if (fr) { sawFinish = true; break; }
+          } catch {
+            // last non-{}; keep scanning
+          }
+        }
       }
       if (pending) {
         const rewritten = rewriteModelName(pending, upstreamModel, publicModelId);
         countContent(rewritten);
         if (Math.ceil(outputChars / 4) < remainingBudget) {
           controller.enqueue(enc.encode(rewritten));
+          if (!sawFinish) {
+            const stopChunk = {
+              id: `chatcmpl-${Date.now()}`,
+              object: 'chat.completion.chunk',
+              created: Math.floor(Date.now() / 1000),
+              model: publicModelId,
+              choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+            };
+            controller.enqueue(enc.encode(`data: ${JSON.stringify(stopChunk)}\n\n`));
+          }
         }
         pending = '';
+      }
+      if (!sawFinish) {
+        const stopChunk = {
+          id: `chatcmpl-${Date.now()}`,
+          object: 'chat.completion.chunk',
+          created: Math.floor(Date.now() / 1000),
+          model: publicModelId,
+          choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+        };
+        controller.enqueue(enc.encode(`data: ${JSON.stringify(stopChunk)}\n\ndata: [DONE]\n\n`));
+      } else {
+        controller.enqueue(enc.encode('data: [DONE]\n\n'));
       }
       await settle();
     },
