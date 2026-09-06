@@ -394,8 +394,9 @@ async function liveGatewayModels(
         if (collected.length > 0) models = collected.slice(0, LIVE_MODELS_MAX);
       }
     }
-  } catch {
+  } catch (error) {
     models = null;
+    console.warn(`[gateway] ${slot.provider} model fetch failed:`, error instanceof Error ? error.message : error);
   }
 
   const gatewayModels = (globalForCatalog.gatewayModels ??= {});
