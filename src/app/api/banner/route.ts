@@ -1,7 +1,7 @@
 import { kvGetCached } from '@/lib/kv';
 import { jsonOk } from '@/lib/http';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET() {
   const banner = await kvGetCached('banner');

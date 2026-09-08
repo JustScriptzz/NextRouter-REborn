@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import StatusBoard from './StatusBoard';
 
+export const runtime = 'edge';
+
 export const metadata: Metadata = {
   title: 'Live model status — NextRouter REborn',
   description: 'Real-time availability, latency and speed for every model on NextRouter.',

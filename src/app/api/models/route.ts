@@ -2,7 +2,7 @@ import { getCatalog, getFallbackModelId } from '@/lib/providers';
 import { jsonOk } from '@/lib/http';
 import type { PublicModelDTO } from '@/lib/types';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET() {
   try {

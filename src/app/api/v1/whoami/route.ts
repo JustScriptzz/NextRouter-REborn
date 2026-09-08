@@ -1,7 +1,7 @@
 import { checkPublicRateLimit, resolveApiCaller, PUBLIC_RPM_PER_IP } from '@/lib/public-access';
 import { jsonErrorCors, jsonOkCors } from '@/lib/http';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET(req: Request) {
   const caller = await resolveApiCaller(req);

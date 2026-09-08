@@ -4,7 +4,7 @@ import { getCatalogModelProviders } from '@/lib/providers';
 import { videosGenerations, UpstreamRequestError } from '@/lib/upstream';
 import { cycleProviderPipes } from '@/lib/provider-cycle';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const maxDuration = 300;
 
 export async function POST(req: Request) {

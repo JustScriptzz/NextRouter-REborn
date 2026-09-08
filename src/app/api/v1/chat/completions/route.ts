@@ -10,7 +10,7 @@ import {
 } from '@/lib/upstream';
 import { UNLIMITED_BUDGET } from '@/lib/usage';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 const RETRY_MAX_ATTEMPTS = 60;
 const RETRY_BASE_DELAY_MS = 800;

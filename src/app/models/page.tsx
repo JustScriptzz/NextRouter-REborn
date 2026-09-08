@@ -3,6 +3,8 @@ import { getCatalog, getFallbackModelId } from '@/lib/providers';
 import type { CatalogModelDTO } from '@/components/ModelCard';
 import ModelsExplorer from '@/components/ModelsExplorer';
 
+export const runtime = 'edge';
+
 export const metadata: Metadata = {
   title: 'Models',
 };

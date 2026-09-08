@@ -4,7 +4,7 @@ import { getCatalogModelProviders } from '@/lib/providers';
 import { imagesGenerations, UpstreamRequestError } from '@/lib/upstream';
 import { cycleProviderPipes } from '@/lib/provider-cycle';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function POST(req: Request) {
   const requestStart = Date.now();

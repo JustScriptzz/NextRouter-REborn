@@ -1,7 +1,7 @@
 import { getCatalog } from '@/lib/providers';
 import { jsonOkCors } from '@/lib/http';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET() {
   const catalog = await getCatalog();
