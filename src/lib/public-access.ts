@@ -1,5 +1,6 @@
-import { timingSafeEqual } from 'crypto';
 import { rateLimiter } from './rateLimit';
+
+export const runtime = 'edge';
 
 // Serverless public access: no database, no users, no sessions.
 // - Everyone uses the shared PUBLIC_API_KEY (documented on /docs).
@@ -30,11 +31,16 @@ function bearerKey(req: Request): string | null {
   return h.slice(7).trim();
 }
 
+// Constant-time string comparison without Node's `crypto` module, so this
+// stays compatible with the Edge Runtime (Cloudflare Pages / next-on-pages).
 function safeEqual(a: string, b: string): boolean {
   if (!a || !b) return false;
-  const ab = Buffer.from(a);
-  const bb = Buffer.from(b);
-  return ab.length === bb.length && timingSafeEqual(ab, bb);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 // null = missing/unknown credential.
