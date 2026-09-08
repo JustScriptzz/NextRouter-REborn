@@ -1,0 +1,465 @@
+{"id": "phoenix-1.0", "type": "image", "round": 1, "status": 200, "ms": 8393, "err": ""}
+{"id": "qwen3-embedding-8b", "type": "embedding", "round": 1, "status": 429, "ms": 53444, "err": "{'message': '{\"error\":{\"message\":\"Too many requests for this API key. Slow down.\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kiro-auto", "type": "text", "round": 1, "status": 200, "ms": 70823, "err": ""}
+{"id": "minimax-m3", "type": "text", "round": 1, "status": 200, "ms": 17098, "err": ""}
+{"id": "moondream3.1", "type": "text", "round": 1, "status": 200, "ms": 6437, "err": ""}
+{"id": "deepseek-v4-pro", "type": "text", "round": 1, "status": 200, "ms": 11479, "err": ""}
+{"id": "glm-5.2", "type": "text", "round": 1, "status": 200, "ms": 12501, "err": ""}
+{"id": "sdxl-lightning", "type": "image", "round": 1, "status": 200, "ms": 8395, "err": ""}
+{"id": "qwen-3.8-2.4t-a95b", "type": "text", "round": 1, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "kimi-k3", "type": "text", "round": 1, "status": 0, "ms": 100094, "err": "TIMEOUT"}
+{"id": "aura-2-en", "type": "tts", "round": 1, "status": 200, "ms": 1348, "err": ""}
+{"id": "lucid-origin", "type": "image", "round": 1, "status": 200, "ms": 6061, "err": ""}
+{"id": "gemma-4-26b", "type": "text", "round": 1, "status": 200, "ms": 1396, "err": ""}
+{"id": "deepseek-v4-flash-0731", "type": "text", "round": 1, "status": 200, "ms": 5191, "err": ""}
+{"id": "qwen-3.8-27b", "type": "text", "round": 1, "status": 200, "ms": 1046, "err": ""}
+{"id": "deepseek-v4-pro-0813", "type": "text", "round": 1, "status": 200, "ms": 3075, "err": ""}
+{"id": "qwen3.8-max", "type": "text", "round": 1, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3.7-plus", "type": "text", "round": 1, "status": 0, "ms": 100081, "err": "TIMEOUT"}
+{"id": "qwen3.7-max", "type": "text", "round": 1, "status": 0, "ms": 100084, "err": "TIMEOUT"}
+{"id": "qwen3.6-plus", "type": "text", "round": 1, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "qwen3.6-max-preview", "type": "text", "round": 1, "status": 0, "ms": 100134, "err": "TIMEOUT"}
+{"id": "qwen3.6-27b", "type": "text", "round": 1, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3.6-35b-a3b", "type": "text", "round": 1, "status": 0, "ms": 100096, "err": "TIMEOUT"}
+{"id": "qwen3.5-plus", "type": "text", "round": 1, "status": 0, "ms": 100094, "err": "TIMEOUT"}
+{"id": "qwen3.5-flash", "type": "text", "round": 1, "status": 0, "ms": 100092, "err": "TIMEOUT"}
+{"id": "qwen3.5-397b-a17b", "type": "text", "round": 1, "status": 0, "ms": 100089, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-plus", "type": "text", "round": 1, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-flash", "type": "text", "round": 1, "status": 0, "ms": 100078, "err": "TIMEOUT"}
+{"id": "qwen3-max-2026-01-23", "type": "text", "round": 1, "status": 0, "ms": 100096, "err": "TIMEOUT"}
+{"id": "qwen-plus-2025-07-28", "type": "text", "round": 1, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3-coder-plus", "type": "text", "round": 1, "status": 0, "ms": 100096, "err": "TIMEOUT"}
+{"id": "qwen3-vl-plus", "type": "text", "round": 1, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "qwen3-omni-flash-2025-12-01", "type": "text", "round": 1, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "gemini-3.6", "type": "text", "round": 1, "status": 200, "ms": 11499, "err": ""}
+{"id": "mimo-v2.5-pro", "type": "text", "round": 1, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "mimo-v2.5", "type": "text", "round": 1, "status": 200, "ms": 41503, "err": ""}
+{"id": "gpt-5.6-luna", "type": "text", "round": 1, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "glm-5.3", "type": "text", "round": 1, "status": 0, "ms": 100098, "err": "TIMEOUT"}
+{"id": "glm-5.1", "type": "text", "round": 1, "status": 0, "ms": 100092, "err": "TIMEOUT"}
+{"id": "glm-5-turbo", "type": "text", "round": 1, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "glm-5v-turbo", "type": "text", "round": 1, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "glm-4.7", "type": "text", "round": 1, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "meta-ai", "type": "text", "round": 1, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "meta-image", "type": "image", "round": 1, "status": 502, "ms": 52432, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "x-preview-f-free", "type": "text", "round": 1, "status": 200, "ms": 6683, "err": ""}
+{"id": "qwen3-guard-8b", "type": "text", "round": 1, "status": 200, "ms": 1043, "err": ""}
+{"id": "nemotron-3.5-lightning-30b", "type": "text", "round": 1, "status": 200, "ms": 904, "err": ""}
+{"id": "north-mini-code", "type": "text", "round": 1, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "glm-4.6v-flash", "type": "text", "round": 1, "status": 200, "ms": 2178, "err": ""}
+{"id": "deepseek-v4-flash", "type": "text", "round": 1, "status": 200, "ms": 1284, "err": ""}
+{"id": "gemma-4-26b-a4b", "type": "text", "round": 1, "status": 200, "ms": 1299, "err": ""}
+{"id": "gemma-diffusion", "type": "text", "round": 1, "status": 200, "ms": 16117, "err": ""}
+{"id": "gemma-4-31b", "type": "text", "round": 1, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "gemini-2.5-flash-lite", "type": "text", "round": 1, "status": 200, "ms": 3437, "err": ""}
+{"id": "gemini-3-flash-preview", "type": "text", "round": 1, "status": 200, "ms": 1025, "err": ""}
+{"id": "gemini-3.1-flash-lite", "type": "text", "round": 1, "status": 0, "ms": 100089, "err": "TIMEOUT"}
+{"id": "gemini-3.1-pro-preview", "type": "text", "round": 1, "status": 0, "ms": 100078, "err": "TIMEOUT"}
+{"id": "ministral-3-3b", "type": "text", "round": 1, "status": 200, "ms": 5491, "err": ""}
+{"id": "agnes-image", "type": "image", "round": 1, "status": 504, "ms": 60272, "err": "An error occurred with your deployment  FUNCTION_INVOCATION_TIMEOUT  fra1::zndtm-1787595408141-6e330e4c1f89 "}
+{"id": "gpt-image-2", "type": "image", "round": 1, "status": 502, "ms": 53025, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "ideogram-v4", "type": "image", "round": 1, "status": 502, "ms": 52392, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana", "type": "image", "round": 1, "status": 429, "ms": 52226, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-2", "type": "image", "round": 1, "status": 400, "ms": 52237, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-pro", "type": "image", "round": 1, "status": 429, "ms": 53203, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kilo-auto/free", "type": "text", "round": 1, "status": 200, "ms": 2834, "err": ""}
+{"id": "stepfun/step-3.7-flash:free", "type": "text", "round": 1, "status": 200, "ms": 16098, "err": ""}
+{"id": "tencent/hy3:free", "type": "text", "round": 1, "status": 200, "ms": 3762, "err": ""}
+{"id": "poolside/laguna-s-2.1:free", "type": "text", "round": 1, "status": 200, "ms": 3006, "err": ""}
+{"id": "dots-studio/dots-3-note-preview:free", "type": "text", "round": 1, "status": 200, "ms": 2083, "err": ""}
+{"id": "liquid/lfm-2.5-2.6b:free", "type": "text", "round": 1, "status": 200, "ms": 2099, "err": ""}
+{"id": "nvidia/nemotron-3.5-lightning:free", "type": "text", "round": 1, "status": 200, "ms": 6961, "err": ""}
+{"id": "thinkingmachines/inkling-small:free", "type": "text", "round": 1, "status": 200, "ms": 2348, "err": ""}
+{"id": "thinkingmachines/inkling:free", "type": "text", "round": 1, "status": 200, "ms": 2471, "err": ""}
+{"id": "poolside/laguna-xs-2.1:free", "type": "text", "round": 1, "status": 200, "ms": 3065, "err": ""}
+{"id": "cohere/north-mini-code:free", "type": "text", "round": 1, "status": 200, "ms": 1818, "err": ""}
+{"id": "nvidia/nemotron-3.5-content-safety:free", "type": "text", "round": 1, "status": 200, "ms": 1123, "err": ""}
+{"id": "nvidia/nemotron-3-ultra-550b-a55b:free", "type": "text", "round": 1, "status": 200, "ms": 2221, "err": ""}
+{"id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "type": "text", "round": 1, "status": 200, "ms": 1664, "err": ""}
+{"id": "nvidia/nemotron-3-super-120b-a12b:free", "type": "text", "round": 1, "status": 200, "ms": 1361, "err": ""}
+{"id": "nemotron-3-super", "type": "text", "round": 1, "status": 200, "ms": 2712, "err": ""}
+{"id": "deepseek-v4-flash:preview", "type": "text", "round": 1, "status": 0, "ms": 100095, "err": "TIMEOUT"}
+{"id": "gemma4:31b", "type": "text", "round": 1, "status": 200, "ms": 3704, "err": ""}
+{"id": "kimi-k2.7-code", "type": "text", "round": 1, "status": 0, "ms": 100080, "err": "TIMEOUT"}
+{"id": "minimax-m2.7", "type": "text", "round": 1, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "deepseek-v4-flash:0731", "type": "text", "round": 1, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "gpt-oss:120b", "type": "text", "round": 1, "status": 200, "ms": 1052, "err": ""}
+{"id": "mistral-large-3:675b", "type": "text", "round": 1, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:0813", "type": "text", "round": 1, "status": 0, "ms": 100096, "err": "TIMEOUT"}
+{"id": "gpt-oss:20b", "type": "text", "round": 1, "status": 200, "ms": 993, "err": ""}
+{"id": "qwen3.5:397b", "type": "text", "round": 1, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:preview", "type": "text", "round": 1, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "nemotron-3-nano:30b", "type": "text", "round": 1, "status": 200, "ms": 795, "err": ""}
+{"id": "nemotron-3-ultra", "type": "text", "round": 1, "status": 200, "ms": 958, "err": ""}
+{"id": "phoenix-1.0", "type": "image", "round": 2, "status": 200, "ms": 5029, "err": ""}
+{"id": "qwen3-embedding-8b", "type": "embedding", "round": 2, "status": 429, "ms": 52247, "err": "{'message': '{\"error\":{\"message\":\"Too many requests for this API key. Slow down.\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kiro-auto", "type": "text", "round": 2, "status": 200, "ms": 3387, "err": ""}
+{"id": "minimax-m3", "type": "text", "round": 2, "status": 200, "ms": 2675, "err": ""}
+{"id": "moondream3.1", "type": "text", "round": 2, "status": 200, "ms": 644, "err": ""}
+{"id": "deepseek-v4-pro", "type": "text", "round": 2, "status": 200, "ms": 4687, "err": ""}
+{"id": "glm-5.2", "type": "text", "round": 2, "status": 200, "ms": 3329, "err": ""}
+{"id": "sdxl-lightning", "type": "image", "round": 2, "status": 200, "ms": 2270, "err": ""}
+{"id": "qwen-3.8-2.4t-a95b", "type": "text", "round": 2, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "kimi-k3", "type": "text", "round": 2, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "aura-2-en", "type": "tts", "round": 2, "status": 200, "ms": 894, "err": ""}
+{"id": "lucid-origin", "type": "image", "round": 2, "status": 200, "ms": 1549, "err": ""}
+{"id": "gemma-4-26b", "type": "text", "round": 2, "status": 200, "ms": 2872, "err": ""}
+{"id": "deepseek-v4-flash-0731", "type": "text", "round": 2, "status": 200, "ms": 2494, "err": ""}
+{"id": "qwen-3.8-27b", "type": "text", "round": 2, "status": 200, "ms": 1536, "err": ""}
+{"id": "deepseek-v4-pro-0813", "type": "text", "round": 2, "status": 200, "ms": 8331, "err": ""}
+{"id": "qwen3.8-max", "type": "text", "round": 2, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "qwen3.7-plus", "type": "text", "round": 2, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "qwen3.7-max", "type": "text", "round": 2, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "qwen3.6-plus", "type": "text", "round": 2, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3.6-max-preview", "type": "text", "round": 2, "status": 0, "ms": 100079, "err": "TIMEOUT"}
+{"id": "qwen3.6-27b", "type": "text", "round": 2, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "qwen3.6-35b-a3b", "type": "text", "round": 2, "status": 0, "ms": 100132, "err": "TIMEOUT"}
+{"id": "qwen3.5-plus", "type": "text", "round": 2, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3.5-flash", "type": "text", "round": 2, "status": 0, "ms": 100084, "err": "TIMEOUT"}
+{"id": "qwen3.5-397b-a17b", "type": "text", "round": 2, "status": 0, "ms": 100084, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-plus", "type": "text", "round": 2, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-flash", "type": "text", "round": 2, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "qwen3-max-2026-01-23", "type": "text", "round": 2, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "qwen-plus-2025-07-28", "type": "text", "round": 2, "status": 0, "ms": 100092, "err": "TIMEOUT"}
+{"id": "qwen3-coder-plus", "type": "text", "round": 2, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3-vl-plus", "type": "text", "round": 2, "status": 0, "ms": 100097, "err": "TIMEOUT"}
+{"id": "qwen3-omni-flash-2025-12-01", "type": "text", "round": 2, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "gemini-3.6", "type": "text", "round": 2, "status": 200, "ms": 12772, "err": ""}
+{"id": "mimo-v2.5-pro", "type": "text", "round": 2, "status": 0, "ms": 100098, "err": "TIMEOUT"}
+{"id": "mimo-v2.5", "type": "text", "round": 2, "status": 200, "ms": 32311, "err": ""}
+{"id": "gpt-5.6-luna", "type": "text", "round": 2, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "glm-5.3", "type": "text", "round": 2, "status": 0, "ms": 100078, "err": "TIMEOUT"}
+{"id": "glm-5.1", "type": "text", "round": 2, "status": 0, "ms": 100178, "err": "TIMEOUT"}
+{"id": "glm-5-turbo", "type": "text", "round": 2, "status": 0, "ms": 100178, "err": "TIMEOUT"}
+{"id": "glm-5v-turbo", "type": "text", "round": 2, "status": 0, "ms": 100178, "err": "TIMEOUT"}
+{"id": "glm-4.7", "type": "text", "round": 2, "status": 0, "ms": 100177, "err": "TIMEOUT"}
+{"id": "meta-ai", "type": "text", "round": 2, "status": 0, "ms": 100177, "err": "TIMEOUT"}
+{"id": "meta-image", "type": "image", "round": 2, "status": 502, "ms": 52341, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "x-preview-f-free", "type": "text", "round": 2, "status": 200, "ms": 9832, "err": ""}
+{"id": "qwen3-guard-8b", "type": "text", "round": 2, "status": 200, "ms": 4196, "err": ""}
+{"id": "nemotron-3.5-lightning-30b", "type": "text", "round": 2, "status": 200, "ms": 996, "err": ""}
+{"id": "north-mini-code", "type": "text", "round": 2, "status": 0, "ms": 100112, "err": "TIMEOUT"}
+{"id": "glm-4.6v-flash", "type": "text", "round": 2, "status": 200, "ms": 2632, "err": ""}
+{"id": "deepseek-v4-flash", "type": "text", "round": 2, "status": 200, "ms": 1688, "err": ""}
+{"id": "gemma-4-26b-a4b", "type": "text", "round": 2, "status": 200, "ms": 11372, "err": ""}
+{"id": "gemma-diffusion", "type": "text", "round": 2, "status": 200, "ms": 9286, "err": ""}
+{"id": "gemma-4-31b", "type": "text", "round": 2, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "gemini-2.5-flash-lite", "type": "text", "round": 2, "status": 200, "ms": 2180, "err": ""}
+{"id": "gemini-3-flash-preview", "type": "text", "round": 2, "status": 200, "ms": 929, "err": ""}
+{"id": "gemini-3.1-flash-lite", "type": "text", "round": 2, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "gemini-3.1-pro-preview", "type": "text", "round": 2, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "ministral-3-3b", "type": "text", "round": 2, "status": 200, "ms": 8445, "err": ""}
+{"id": "agnes-image", "type": "image", "round": 2, "status": 429, "ms": 52730, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "gpt-image-2", "type": "image", "round": 2, "status": 429, "ms": 52258, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "ideogram-v4", "type": "image", "round": 2, "status": 502, "ms": 52328, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana", "type": "image", "round": 2, "status": 502, "ms": 52668, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-2", "type": "image", "round": 2, "status": 429, "ms": 52228, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-pro", "type": "image", "round": 2, "status": 400, "ms": 52262, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kilo-auto/free", "type": "text", "round": 2, "status": 200, "ms": 2981, "err": ""}
+{"id": "stepfun/step-3.7-flash:free", "type": "text", "round": 2, "status": 200, "ms": 10905, "err": ""}
+{"id": "tencent/hy3:free", "type": "text", "round": 2, "status": 200, "ms": 2383, "err": ""}
+{"id": "poolside/laguna-s-2.1:free", "type": "text", "round": 2, "status": 200, "ms": 1865, "err": ""}
+{"id": "dots-studio/dots-3-note-preview:free", "type": "text", "round": 2, "status": 200, "ms": 3353, "err": ""}
+{"id": "liquid/lfm-2.5-2.6b:free", "type": "text", "round": 2, "status": 200, "ms": 1413, "err": ""}
+{"id": "nvidia/nemotron-3.5-lightning:free", "type": "text", "round": 2, "status": 200, "ms": 6169, "err": ""}
+{"id": "thinkingmachines/inkling-small:free", "type": "text", "round": 2, "status": 200, "ms": 2492, "err": ""}
+{"id": "thinkingmachines/inkling:free", "type": "text", "round": 2, "status": 200, "ms": 3164, "err": ""}
+{"id": "poolside/laguna-xs-2.1:free", "type": "text", "round": 2, "status": 200, "ms": 1065, "err": ""}
+{"id": "cohere/north-mini-code:free", "type": "text", "round": 2, "status": 200, "ms": 1789, "err": ""}
+{"id": "nvidia/nemotron-3.5-content-safety:free", "type": "text", "round": 2, "status": 200, "ms": 3094, "err": ""}
+{"id": "nvidia/nemotron-3-ultra-550b-a55b:free", "type": "text", "round": 2, "status": 200, "ms": 1197, "err": ""}
+{"id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "type": "text", "round": 2, "status": 200, "ms": 3238, "err": ""}
+{"id": "nvidia/nemotron-3-super-120b-a12b:free", "type": "text", "round": 2, "status": 200, "ms": 1750, "err": ""}
+{"id": "nemotron-3-super", "type": "text", "round": 2, "status": 200, "ms": 796, "err": ""}
+{"id": "deepseek-v4-flash:preview", "type": "text", "round": 2, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "gemma4:31b", "type": "text", "round": 2, "status": 200, "ms": 1128, "err": ""}
+{"id": "kimi-k2.7-code", "type": "text", "round": 2, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "minimax-m2.7", "type": "text", "round": 2, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "deepseek-v4-flash:0731", "type": "text", "round": 2, "status": 0, "ms": 100079, "err": "TIMEOUT"}
+{"id": "gpt-oss:120b", "type": "text", "round": 2, "status": 200, "ms": 719, "err": ""}
+{"id": "mistral-large-3:675b", "type": "text", "round": 2, "status": 0, "ms": 100097, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:0813", "type": "text", "round": 2, "status": 0, "ms": 100094, "err": "TIMEOUT"}
+{"id": "gpt-oss:20b", "type": "text", "round": 2, "status": 200, "ms": 921, "err": ""}
+{"id": "qwen3.5:397b", "type": "text", "round": 2, "status": 0, "ms": 100100, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:preview", "type": "text", "round": 2, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "nemotron-3-nano:30b", "type": "text", "round": 2, "status": 200, "ms": 3190, "err": ""}
+{"id": "nemotron-3-ultra", "type": "text", "round": 2, "status": 200, "ms": 13663, "err": ""}
+{"id": "phoenix-1.0", "type": "image", "round": 3, "status": 200, "ms": 5231, "err": ""}
+{"id": "qwen3-embedding-8b", "type": "embedding", "round": 3, "status": 429, "ms": 52231, "err": "{'message': '{\"error\":{\"message\":\"Too many requests for this API key. Slow down.\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kiro-auto", "type": "text", "round": 3, "status": 200, "ms": 3789, "err": ""}
+{"id": "minimax-m3", "type": "text", "round": 3, "status": 200, "ms": 1664, "err": ""}
+{"id": "moondream3.1", "type": "text", "round": 3, "status": 200, "ms": 664, "err": ""}
+{"id": "deepseek-v4-pro", "type": "text", "round": 3, "status": 200, "ms": 4337, "err": ""}
+{"id": "glm-5.2", "type": "text", "round": 3, "status": 200, "ms": 10597, "err": ""}
+{"id": "sdxl-lightning", "type": "image", "round": 3, "status": 200, "ms": 2400, "err": ""}
+{"id": "qwen-3.8-2.4t-a95b", "type": "text", "round": 3, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "kimi-k3", "type": "text", "round": 3, "status": 0, "ms": 100126, "err": "TIMEOUT"}
+{"id": "aura-2-en", "type": "tts", "round": 3, "status": 200, "ms": 927, "err": ""}
+{"id": "lucid-origin", "type": "image", "round": 3, "status": 200, "ms": 2665, "err": ""}
+{"id": "gemma-4-26b", "type": "text", "round": 3, "status": 200, "ms": 547, "err": ""}
+{"id": "deepseek-v4-flash-0731", "type": "text", "round": 3, "status": 200, "ms": 3131, "err": ""}
+{"id": "qwen-3.8-27b", "type": "text", "round": 3, "status": 200, "ms": 1065, "err": ""}
+{"id": "deepseek-v4-pro-0813", "type": "text", "round": 3, "status": 200, "ms": 2005, "err": ""}
+{"id": "qwen3.8-max", "type": "text", "round": 3, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "qwen3.7-plus", "type": "text", "round": 3, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "qwen3.7-max", "type": "text", "round": 3, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3.6-plus", "type": "text", "round": 3, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "qwen3.6-max-preview", "type": "text", "round": 3, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "qwen3.6-27b", "type": "text", "round": 3, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "qwen3.6-35b-a3b", "type": "text", "round": 3, "status": 0, "ms": 100122, "err": "TIMEOUT"}
+{"id": "qwen3.5-plus", "type": "text", "round": 3, "status": 0, "ms": 100080, "err": "TIMEOUT"}
+{"id": "qwen3.5-flash", "type": "text", "round": 3, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "qwen3.5-397b-a17b", "type": "text", "round": 3, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-plus", "type": "text", "round": 3, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-flash", "type": "text", "round": 3, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "qwen3-max-2026-01-23", "type": "text", "round": 3, "status": 0, "ms": 100089, "err": "TIMEOUT"}
+{"id": "qwen-plus-2025-07-28", "type": "text", "round": 3, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "qwen3-coder-plus", "type": "text", "round": 3, "status": 0, "ms": 100092, "err": "TIMEOUT"}
+{"id": "qwen3-vl-plus", "type": "text", "round": 3, "status": 0, "ms": 100084, "err": "TIMEOUT"}
+{"id": "qwen3-omni-flash-2025-12-01", "type": "text", "round": 3, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "gemini-3.6", "type": "text", "round": 3, "status": 200, "ms": 18716, "err": ""}
+{"id": "mimo-v2.5-pro", "type": "text", "round": 3, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "mimo-v2.5", "type": "text", "round": 3, "status": 200, "ms": 34750, "err": ""}
+{"id": "gpt-5.6-luna", "type": "text", "round": 3, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "glm-5.3", "type": "text", "round": 3, "status": 0, "ms": 100098, "err": "TIMEOUT"}
+{"id": "glm-5.1", "type": "text", "round": 3, "status": 0, "ms": 100095, "err": "TIMEOUT"}
+{"id": "glm-5-turbo", "type": "text", "round": 3, "status": 0, "ms": 100089, "err": "TIMEOUT"}
+{"id": "glm-5v-turbo", "type": "text", "round": 3, "status": 0, "ms": 100094, "err": "TIMEOUT"}
+{"id": "glm-4.7", "type": "text", "round": 3, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "meta-ai", "type": "text", "round": 3, "status": 404, "ms": 259, "err": "{'message': 'Model \"meta-ai\" not found', 'type': 'error'}"}
+{"id": "meta-image", "type": "image", "round": 3, "status": 404, "ms": 3295, "err": "{'message': 'Model \"meta-image\" not found', 'type': 'error'}"}
+{"id": "x-preview-f-free", "type": "text", "round": 3, "status": 200, "ms": 9798, "err": ""}
+{"id": "qwen3-guard-8b", "type": "text", "round": 3, "status": 200, "ms": 1133, "err": ""}
+{"id": "nemotron-3.5-lightning-30b", "type": "text", "round": 3, "status": 200, "ms": 952, "err": ""}
+{"id": "north-mini-code", "type": "text", "round": 3, "status": 0, "ms": 100092, "err": "TIMEOUT"}
+{"id": "glm-4.6v-flash", "type": "text", "round": 3, "status": 200, "ms": 2259, "err": ""}
+{"id": "deepseek-v4-flash", "type": "text", "round": 3, "status": 200, "ms": 1382, "err": ""}
+{"id": "gemma-4-26b-a4b", "type": "text", "round": 3, "status": 200, "ms": 945, "err": ""}
+{"id": "gemma-diffusion", "type": "text", "round": 3, "status": 200, "ms": 20674, "err": ""}
+{"id": "gemma-4-31b", "type": "text", "round": 3, "status": 0, "ms": 100102, "err": "TIMEOUT"}
+{"id": "gemini-2.5-flash-lite", "type": "text", "round": 3, "status": 200, "ms": 1415, "err": ""}
+{"id": "gemini-3-flash-preview", "type": "text", "round": 3, "status": 200, "ms": 705, "err": ""}
+{"id": "gemini-3.1-flash-lite", "type": "text", "round": 3, "status": 0, "ms": 100080, "err": "TIMEOUT"}
+{"id": "gemini-3.1-pro-preview", "type": "text", "round": 3, "status": 0, "ms": 100081, "err": "TIMEOUT"}
+{"id": "ministral-3-3b", "type": "text", "round": 3, "status": 200, "ms": 2156, "err": ""}
+{"id": "agnes-image", "type": "image", "round": 3, "status": 200, "ms": 52264, "err": ""}
+{"id": "gpt-image-2", "type": "image", "round": 3, "status": 429, "ms": 52485, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "ideogram-v4", "type": "image", "round": 3, "status": 502, "ms": 52644, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana", "type": "image", "round": 3, "status": 502, "ms": 52881, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-2", "type": "image", "round": 3, "status": 502, "ms": 52710, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-pro", "type": "image", "round": 3, "status": 502, "ms": 52869, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kilo-auto/free", "type": "text", "round": 3, "status": 200, "ms": 2522, "err": ""}
+{"id": "stepfun/step-3.7-flash:free", "type": "text", "round": 3, "status": 200, "ms": 15811, "err": ""}
+{"id": "tencent/hy3:free", "type": "text", "round": 3, "status": 200, "ms": 3882, "err": ""}
+{"id": "poolside/laguna-s-2.1:free", "type": "text", "round": 3, "status": 200, "ms": 1233, "err": ""}
+{"id": "dots-studio/dots-3-note-preview:free", "type": "text", "round": 3, "status": 200, "ms": 1866, "err": ""}
+{"id": "liquid/lfm-2.5-2.6b:free", "type": "text", "round": 3, "status": 200, "ms": 1465, "err": ""}
+{"id": "nvidia/nemotron-3.5-lightning:free", "type": "text", "round": 3, "status": 200, "ms": 18730, "err": ""}
+{"id": "thinkingmachines/inkling-small:free", "type": "text", "round": 3, "status": 200, "ms": 2734, "err": ""}
+{"id": "thinkingmachines/inkling:free", "type": "text", "round": 3, "status": 200, "ms": 2390, "err": ""}
+{"id": "poolside/laguna-xs-2.1:free", "type": "text", "round": 3, "status": 200, "ms": 25326, "err": ""}
+{"id": "cohere/north-mini-code:free", "type": "text", "round": 3, "status": 200, "ms": 6399, "err": ""}
+{"id": "nvidia/nemotron-3.5-content-safety:free", "type": "text", "round": 3, "status": 200, "ms": 4187, "err": ""}
+{"id": "nvidia/nemotron-3-ultra-550b-a55b:free", "type": "text", "round": 3, "status": 200, "ms": 3017, "err": ""}
+{"id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "type": "text", "round": 3, "status": 200, "ms": 2238, "err": ""}
+{"id": "nvidia/nemotron-3-super-120b-a12b:free", "type": "text", "round": 3, "status": 200, "ms": 2301, "err": ""}
+{"id": "nemotron-3-super", "type": "text", "round": 3, "status": 200, "ms": 2183, "err": ""}
+{"id": "deepseek-v4-flash:preview", "type": "text", "round": 3, "status": 0, "ms": 100076, "err": "TIMEOUT"}
+{"id": "gemma4:31b", "type": "text", "round": 3, "status": 200, "ms": 573, "err": ""}
+{"id": "kimi-k2.7-code", "type": "text", "round": 3, "status": 0, "ms": 100131, "err": "TIMEOUT"}
+{"id": "minimax-m2.7", "type": "text", "round": 3, "status": 0, "ms": 100116, "err": "TIMEOUT"}
+{"id": "deepseek-v4-flash:0731", "type": "text", "round": 3, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "gpt-oss:120b", "type": "text", "round": 3, "status": 200, "ms": 649, "err": ""}
+{"id": "mistral-large-3:675b", "type": "text", "round": 3, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:0813", "type": "text", "round": 3, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "gpt-oss:20b", "type": "text", "round": 3, "status": 200, "ms": 3222, "err": ""}
+{"id": "qwen3.5:397b", "type": "text", "round": 3, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:preview", "type": "text", "round": 3, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "nemotron-3-nano:30b", "type": "text", "round": 3, "status": 200, "ms": 2571, "err": ""}
+{"id": "nemotron-3-ultra", "type": "text", "round": 3, "status": 200, "ms": 2712, "err": ""}
+{"id": "phoenix-1.0", "type": "image", "round": 4, "status": 200, "ms": 7035, "err": ""}
+{"id": "qwen3-embedding-8b", "type": "embedding", "round": 4, "status": 429, "ms": 52227, "err": "{'message': '{\"error\":{\"message\":\"Too many requests for this API key. Slow down.\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kiro-auto", "type": "text", "round": 4, "status": 200, "ms": 3482, "err": ""}
+{"id": "minimax-m3", "type": "text", "round": 4, "status": 200, "ms": 1327, "err": ""}
+{"id": "moondream3.1", "type": "text", "round": 4, "status": 200, "ms": 660, "err": ""}
+{"id": "deepseek-v4-pro", "type": "text", "round": 4, "status": 200, "ms": 4360, "err": ""}
+{"id": "glm-5.2", "type": "text", "round": 4, "status": 200, "ms": 4373, "err": ""}
+{"id": "sdxl-lightning", "type": "image", "round": 4, "status": 200, "ms": 3899, "err": ""}
+{"id": "qwen-3.8-2.4t-a95b", "type": "text", "round": 4, "status": 0, "ms": 100169, "err": "TIMEOUT"}
+{"id": "kimi-k3", "type": "text", "round": 4, "status": 0, "ms": 100168, "err": "TIMEOUT"}
+{"id": "aura-2-en", "type": "tts", "round": 4, "status": 200, "ms": 3634, "err": ""}
+{"id": "lucid-origin", "type": "image", "round": 4, "status": 200, "ms": 1684, "err": ""}
+{"id": "gemma-4-26b", "type": "text", "round": 4, "status": 200, "ms": 779, "err": ""}
+{"id": "deepseek-v4-flash-0731", "type": "text", "round": 4, "status": 200, "ms": 1234, "err": ""}
+{"id": "qwen-3.8-27b", "type": "text", "round": 4, "status": 200, "ms": 3648, "err": ""}
+{"id": "deepseek-v4-pro-0813", "type": "text", "round": 4, "status": 200, "ms": 5146, "err": ""}
+{"id": "qwen3.8-max", "type": "text", "round": 4, "status": 404, "ms": 267, "err": "{'message': 'Model \"qwen3.8-max\" not found', 'type': 'error'}"}
+{"id": "qwen3.7-plus", "type": "text", "round": 4, "status": 404, "ms": 1080, "err": "{'message': 'Model \"qwen3.7-plus\" not found', 'type': 'error'}"}
+{"id": "qwen3.7-max", "type": "text", "round": 4, "status": 404, "ms": 1001, "err": "{'message': 'Model \"qwen3.7-max\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-plus", "type": "text", "round": 4, "status": 404, "ms": 237, "err": "{'message': 'Model \"qwen3.6-plus\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-max-preview", "type": "text", "round": 4, "status": 404, "ms": 238, "err": "{'message': 'Model \"qwen3.6-max-preview\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-27b", "type": "text", "round": 4, "status": 404, "ms": 241, "err": "{'message': 'Model \"qwen3.6-27b\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-35b-a3b", "type": "text", "round": 4, "status": 404, "ms": 247, "err": "{'message': 'Model \"qwen3.6-35b-a3b\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-plus", "type": "text", "round": 4, "status": 404, "ms": 267, "err": "{'message': 'Model \"qwen3.5-plus\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-flash", "type": "text", "round": 4, "status": 404, "ms": 240, "err": "{'message': 'Model \"qwen3.5-flash\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-397b-a17b", "type": "text", "round": 4, "status": 404, "ms": 245, "err": "{'message': 'Model \"qwen3.5-397b-a17b\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-omni-plus", "type": "text", "round": 4, "status": 0, "ms": 100079, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-flash", "type": "text", "round": 4, "status": 0, "ms": 100078, "err": "TIMEOUT"}
+{"id": "qwen3-max-2026-01-23", "type": "text", "round": 4, "status": 0, "ms": 100092, "err": "TIMEOUT"}
+{"id": "qwen-plus-2025-07-28", "type": "text", "round": 4, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "qwen3-coder-plus", "type": "text", "round": 4, "status": 0, "ms": 100084, "err": "TIMEOUT"}
+{"id": "qwen3-vl-plus", "type": "text", "round": 4, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "qwen3-omni-flash-2025-12-01", "type": "text", "round": 4, "status": 0, "ms": 100126, "err": "TIMEOUT"}
+{"id": "gemini-3.6", "type": "text", "round": 4, "status": 200, "ms": 32765, "err": ""}
+{"id": "mimo-v2.5-pro", "type": "text", "round": 4, "status": 0, "ms": 100084, "err": "TIMEOUT"}
+{"id": "mimo-v2.5", "type": "text", "round": 4, "status": 200, "ms": 46009, "err": ""}
+{"id": "gpt-5.6-luna", "type": "text", "round": 4, "status": 0, "ms": 100079, "err": "TIMEOUT"}
+{"id": "glm-5.3", "type": "text", "round": 4, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "glm-5.1", "type": "text", "round": 4, "status": 0, "ms": 100102, "err": "TIMEOUT"}
+{"id": "glm-5-turbo", "type": "text", "round": 4, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "glm-5v-turbo", "type": "text", "round": 4, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "glm-4.7", "type": "text", "round": 4, "status": 0, "ms": 100078, "err": "TIMEOUT"}
+{"id": "meta-ai", "type": "text", "round": 4, "status": 404, "ms": 1902, "err": "{'message': 'Model \"meta-ai\" not found', 'type': 'error'}"}
+{"id": "meta-image", "type": "image", "round": 4, "status": 404, "ms": 2702, "err": "{'message': 'Model \"meta-image\" not found', 'type': 'error'}"}
+{"id": "x-preview-f-free", "type": "text", "round": 4, "status": 200, "ms": 6770, "err": ""}
+{"id": "qwen3-guard-8b", "type": "text", "round": 4, "status": 200, "ms": 1469, "err": ""}
+{"id": "nemotron-3.5-lightning-30b", "type": "text", "round": 4, "status": 200, "ms": 2903, "err": ""}
+{"id": "north-mini-code", "type": "text", "round": 4, "status": 0, "ms": 100095, "err": "TIMEOUT"}
+{"id": "glm-4.6v-flash", "type": "text", "round": 4, "status": 200, "ms": 5861, "err": ""}
+{"id": "deepseek-v4-flash", "type": "text", "round": 4, "status": 200, "ms": 2338, "err": ""}
+{"id": "gemma-4-26b-a4b", "type": "text", "round": 4, "status": 200, "ms": 1215, "err": ""}
+{"id": "gemma-diffusion", "type": "text", "round": 4, "status": 200, "ms": 6171, "err": ""}
+{"id": "gemma-4-31b", "type": "text", "round": 4, "status": 0, "ms": 100080, "err": "TIMEOUT"}
+{"id": "gemini-2.5-flash-lite", "type": "text", "round": 4, "status": 200, "ms": 2446, "err": ""}
+{"id": "gemini-3-flash-preview", "type": "text", "round": 4, "status": 200, "ms": 828, "err": ""}
+{"id": "gemini-3.1-flash-lite", "type": "text", "round": 4, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "gemini-3.1-pro-preview", "type": "text", "round": 4, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "ministral-3-3b", "type": "text", "round": 4, "status": 200, "ms": 14158, "err": ""}
+{"id": "agnes-image", "type": "image", "round": 4, "status": 200, "ms": 20780, "err": ""}
+{"id": "gpt-image-2", "type": "image", "round": 4, "status": 502, "ms": 52861, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "ideogram-v4", "type": "image", "round": 4, "status": 502, "ms": 52810, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana", "type": "image", "round": 4, "status": 502, "ms": 53055, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-2", "type": "image", "round": 4, "status": 400, "ms": 52232, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-pro", "type": "image", "round": 4, "status": 429, "ms": 52230, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kilo-auto/free", "type": "text", "round": 4, "status": 200, "ms": 12284, "err": ""}
+{"id": "stepfun/step-3.7-flash:free", "type": "text", "round": 4, "status": 200, "ms": 9451, "err": ""}
+{"id": "tencent/hy3:free", "type": "text", "round": 4, "status": 200, "ms": 2412, "err": ""}
+{"id": "poolside/laguna-s-2.1:free", "type": "text", "round": 4, "status": 200, "ms": 4123, "err": ""}
+{"id": "dots-studio/dots-3-note-preview:free", "type": "text", "round": 4, "status": 200, "ms": 1658, "err": ""}
+{"id": "liquid/lfm-2.5-2.6b:free", "type": "text", "round": 4, "status": 200, "ms": 1406, "err": ""}
+{"id": "nvidia/nemotron-3.5-lightning:free", "type": "text", "round": 4, "status": 200, "ms": 10122, "err": ""}
+{"id": "thinkingmachines/inkling-small:free", "type": "text", "round": 4, "status": 200, "ms": 3262, "err": ""}
+{"id": "thinkingmachines/inkling:free", "type": "text", "round": 4, "status": 200, "ms": 2339, "err": ""}
+{"id": "poolside/laguna-xs-2.1:free", "type": "text", "round": 4, "status": 200, "ms": 12924, "err": ""}
+{"id": "cohere/north-mini-code:free", "type": "text", "round": 4, "status": 200, "ms": 1835, "err": ""}
+{"id": "nvidia/nemotron-3.5-content-safety:free", "type": "text", "round": 4, "status": 200, "ms": 2175, "err": ""}
+{"id": "nvidia/nemotron-3-ultra-550b-a55b:free", "type": "text", "round": 4, "status": 200, "ms": 14010, "err": ""}
+{"id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "type": "text", "round": 4, "status": 200, "ms": 1287, "err": ""}
+{"id": "nvidia/nemotron-3-super-120b-a12b:free", "type": "text", "round": 4, "status": 200, "ms": 2020, "err": ""}
+{"id": "nemotron-3-super", "type": "text", "round": 4, "status": 200, "ms": 815, "err": ""}
+{"id": "deepseek-v4-flash:preview", "type": "text", "round": 4, "status": 0, "ms": 100096, "err": "TIMEOUT"}
+{"id": "gemma4:31b", "type": "text", "round": 4, "status": 200, "ms": 2391, "err": ""}
+{"id": "kimi-k2.7-code", "type": "text", "round": 4, "status": 0, "ms": 100095, "err": "TIMEOUT"}
+{"id": "minimax-m2.7", "type": "text", "round": 4, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "deepseek-v4-flash:0731", "type": "text", "round": 4, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "gpt-oss:120b", "type": "text", "round": 4, "status": 200, "ms": 682, "err": ""}
+{"id": "mistral-large-3:675b", "type": "text", "round": 4, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:0813", "type": "text", "round": 4, "status": 0, "ms": 100088, "err": "TIMEOUT"}
+{"id": "gpt-oss:20b", "type": "text", "round": 4, "status": 200, "ms": 6735, "err": ""}
+{"id": "qwen3.5:397b", "type": "text", "round": 4, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:preview", "type": "text", "round": 4, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "nemotron-3-nano:30b", "type": "text", "round": 4, "status": 200, "ms": 4236, "err": ""}
+{"id": "nemotron-3-ultra", "type": "text", "round": 4, "status": 200, "ms": 4873, "err": ""}
+{"id": "phoenix-1.0", "type": "image", "round": 5, "status": 200, "ms": 5271, "err": ""}
+{"id": "qwen3-embedding-8b", "type": "embedding", "round": 5, "status": 429, "ms": 52261, "err": "{'message': '{\"error\":{\"message\":\"Too many requests for this API key. Slow down.\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kiro-auto", "type": "text", "round": 5, "status": 200, "ms": 3308, "err": ""}
+{"id": "minimax-m3", "type": "text", "round": 5, "status": 200, "ms": 1265, "err": ""}
+{"id": "moondream3.1", "type": "text", "round": 5, "status": 200, "ms": 880, "err": ""}
+{"id": "deepseek-v4-pro", "type": "text", "round": 5, "status": 200, "ms": 5397, "err": ""}
+{"id": "glm-5.2", "type": "text", "round": 5, "status": 200, "ms": 5413, "err": ""}
+{"id": "sdxl-lightning", "type": "image", "round": 5, "status": 200, "ms": 2203, "err": ""}
+{"id": "qwen-3.8-2.4t-a95b", "type": "text", "round": 5, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "kimi-k3", "type": "text", "round": 5, "status": 0, "ms": 100098, "err": "TIMEOUT"}
+{"id": "aura-2-en", "type": "tts", "round": 5, "status": 200, "ms": 846, "err": ""}
+{"id": "lucid-origin", "type": "image", "round": 5, "status": 200, "ms": 4792, "err": ""}
+{"id": "gemma-4-26b", "type": "text", "round": 5, "status": 200, "ms": 705, "err": ""}
+{"id": "deepseek-v4-flash-0731", "type": "text", "round": 5, "status": 200, "ms": 6965, "err": ""}
+{"id": "qwen-3.8-27b", "type": "text", "round": 5, "status": 200, "ms": 17393, "err": ""}
+{"id": "deepseek-v4-pro-0813", "type": "text", "round": 5, "status": 200, "ms": 2196, "err": ""}
+{"id": "qwen3.8-max", "type": "text", "round": 5, "status": 404, "ms": 245, "err": "{'message': 'Model \"qwen3.8-max\" not found', 'type': 'error'}"}
+{"id": "qwen3.7-plus", "type": "text", "round": 5, "status": 404, "ms": 237, "err": "{'message': 'Model \"qwen3.7-plus\" not found', 'type': 'error'}"}
+{"id": "qwen3.7-max", "type": "text", "round": 5, "status": 404, "ms": 232, "err": "{'message': 'Model \"qwen3.7-max\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-plus", "type": "text", "round": 5, "status": 404, "ms": 235, "err": "{'message': 'Model \"qwen3.6-plus\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-max-preview", "type": "text", "round": 5, "status": 404, "ms": 238, "err": "{'message': 'Model \"qwen3.6-max-preview\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-27b", "type": "text", "round": 5, "status": 404, "ms": 240, "err": "{'message': 'Model \"qwen3.6-27b\" not found', 'type': 'error'}"}
+{"id": "qwen3.6-35b-a3b", "type": "text", "round": 5, "status": 404, "ms": 330, "err": "{'message': 'Model \"qwen3.6-35b-a3b\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-plus", "type": "text", "round": 5, "status": 404, "ms": 238, "err": "{'message': 'Model \"qwen3.5-plus\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-flash", "type": "text", "round": 5, "status": 404, "ms": 245, "err": "{'message': 'Model \"qwen3.5-flash\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-397b-a17b", "type": "text", "round": 5, "status": 404, "ms": 249, "err": "{'message': 'Model \"qwen3.5-397b-a17b\" not found', 'type': 'error'}"}
+{"id": "qwen3.5-omni-plus", "type": "text", "round": 5, "status": 0, "ms": 100084, "err": "TIMEOUT"}
+{"id": "qwen3.5-omni-flash", "type": "text", "round": 5, "status": 0, "ms": 100092, "err": "TIMEOUT"}
+{"id": "qwen3-max-2026-01-23", "type": "text", "round": 5, "status": 0, "ms": 100104, "err": "TIMEOUT"}
+{"id": "qwen-plus-2025-07-28", "type": "text", "round": 5, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "qwen3-coder-plus", "type": "text", "round": 5, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "qwen3-vl-plus", "type": "text", "round": 5, "status": 0, "ms": 100094, "err": "TIMEOUT"}
+{"id": "qwen3-omni-flash-2025-12-01", "type": "text", "round": 5, "status": 0, "ms": 100087, "err": "TIMEOUT"}
+{"id": "gemini-3.6", "type": "text", "round": 5, "status": 200, "ms": 14038, "err": ""}
+{"id": "mimo-v2.5-pro", "type": "text", "round": 5, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "mimo-v2.5", "type": "text", "round": 5, "status": 200, "ms": 36834, "err": ""}
+{"id": "gpt-5.6-luna", "type": "text", "round": 5, "status": 0, "ms": 100101, "err": "TIMEOUT"}
+{"id": "glm-5.3", "type": "text", "round": 5, "status": 0, "ms": 100090, "err": "TIMEOUT"}
+{"id": "glm-5.1", "type": "text", "round": 5, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "glm-5-turbo", "type": "text", "round": 5, "status": 0, "ms": 100093, "err": "TIMEOUT"}
+{"id": "glm-5v-turbo", "type": "text", "round": 5, "status": 0, "ms": 100100, "err": "TIMEOUT"}
+{"id": "glm-4.7", "type": "text", "round": 5, "status": 0, "ms": 100091, "err": "TIMEOUT"}
+{"id": "meta-ai", "type": "text", "round": 5, "status": 404, "ms": 239, "err": "{'message': 'Model \"meta-ai\" not found', 'type': 'error'}"}
+{"id": "meta-image", "type": "image", "round": 5, "status": 404, "ms": 2698, "err": "{'message': 'Model \"meta-image\" not found', 'type': 'error'}"}
+{"id": "x-preview-f-free", "type": "text", "round": 5, "status": 200, "ms": 2105, "err": ""}
+{"id": "qwen3-guard-8b", "type": "text", "round": 5, "status": 200, "ms": 1163, "err": ""}
+{"id": "nemotron-3.5-lightning-30b", "type": "text", "round": 5, "status": 200, "ms": 797, "err": ""}
+{"id": "north-mini-code", "type": "text", "round": 5, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "glm-4.6v-flash", "type": "text", "round": 5, "status": 200, "ms": 6846, "err": ""}
+{"id": "deepseek-v4-flash", "type": "text", "round": 5, "status": 200, "ms": 2175, "err": ""}
+{"id": "gemma-4-26b-a4b", "type": "text", "round": 5, "status": 200, "ms": 907, "err": ""}
+{"id": "gemma-diffusion", "type": "text", "round": 5, "status": 200, "ms": 7176, "err": ""}
+{"id": "gemma-4-31b", "type": "text", "round": 5, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "gemini-2.5-flash-lite", "type": "text", "round": 5, "status": 200, "ms": 2085, "err": ""}
+{"id": "gemini-3-flash-preview", "type": "text", "round": 5, "status": 200, "ms": 915, "err": ""}
+{"id": "gemini-3.1-flash-lite", "type": "text", "round": 5, "status": 0, "ms": 100085, "err": "TIMEOUT"}
+{"id": "gemini-3.1-pro-preview", "type": "text", "round": 5, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "ministral-3-3b", "type": "text", "round": 5, "status": 200, "ms": 2751, "err": ""}
+{"id": "agnes-image", "type": "image", "round": 5, "status": 200, "ms": 27429, "err": ""}
+{"id": "gpt-image-2", "type": "image", "round": 5, "status": 429, "ms": 52510, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "ideogram-v4", "type": "image", "round": 5, "status": 502, "ms": 52250, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana", "type": "image", "round": 5, "status": 502, "ms": 52760, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-2", "type": "image", "round": 5, "status": 429, "ms": 52237, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "nanobanana-pro", "type": "image", "round": 5, "status": 429, "ms": 52235, "err": "{'message': '{\"error\":{\"message\":\"Upstream request failed\",\"type\":\"upstream_error\"}}', 'type': 'upstream_error'}"}
+{"id": "kilo-auto/free", "type": "text", "round": 5, "status": 200, "ms": 2495, "err": ""}
+{"id": "stepfun/step-3.7-flash:free", "type": "text", "round": 5, "status": 200, "ms": 8976, "err": ""}
+{"id": "tencent/hy3:free", "type": "text", "round": 5, "status": 200, "ms": 2433, "err": ""}
+{"id": "poolside/laguna-s-2.1:free", "type": "text", "round": 5, "status": 200, "ms": 5433, "err": ""}
+{"id": "dots-studio/dots-3-note-preview:free", "type": "text", "round": 5, "status": 200, "ms": 2812, "err": ""}
+{"id": "liquid/lfm-2.5-2.6b:free", "type": "text", "round": 5, "status": 200, "ms": 1503, "err": ""}
+{"id": "nvidia/nemotron-3.5-lightning:free", "type": "text", "round": 5, "status": 200, "ms": 1824, "err": ""}
+{"id": "thinkingmachines/inkling-small:free", "type": "text", "round": 5, "status": 200, "ms": 4850, "err": ""}
+{"id": "thinkingmachines/inkling:free", "type": "text", "round": 5, "status": 200, "ms": 2392, "err": ""}
+{"id": "poolside/laguna-xs-2.1:free", "type": "text", "round": 5, "status": 200, "ms": 2796, "err": ""}
+{"id": "cohere/north-mini-code:free", "type": "text", "round": 5, "status": 200, "ms": 1458, "err": ""}
+{"id": "nvidia/nemotron-3.5-content-safety:free", "type": "text", "round": 5, "status": 200, "ms": 1585, "err": ""}
+{"id": "nvidia/nemotron-3-ultra-550b-a55b:free", "type": "text", "round": 5, "status": 200, "ms": 1605, "err": ""}
+{"id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "type": "text", "round": 5, "status": 200, "ms": 3972, "err": ""}
+{"id": "nvidia/nemotron-3-super-120b-a12b:free", "type": "text", "round": 5, "status": 200, "ms": 1191, "err": ""}
+{"id": "nemotron-3-super", "type": "text", "round": 5, "status": 200, "ms": 2261, "err": ""}
+{"id": "deepseek-v4-flash:preview", "type": "text", "round": 5, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "gemma4:31b", "type": "text", "round": 5, "status": 200, "ms": 1519, "err": ""}
+{"id": "kimi-k2.7-code", "type": "text", "round": 5, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "minimax-m2.7", "type": "text", "round": 5, "status": 0, "ms": 100079, "err": "TIMEOUT"}
+{"id": "deepseek-v4-flash:0731", "type": "text", "round": 5, "status": 0, "ms": 100081, "err": "TIMEOUT"}
+{"id": "gpt-oss:120b", "type": "text", "round": 5, "status": 200, "ms": 584, "err": ""}
+{"id": "mistral-large-3:675b", "type": "text", "round": 5, "status": 0, "ms": 100082, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:0813", "type": "text", "round": 5, "status": 0, "ms": 100083, "err": "TIMEOUT"}
+{"id": "gpt-oss:20b", "type": "text", "round": 5, "status": 200, "ms": 923, "err": ""}
+{"id": "qwen3.5:397b", "type": "text", "round": 5, "status": 0, "ms": 100081, "err": "TIMEOUT"}
+{"id": "deepseek-v4-pro:preview", "type": "text", "round": 5, "status": 0, "ms": 100086, "err": "TIMEOUT"}
+{"id": "nemotron-3-nano:30b", "type": "text", "round": 5, "status": 200, "ms": 807, "err": ""}
+{"id": "nemotron-3-ultra", "type": "text", "round": 5, "status": 200, "ms": 1398, "err": ""}

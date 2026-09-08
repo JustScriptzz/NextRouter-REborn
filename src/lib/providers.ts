@@ -299,6 +299,19 @@ const GATEWAYS: GatewaySlot[] = [
     requiresKey: true,
     modelFetchTimeoutMs: 8000,
   },
+  {
+    // Ayechat: OpenAI-compatible upstream (chat at <base>/admin/v1/chat/completions).
+    // Inactive until AYECHAT_API_KEY is set in Render env vars. Models are
+    // discovered live from {base}/v1/models; AYECHAT_MODELS optionally pins
+    // the list (comma-separated upstream IDs).
+    provider: 'ayechat',
+    baseUrlEnv: 'AYECHAT_BASE_URL',
+    apiKeyEnv: 'AYECHAT_API_KEY',
+    modelsEnv: 'AYECHAT_MODELS',
+    defaultBaseUrl: 'https://rimo-api.mywire.org/admin',
+    requiresKey: true,
+    modelFetchTimeoutMs: 8000,
+  },
 ];
 
 function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
@@ -439,6 +452,24 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
     list.push(entry);
     providersMap.set(ownerId, list);
   };
+
+  // Warm the live-model caches concurrently: the merge loop below must run
+  // in slot order (first-wins ownership), but the network fetches are
+  // independent, so fire them all at once and let the loop read warm cache.
+  // Without this, first loads pay the sum of every slot timeout sequentially.
+  {
+    const disabledProviders = await kvGetCached('disabled_providers');
+    const prefetchable = GATEWAYS.filter((slot) => {
+      if (disabledProviders.includes(slot.provider)) return false;
+      if (slot.disableLive) return false;
+      const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
+      if (!baseUrl) return false;
+      const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+      if (slot.requiresKey && !apiKey) return false;
+      return true;
+    });
+    await Promise.all(prefetchable.map((slot) => liveGatewayModels(slot)));
+  }
 
   for (const slot of GATEWAYS) {
     const disabledProviders = await kvGetCached('disabled_providers');

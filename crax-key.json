@@ -1,0 +1,6 @@
+{
+  "key": "CRAX_API_KEY",
+  "type": "encrypted",
+  "target": ["production", "preview"],
+  "value": "crk_live_b02c78b65752e9fc1ed1d955d0cf55f5755b"
+}

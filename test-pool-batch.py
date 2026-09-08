@@ -1,0 +1,142 @@
+import concurrent.futures, urllib.request
+
+old_raw = """31.59.20.176:6754:dnosacqw:nctqmw3xboq6
+31.56.127.193:7684:dnosacqw:nctqmw3xboq6
+45.38.107.97:6014:dnosacqw:nctqmw3xboq6
+198.105.121.200:6462:dnosacqw:nctqmw3xboq6
+64.137.96.74:6641:dnosacqw:nctqmw3xboq6
+198.23.243.226:6361:dnosacqw:nctqmw3xboq6
+38.154.185.97:6370:dnosacqw:nctqmw3xboq6
+84.247.60.125:6095:dnosacqw:nctqmw3xboq6
+142.111.67.146:5611:dnosacqw:nctqmw3xboq6
+191.96.254.138:6185:dnosacqw:nctqmw3xboq6"""
+
+new_raw = """23.109.225.126:5757:seqbigkc:r8de2wjx8up9
+23.109.232.29:5949:seqbigkc:r8de2wjx8up9
+45.84.44.4:5482:seqbigkc:r8de2wjx8up9
+172.84.181.245:7223:seqbigkc:r8de2wjx8up9
+145.223.45.129:7163:seqbigkc:r8de2wjx8up9
+145.223.51.214:6747:seqbigkc:r8de2wjx8up9
+45.84.44.143:5621:seqbigkc:r8de2wjx8up9
+145.223.53.66:6600:seqbigkc:r8de2wjx8up9
+104.222.185.74:5637:seqbigkc:r8de2wjx8up9
+172.84.191.48:7526:seqbigkc:r8de2wjx8up9
+194.5.3.239:5751:seqbigkc:r8de2wjx8up9
+45.84.44.120:5598:seqbigkc:r8de2wjx8up9
+104.222.187.37:6161:seqbigkc:r8de2wjx8up9
+145.223.45.155:7189:seqbigkc:r8de2wjx8up9
+45.85.129.143:6621:seqbigkc:r8de2wjx8up9
+148.135.177.49:5583:seqbigkc:r8de2wjx8up9
+45.84.44.187:5665:seqbigkc:r8de2wjx8up9
+206.127.212.190:6168:seqbigkc:r8de2wjx8up9
+193.25.167.75:5606:seqbigkc:r8de2wjx8up9
+104.238.9.126:6579:seqbigkc:r8de2wjx8up9
+145.223.53.63:6597:seqbigkc:r8de2wjx8up9
+145.223.53.204:6738:seqbigkc:r8de2wjx8up9
+168.199.244.69:6601:seqbigkc:r8de2wjx8up9
+104.222.187.186:6310:seqbigkc:r8de2wjx8up9
+104.222.187.142:6266:seqbigkc:r8de2wjx8up9
+193.25.167.10:5541:seqbigkc:r8de2wjx8up9
+193.25.167.82:5613:seqbigkc:r8de2wjx8up9
+145.223.57.45:6078:seqbigkc:r8de2wjx8up9
+185.101.252.36:7067:seqbigkc:r8de2wjx8up9
+185.101.252.141:7172:seqbigkc:r8de2wjx8up9
+45.14.83.177:8155:seqbigkc:r8de2wjx8up9
+172.84.191.196:7674:seqbigkc:r8de2wjx8up9
+172.84.191.17:7495:seqbigkc:r8de2wjx8up9
+145.223.51.62:6595:seqbigkc:r8de2wjx8up9
+145.223.57.46:6079:seqbigkc:r8de2wjx8up9
+154.13.221.26:6012:seqbigkc:r8de2wjx8up9
+185.101.252.161:7192:seqbigkc:r8de2wjx8up9
+185.171.254.64:6096:seqbigkc:r8de2wjx8up9
+172.84.181.214:7192:seqbigkc:r8de2wjx8up9
+148.135.177.249:5783:seqbigkc:r8de2wjx8up9
+193.25.167.83:5614:seqbigkc:r8de2wjx8up9
+108.165.69.55:6017:seqbigkc:r8de2wjx8up9
+206.127.212.198:6176:seqbigkc:r8de2wjx8up9
+45.84.44.251:5729:seqbigkc:r8de2wjx8up9
+45.14.83.227:8205:seqbigkc:r8de2wjx8up9
+23.109.225.88:5719:seqbigkc:r8de2wjx8up9
+145.223.59.62:6096:seqbigkc:r8de2wjx8up9
+145.223.59.197:6231:seqbigkc:r8de2wjx8up9
+104.222.187.194:6318:seqbigkc:r8de2wjx8up9
+104.238.9.142:6595:seqbigkc:r8de2wjx8up9
+146.103.1.52:5585:seqbigkc:r8de2wjx8up9
+193.25.167.235:5766:seqbigkc:r8de2wjx8up9
+45.84.44.154:5632:seqbigkc:r8de2wjx8up9
+145.223.45.186:7220:seqbigkc:r8de2wjx8up9
+146.103.1.180:5713:seqbigkc:r8de2wjx8up9
+185.226.205.214:5746:seqbigkc:r8de2wjx8up9
+185.226.205.212:5744:seqbigkc:r8de2wjx8up9
+104.222.187.200:6324:seqbigkc:r8de2wjx8up9
+45.84.44.190:5668:seqbigkc:r8de2wjx8up9
+23.109.225.244:5875:seqbigkc:r8de2wjx8up9
+206.127.212.158:6136:seqbigkc:r8de2wjx8up9
+185.226.205.44:5576:seqbigkc:r8de2wjx8up9
+104.238.9.170:6623:seqbigkc:r8de2wjx8up9
+23.109.219.20:6244:seqbigkc:r8de2wjx8up9
+108.165.69.53:6015:seqbigkc:r8de2wjx8up9
+104.222.185.221:5784:seqbigkc:r8de2wjx8up9
+23.109.208.59:6583:seqbigkc:r8de2wjx8up9
+104.238.8.11:5869:seqbigkc:r8de2wjx8up9
+168.199.244.31:6563:seqbigkc:r8de2wjx8up9
+23.109.208.36:6560:seqbigkc:r8de2wjx8up9
+145.223.57.240:6273:seqbigkc:r8de2wjx8up9
+104.222.185.115:5678:seqbigkc:r8de2wjx8up9
+23.109.208.174:6698:seqbigkc:r8de2wjx8up9
+104.222.187.167:6291:seqbigkc:r8de2wjx8up9
+146.103.1.119:5652:seqbigkc:r8de2wjx8up9
+172.84.181.159:7137:seqbigkc:r8de2wjx8up9
+23.109.225.206:5837:seqbigkc:r8de2wjx8up9
+108.165.69.107:6069:seqbigkc:r8de2wjx8up9
+104.238.9.33:6486:seqbigkc:r8de2wjx8up9
+104.222.187.220:6344:seqbigkc:r8de2wjx8up9
+172.84.181.223:7201:seqbigkc:r8de2wjx8up9
+45.85.129.184:6662:seqbigkc:r8de2wjx8up9
+185.101.252.150:7181:seqbigkc:r8de2wjx8up9
+140.233.166.120:7153:seqbigkc:r8de2wjx8up9
+104.238.8.8:5866:seqbigkc:r8de2wjx8up9
+206.127.212.217:6195:seqbigkc:r8de2wjx8up9
+154.13.221.232:6218:seqbigkc:r8de2wjx8up9
+172.84.181.254:7232:seqbigkc:r8de2wjx8up9
+45.84.44.43:5521:seqbigkc:r8de2wjx8up9
+206.127.212.240:6218:seqbigkc:r8de2wjx8up9
+185.226.205.35:5567:seqbigkc:r8de2wjx8up9
+23.109.208.106:6630:seqbigkc:r8de2wjx8up9
+45.84.44.32:5510:seqbigkc:r8de2wjx8up9
+145.223.59.142:6176:seqbigkc:r8de2wjx8up9
+185.226.205.169:5701:seqbigkc:r8de2wjx8up9
+45.84.44.122:5600:seqbigkc:r8de2wjx8up9
+146.103.1.20:5553:seqbigkc:r8de2wjx8up9
+185.101.252.174:7205:seqbigkc:r8de2wjx8up9
+104.238.8.209:6067:seqbigkc:r8de2wjx8up9
+108.165.69.82:6044:seqbigkc:r8de2wjx8up9"""
+
+def test(line):
+    host, port, user, pw = line.strip().split(":")
+    purl = "http://" + user + ":" + pw + "@" + host + ":" + port
+    handler = urllib.request.ProxyHandler({"http": purl, "https": purl})
+    opener = urllib.request.build_opener(handler)
+    try:
+        r = opener.open("https://api.ipify.org?format=json", timeout=15)
+        return line.strip(), True, ""
+    except Exception as e:
+        return line.strip(), False, str(e)[:60]
+
+lines = [l for l in (old_raw + "\n" + new_raw).strip().splitlines() if l.strip()]
+alive, dead = [], []
+with concurrent.futures.ThreadPoolExecutor(40) as ex:
+    for line, ok, err in ex.map(test, lines):
+        (alive if ok else dead).append((line, err))
+
+print("alive:", len(alive), "dead:", len(dead))
+for line, err in dead:
+    print("DEAD", line.split(":")[0], err)
+
+urls = []
+for line, _ in alive:
+    host, port, user, pw = line.split(":")
+    urls.append("http://" + user + ":" + pw + "@" + host + ":" + port)
+with open(r"C:\Users\ciull_yx1zjgv\nextrouter-reborn\pool-alive.txt", "w") as f:
+    f.write(",".join(urls))
+print("wrote pool-alive.txt")

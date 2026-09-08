@@ -83,7 +83,8 @@ export default function PlaygroundClient() {
       .catch(() => {});
   }, []);
 
-  // load / create API key (persisted in sessionStorage so we don't mint a new one every visit)
+  // Shared public key (no per-user minting — see /docs). Persisted in
+  // sessionStorage so we only fetch it once per visit.
   const [keyError, setKeyError] = useState('');
   useEffect(() => {
     let cancelled = false;
@@ -96,17 +97,17 @@ export default function PlaygroundClient() {
       try {
         const existing = sessionStorage.getItem(STORAGE_KEY);
         if (existing) return;
-        const res = await fetch('/api/keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Playground' }) });
+        const res = await fetch('/api/public-key');
         const j = await res.json().catch(() => ({}));
         if (!cancelled && j.key) {
           sessionStorage.setItem(STORAGE_KEY, j.key);
           setApiKey(j.key);
-          setKeyMasked(j.masked);
+          setKeyMasked(`${String(j.key).slice(0, 8)}...${String(j.key).slice(-4)}`);
         } else if (!cancelled) {
-          setKeyError((j as { error?: { message?: string } }).error?.message ?? 'Could not create a Playground key.');
+          setKeyError('Could not load the public key.');
         }
       } catch {
-        if (!cancelled) setKeyError('Could not reach /api/keys — are you signed in?');
+        if (!cancelled) setKeyError('Could not reach /api/public-key — is the server running?');
       }
     })();
     return () => { cancelled = true; };
@@ -145,7 +146,7 @@ export default function PlaygroundClient() {
 
   async function sendChat() {
     if (!input.trim() || !selectedModel || !apiKey) {
-      if (!apiKey) setError(keyError ? `No API key: ${keyError}` : 'No API key available — create one in /keys (a Playground key should be auto-created).');
+      if (!apiKey) setError(keyError ? `No API key: ${keyError}` : 'No API key available — the public key should load automatically.');
       return;
     }
     const userMsg: Msg = { role: 'user', content: input.trim() };

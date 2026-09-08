@@ -1,0 +1,6 @@
+{
+  "key": "JANKROUTER_API_KEY",
+  "type": "encrypted",
+  "target": ["production", "preview"],
+  "value": "sk-bljr-ee7a3a3da573e7ca42ef7f9d538073ee20ee"
+}

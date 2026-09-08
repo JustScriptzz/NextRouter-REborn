@@ -1,18 +1,14 @@
-import { getUserFromApiKey } from '@/lib/auth';
-import { decryptSecret } from '@/lib/crypto';
-import { findCustomModelForCaller } from '@/lib/customModels';
+import { checkPublicRateLimit, resolveApiCaller, trackingId } from '@/lib/public-access';
 import { CORS_HEADERS, jsonError, jsonErrorCors } from '@/lib/http';
 import { isProbeBackedOff, recordModelResult } from '@/lib/model-stats';
-import { getCatalogModel, getCatalogModelProviders } from '@/lib/providers';
-import { rateLimiter } from '@/lib/rateLimit';
+import { getCatalogModelProviders } from '@/lib/providers';
 import {
   chatCompletions,
   parseRetryAfterMs,
   parseUpstreamErrorBody,
   UpstreamRequestError,
 } from '@/lib/upstream';
-import { getEffectiveLimits } from '@/lib/user-limits';
-import { getTodayUsage, getUsageRemaining, isUnlimitedEmail, UNLIMITED_BUDGET } from '@/lib/usage';
+import { UNLIMITED_BUDGET } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
@@ -26,34 +22,20 @@ const PROVIDER_FAILOVER_BUDGET_MS = 8000;
 
 export async function POST(req: Request) {
   const requestStart = Date.now();
-  const user = await getUserFromApiKey(req.headers.get('authorization'));
-  if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
+  const caller = await resolveApiCaller(req);
+  if (!caller) return jsonErrorCors(401, 'Invalid API key. Use the public key from the Docs page.');
+  const limited = checkPublicRateLimit(caller);
+  if (limited) return jsonErrorCors(429, limited, 'rate_limit');
+  const trackId = trackingId(caller);
+  // No per-user RPM gates, no daily token limits: public callers are gated
+  // only by the fixed 30 RPM per IP above. Admins are unlimited.
+  const remaining = UNLIMITED_BUDGET;
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body.model !== 'string' || !Array.isArray(body.messages)) {
     return jsonErrorCors(400, 'Request body must include "model" and "messages"');
   }
   const modelId = body.model;
-
-  const unlimited = isUnlimitedEmail(user.email);
-  const { rpm: userRpm, tokenLimit: userTokenLimit } = unlimited
-    ? { rpm: Number.MAX_SAFE_INTEGER, tokenLimit: UNLIMITED_BUDGET }
-    : await getEffectiveLimits(user.id);
-
-  // Per-user RPM gate (default 15)
-  if (userRpm > 0 && !rateLimiter.allow(`user-rpm:${user.id}`, userRpm)) {
-    return jsonErrorCors(429, 'Rate limit exceeded for your account. Increase your RPM on the Limits page.', 'rate_limit');
-  }
-
-  const { tokens: usedToday } = await getTodayUsage(user.id);
-  const remaining = Math.max(0, userTokenLimit - usedToday);
-  if (remaining <= 0) {
-    return jsonErrorCors(
-      429,
-      `Daily token limit of ${userTokenLimit} tokens reached. It resets at midnight UTC.`,
-      'daily_limit',
-    );
-  }
 
   const controller = new AbortController();
   req.signal.addEventListener('abort', () => controller.abort());
@@ -92,7 +74,7 @@ export async function POST(req: Request) {
               publicModelId: pipe.id,
               body,
               signal,
-              userId: user.id,
+              userId: trackId,
               remainingBudget: remaining,
             }),
           {
@@ -134,89 +116,7 @@ export async function POST(req: Request) {
     return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
   }
 
-  const custom = await findCustomModelForCaller(modelId, user);
-  if (!custom) {
-    return jsonErrorCors(404, `Model "${modelId}" not found`);
-  }
-  const rpm = custom.rpm;
-  if (!unlimited && rpm && !rateLimiter.allow(`custom:${custom.modelId}:${user.id}`, rpm)) {
-    return jsonErrorCors(429, 'Rate limit exceeded for this model', 'rate_limit');
-  }
-
-  let primaryError: { status: number; message: string } | null = null;
-  const primaryStart = Date.now();
-  for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
-    try {
-      const token = custom.bearerTokenEnc ? decryptSecret(custom.bearerTokenEnc) : '';
-      const response = await chatCompletions({
-        baseUrl: custom.endpointUrl,
-        apiKey: token,
-        upstreamModel: custom.providerModelId,
-        publicModelId: custom.modelId,
-        body,
-        signal,
-        userId: user.id,
-        remainingBudget: remaining,
-      });
-      if (response.ok) return response;
-      if (!isRetryable(response.status)) {
-        primaryError = {
-          status: response.status,
-          message: await readErrorText(response),
-        };
-        break;
-      }
-      primaryError = { status: response.status, message: 'Upstream request failed' };
-    } catch (error) {
-      if (error instanceof UpstreamRequestError && !isRetryable(error.status)) {
-        return upstreamErrorWithRetryAfter(error);
-      }
-      if (isAbortError(error)) {
-        return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
-      }
-      primaryError = { status: 502, message: 'Upstream request failed' };
-    }
-    if (attempt === RETRY_MAX_ATTEMPTS || Date.now() - primaryStart > RETRY_TIME_BUDGET_MS) {
-      break;
-    }
-    await sleep(backoffFor(attempt));
-  }
-
-  if (primaryError && primaryError.status < 500) {
-    return jsonErrorCors(primaryError.status, parseUpstreamErrorBody(primaryError.message), 'upstream_error');
-  }
-
-  const fallback = await getCatalogModel(custom.fallbackModelId);
-  if (fallback && fallback.type === 'text') {
-    try {
-      const effectiveRemaining = unlimited ? UNLIMITED_BUDGET : await getUsageRemaining(user.id);
-      if (effectiveRemaining <= 0) {
-        return jsonErrorCors(
-          429,
-          'Daily token limit of 500000 tokens reached. It resets at midnight UTC.',
-          'daily_limit',
-        );
-      }
-      return await withRetry(() =>
-        chatCompletions({
-          baseUrl: fallback.baseUrl,
-          apiKey: fallback.apiKey,
-          upstreamModel: fallback.upstreamModel,
-          publicModelId: fallback.id,
-          body,
-          signal,
-          userId: user.id,
-          remainingBudget: effectiveRemaining,
-        }),
-      );
-    } catch {
-      return jsonErrorCors(502, 'The model and its fallback both failed', 'upstream_error');
-    }
-  }
-
-  return primaryError
-    ? jsonErrorCors(primaryError.status, parseUpstreamErrorBody(primaryError.message), 'upstream_error')
-    : jsonErrorCors(502, 'The model failed and no fallback is available', 'upstream_error');
+  return jsonErrorCors(404, `Model "${modelId}" not found`);
 }
 
 function isRetryable(status: number): boolean {

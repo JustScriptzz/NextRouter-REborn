@@ -1,0 +1,10 @@
+{
+  "postgres": {
+    "name": "nextrouter-db",
+    "databaseName": "nextrouter",
+    "user": "nextrouter",
+    "version": "16",
+    "plan": "free",
+    "role": "primary"
+  }
+}

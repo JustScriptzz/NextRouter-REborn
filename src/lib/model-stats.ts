@@ -1,9 +1,6 @@
-import { kvGetCached, kvSet } from './kv';
-
-const STATS_KEY = 'model_stats_v2';
+// Serverless: stats live in memory only. No persistence, no restore.
 const RING = 120;
 const WINDOW_MS = 24 * 60 * 60 * 1000;
-const PERSIST_INTERVAL_MS = 15000;
 
 interface StatEvent {
   o: 0 | 1;
@@ -26,8 +23,6 @@ type StatsMap = Record<string, ModelStat>;
 
 const globalForStats = globalThis as unknown as {
   __modelStats?: StatsMap;
-  __modelStatsPersistedAt?: number;
-  __modelStatsPersisting?: boolean;
 };
 
 function statsMap(): StatsMap {
@@ -71,21 +66,6 @@ export function recordModelResult(
     }
   }
   e.updatedAt = now;
-  maybePersist();
-}
-
-function maybePersist(): void {
-  const now = Date.now();
-  if (globalForStats.__modelStatsPersisting) return;
-  if (now - (globalForStats.__modelStatsPersistedAt ?? 0) < PERSIST_INTERVAL_MS) return;
-  globalForStats.__modelStatsPersisting = true;
-  globalForStats.__modelStatsPersistedAt = now;
-  const snapshot = JSON.stringify(statsMap());
-  void kvSet(STATS_KEY, [snapshot])
-    .catch(() => undefined)
-    .finally(() => {
-      globalForStats.__modelStatsPersisting = false;
-    });
 }
 
 export function isProbeBackedOff(id: string): boolean {
@@ -110,22 +90,6 @@ export interface PublicModelStat {
 }
 
 export async function getModelStats(): Promise<PublicModelStat[]> {
-  if (Object.keys(statsMap()).length === 0) {
-    try {
-      const stored = await kvGetCached(STATS_KEY);
-      if (stored && stored[0]) {
-        const parsed = JSON.parse(stored[0]) as StatsMap;
-        for (const [id, s] of Object.entries(parsed)) {
-          if (!statsMap()[id] && Array.isArray(s.events)) {
-            statsMap()[id] = s;
-          }
-        }
-      }
-    } catch {
-      /* no persisted stats yet */
-    }
-  }
-
   const cutoff = Date.now() - WINDOW_MS;
   return Object.entries(statsMap()).map(([id, s]) => {
     const recent = s.events.filter((e) => e.t >= cutoff);

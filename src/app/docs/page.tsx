@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import CodeBlock from '@/components/CodeBlock';
+import { PUBLIC_API_KEY, PUBLIC_RPM_PER_IP } from '@/lib/public-access';
 
 export const metadata: Metadata = {
   title: 'Docs',
@@ -10,14 +11,14 @@ const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 
 export default function DocsPage() {
   const quickStart = `curl ${apiBase}/api/v1/chat/completions \\
-  -H "Authorization: Bearer nr_xxxxxxxx" \\
+  -H "Authorization: Bearer ${PUBLIC_API_KEY}" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"kiro-auto","messages":[{"role":"user","content":"Hello"}]}'`;
 
   const streamingExample = `const res = await fetch("${apiBase}/api/v1/chat/completions", {
   method: "POST",
   headers: {
-    "Authorization": "Bearer nr_xxxxxxxx",
+    "Authorization": "Bearer ${PUBLIC_API_KEY}",
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
@@ -31,7 +32,7 @@ for await (const chunk of res.body) {
 }`;
 
   const videoExample = `curl ${apiBase}/api/v1/videos/generations \\
-  -H "Authorization: Bearer nr_xxxxxxxx" \\
+  -H "Authorization: Bearer ${PUBLIC_API_KEY}" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"video-model-id","prompt":"A cat surfing a wave"}'`;
 
@@ -43,7 +44,7 @@ for await (const chunk of res.body) {
       "name": "NextRouter",
       "options": {
         "baseURL": "${apiBase}/api/v1",
-        "apiKey": "nr_xxxxxxxx"
+        "apiKey": "${PUBLIC_API_KEY}"
       },
       "models": {
         "gpt-4o": { "name": "GPT-4o (NextRouter)" }
@@ -57,10 +58,22 @@ for await (const chunk of res.body) {
       <div className="anim-fade-up">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Documentation</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
-          NextRouter REborn exposes an OpenAI-compatible API. Point your client at it with an API
-          key from the Keys page — no SDK changes needed.
+          NextRouter REborn exposes an OpenAI-compatible API. No signup, no personal
+          keys — everyone uses the same public key below.
         </p>
       </div>
+
+      <Section title="Public key" className="anim-fade-up delay-1">
+        <CodeBlock code={PUBLIC_API_KEY} label="api-key" />
+        <p className="mt-3 text-sm text-zinc-400">
+          {PUBLIC_RPM_PER_IP} requests/min per IP · no token caps · no increases, same
+          for everyone. Pass it as{' '}
+          <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
+            Authorization: Bearer
+          </code>
+          .
+        </p>
+      </Section>
 
       <Section title="Attribution & Credits" className="anim-fade-up delay-1">
         <div className="card p-5" style={{ border: '0.5px solid #ffffff30' }}>
@@ -155,7 +168,7 @@ for await (const chunk of res.body) {
           <Endpoint
             method="GET"
             path="/api/v1/whoami"
-            desc="Returns info about the authenticated key: user id, username, email, and whether limits are removed."
+            desc="Returns the caller mode: public (rpm_per_ip, fixed limits) or admin."
           />
         </div>
       </Section>
@@ -167,11 +180,12 @@ for await (const chunk of res.body) {
             <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               /api/v1
             </code>{' '}
-            endpoints require{' '}
+            endpoints share one public key (see above) sent as{' '}
             <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               Authorization: Bearer &lt;key&gt;
             </code>
-            . Generate keys on the Keys page. Keys are shown once — keep them safe.
+            . There are no personal keys and no signups — only the public key and
+            admin keys are accepted.
           </p>
         </div>
       </Section>
@@ -182,16 +196,16 @@ for await (const chunk of res.body) {
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
-                Daily token limit: <strong className="text-zinc-100">500K tokens</strong> per user,
-                combined across all models. Resets at midnight UTC.
+                Requests per minute: <strong className="text-zinc-100">{PUBLIC_RPM_PER_IP} RPM per IP</strong> on
+                all{' '}
+                <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>/api/v1</code>{' '}
+                endpoints. Fixed for everyone — no increases.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
-                Requests per minute: <strong className="text-zinc-100">15 RPM</strong> per account
-                by default on <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>/api/v1/chat/completions</code>. Check the Limits
-                page for your current allowance.
+                Daily token limit: <strong className="text-zinc-100">none</strong>. No token caps at all.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
@@ -204,14 +218,14 @@ for await (const chunk of res.body) {
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
-                Custom models: at most <strong className="text-zinc-100">100 per account</strong>.
+                Custom models: community models stay callable by anyone. Publishing new
+                ones is admin-only.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
-                Accounts with limits removed (unlimited) skip both the daily token cap and the
-                per-account RPM gate.
+                Admins are exempt from the per-IP gate.
               </span>
             </li>
           </ul>

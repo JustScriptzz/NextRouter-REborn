@@ -12,13 +12,13 @@ interface MeResponse {
 const NAV_ITEMS = [
   { href: '/models', label: 'Models' },
   { href: '/playground', label: 'Playground' },
-  { href: '/messages', label: 'Messages' },
-  { href: '/limits', label: 'Limits' },
-  { href: '/my-models', label: 'My Models' },
   { href: '/keys', label: 'Keys' },
-  { href: '/usage', label: 'Usage' },
+  { href: '/limits', label: 'Limits' },
   { href: '/docs', label: 'Docs' },
 ] as const;
+
+// No admin-only nav items; everything is public.
+const ADMIN_ONLY_NAV_ITEMS = [] as const;
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -29,17 +29,10 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
 
-  useEffect(() => {
-    fetch('/api/banner')
-      .then((r) => r.json())
-      .then((d) => setBanner(d?.message ?? null))
-      .catch(() => undefined);
-  }, []);
-
   const loadUnread = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/messages/unread?cb=${Date.now()}`);
+      const res = await fetch('/api/public-key');
       if (res.ok) {
         const d = await res.json();
         setUnread(typeof d.unread === 'number' ? d.unread : 0);
@@ -54,17 +47,21 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
   }, [loadUnread, user]);
 
   const loadUser = useCallback(() => {
-    fetch('/api/auth/me')
+    fetch('/api/public-key')
       .then((r) => r.json())
-      .then((data: MeResponse) => {
-        setUser(data.user);
-        setIsAdmin(!!data.isAdmin);
+      .then((d) => {
+        // keys page sets this; otherwise leave null.
+        if (typeof d?.key === 'string') {
+          // Not storing state globally — the key is fetched on demand.
+        }
       })
-      .catch(() => setUser(null));
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
     loadUser();
+    const t = setInterval(loadUser, 15000);
+    return () => clearInterval(t);
   }, [loadUser]);
 
   useEffect(() => {
@@ -121,7 +118,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
 
           <Link href="/" className="group flex shrink-0 items-center gap-2.5">
             <img src="/logo.png" alt="NextRouter REborn" className="h-9 w-9 rounded-lg object-contain transition" style={{ border: '0.5px solid #2d2d2d' }} />
-            <span className="hidden text-base font-bold leading-tight tracking-tight text-white sm:block" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>
+            <span className="hidden text-base font-bold leading-tight text-white sm:block" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>
               NextRouter REborn
             </span>
           </Link>
@@ -142,59 +139,15 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
                   style={{ border: active ? '0.5px solid #2d2d2d' : '0.5px solid transparent' }}
                 >
                   {item.label}
-                  {item.href === '/messages' && unread > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-black">
-                      {unread > 99 ? '99+' : unread}
-                    </span>
-                  )}
                 </Link>
               );
             })}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className={`rounded-lg px-3.5 py-2 text-sm transition ${
-                  pathname === '/admin'
-                    ? 'bg-[#1D1D1F] font-medium text-white'
-                    : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'
-                }`}
-                style={{ border: pathname === '/admin' ? '0.5px solid #2d2d2d' : '0.5px solid transparent' }}
-              >
-                Admin
-              </Link>
-            )}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2 md:ml-3">
-            {user ? (
-              <div className="flex items-center gap-2.5">
-                <span
-                  title={user.email}
-                  className="hidden text-sm text-zinc-400 sm:block"
-                >
-                  @{user.username}
-                </span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold uppercase" style={{ border: '0.5px solid #2d2d2d', background: '#1D1D1F', color: '#ffffff' }}>
-                  {user.username.charAt(0)}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="btn-ghost hidden px-3 py-2 text-xs sm:inline-flex"
-                >
-                  Log out
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link href="/login" className="btn-ghost px-3 py-2 text-xs sm:text-sm">
-                  Log in
-                </Link>
-                <Link href="/register" className="btn-primary px-3 py-2 text-xs sm:text-sm">
-                  Sign up
-                </Link>
-              </div>
-            )}
+          <div className="flex gap-2">
+            <Link href="/login" className="btn-ghost flex-1 px-3 py-2 text-center">
+              Admin login
+            </Link>
           </div>
         </div>
       </header>
@@ -248,7 +201,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
                 style={{ border: active ? '0.5px solid #2d2d2d' : '0.5px solid transparent' }}
               >
                 {item.label}
-                {item.href === '/messages' && unread > 0 && (
+                {item.href === '/keys' && unread > 0 && (
                   <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-black">
                     {unread > 99 ? '99+' : unread}
                   </span>
@@ -281,10 +234,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
           ) : (
             <div className="flex gap-2">
               <Link href="/login" className="btn-ghost flex-1 px-3 py-2 text-center">
-                Log in
-              </Link>
-              <Link href="/register" className="btn-primary flex-1 px-3 py-2 text-center">
-                Sign up
+                Admin login
               </Link>
             </div>
           )}

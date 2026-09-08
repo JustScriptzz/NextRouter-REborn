@@ -1,0 +1,6 @@
+{
+  "key": "ALLOW_UNVERIFIED_LOGIN",
+  "type": "plain",
+  "target": ["production", "preview"],
+  "value": "true"
+}

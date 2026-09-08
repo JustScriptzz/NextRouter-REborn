@@ -1,0 +1,6 @@
+{
+  "key": "CRON_SECRET",
+  "type": "encrypted",
+  "target": ["production", "preview"],
+  "value": "94f980f4a92098988dd865827701b5c3b5d90a6fc4bb6aaa"
+}

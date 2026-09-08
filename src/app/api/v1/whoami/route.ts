@@ -1,17 +1,24 @@
-import { getUserFromApiKey } from '@/lib/auth';
+import { checkPublicRateLimit, resolveApiCaller, PUBLIC_RPM_PER_IP } from '@/lib/public-access';
 import { jsonErrorCors, jsonOkCors } from '@/lib/http';
-import { isUnlimitedEmail } from '@/lib/usage';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
-  const user = await getUserFromApiKey(req.headers.get('authorization'));
-  if (!user) return jsonErrorCors(401, 'Missing or invalid API key');
+  const caller = await resolveApiCaller(req);
+  if (!caller) return jsonErrorCors(401, 'Invalid API key. Use the public key from the Docs page.');
+  const limited = checkPublicRateLimit(caller);
+  if (limited) return jsonErrorCors(429, limited, 'rate_limit');
+  if (caller.kind === 'admin') {
+    return jsonOkCors({
+      mode: 'admin',
+      rpm_per_ip: PUBLIC_RPM_PER_IP,
+      limits: 'fixed — no increases',
+    });
+  }
   return jsonOkCors({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    limits_removed: isUnlimitedEmail(user.email),
+    mode: 'public',
+    rpm_per_ip: PUBLIC_RPM_PER_IP,
+    limits: 'fixed — no increases',
   });
 }
 

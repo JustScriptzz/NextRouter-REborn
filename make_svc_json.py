@@ -1,0 +1,25 @@
+import json
+
+payload = {
+    "ownerId": "tea-d9to86jncjis739nnfs0",
+    "type": "web_service",
+    "name": "nextrouter",
+    "runtime": "node",
+    "plan": "free",
+    "branch": "master",
+    "autoDeploy": True,
+    "numInstances": 1,
+    "repo": "https://github.com/JustScriptzz/NextRouter-REborn",
+    "envVars": [],
+    "serviceDetails": {
+        "buildCommand": "npm install && npm run build",
+        "startCommand": "npm start -- -p $PORT",
+        "env": "node",
+        "pullRequestPreviewsEnabled": "no",
+        "healthCheckPath": "/",
+        "openPorts": [{"name": "http", "protocol": "http"}],
+    },
+}
+with open(r"C:\Users\CIULL_~1\nextrouter-reborn\render-service.json", "w", encoding="ascii") as f:
+    json.dump(payload, f)
+print("written ascii")

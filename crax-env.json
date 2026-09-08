@@ -1,0 +1,6 @@
+{
+  "key": "CRAX_BASE_URL",
+  "type": "encrypted",
+  "target": ["production", "preview"],
+  "value": "https://gpt.crax.lol"
+}

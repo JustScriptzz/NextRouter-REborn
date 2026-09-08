@@ -1,5 +1,4 @@
 import { getCatalog, getFallbackModelId } from '@/lib/providers';
-import { listPublicCustomModels } from '@/lib/customModels';
 import { jsonOk } from '@/lib/http';
 import type { PublicModelDTO } from '@/lib/types';
 
@@ -9,25 +8,14 @@ export async function GET() {
   try {
     const catalog = await getCatalog();
     const fallbackId = await getFallbackModelId();
-    const publicModels = await listPublicCustomModels();
-    const models: PublicModelDTO[] = [
-      ...catalog.models.map(
-        (entry): PublicModelDTO => ({
-          id: entry.id,
-          type: entry.type,
-          title: entry.description,
-          isFallback: entry.id === fallbackId,
-        }),
-      ),
-      ...publicModels.map(
-        (model): PublicModelDTO => ({
-          id: model.modelId,
-          type: 'text',
-          title: model.title,
-          isFallback: false,
-        }),
-      ),
-    ];
+    const models: PublicModelDTO[] = catalog.models.map(
+      (entry): PublicModelDTO => ({
+        id: entry.id,
+        type: entry.type,
+        title: entry.description,
+        isFallback: entry.id === fallbackId,
+      }),
+    );
     return jsonOk({ models });
   } catch (error) {
     console.error('[GET /api/models] Error:', error);
