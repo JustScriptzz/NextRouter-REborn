@@ -84,3 +84,12 @@ export function checkAdminCredentials(email: string, password: string): boolean 
 }
 
 export const ADMIN_SESSION_COOKIE = 'admin_session';
+
+// Server-side guard for Route Handlers: reads the signed cookie via
+// `next/headers` and verifies it. Returns the session or null.
+export async function requireAdmin(): Promise<{ email: string } | null> {
+  const { cookies } = await import('next/headers');
+  const store = await cookies();
+  const token = store.get(ADMIN_SESSION_COOKIE)?.value;
+  return verifyAdminToken(token);
+}

@@ -775,6 +775,10 @@ export interface GatewayHealth {
   lastAttemptAt: number | null;
 }
 
+export function getBuiltinProviderNames(): string[] {
+  return GATEWAYS.map((slot) => slot.provider);
+}
+
 export function getGatewaysHealth(): GatewayHealth[] {
   return GATEWAYS.map((slot) => {
     const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
