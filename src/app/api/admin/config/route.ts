@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { getCatalog, getBuiltinProviderNames, getGatewaysHealth } from '@/lib/providers';
 import { kvGetCached, isKvConfigured } from '@/lib/kv';
+import { getModelStats } from '@/lib/model-stats';
 
 export const runtime = 'edge';
 
@@ -9,7 +10,7 @@ export async function GET() {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [catalog, blockedModels, pinnedModels, disabledProviders, modelRules, extraGateways] =
+  const [catalog, blockedModels, pinnedModels, disabledProviders, modelRules, extraGateways, stats] =
     await Promise.all([
       getCatalog({ includeBlocked: true }),
       kvGetCached('blocked_models'),
@@ -17,9 +18,11 @@ export async function GET() {
       kvGetCached('disabled_providers'),
       kvGetCached('model_rules'),
       kvGetCached('extra_gateways'),
+      getModelStats(),
     ]);
 
   const blockedSet = new Set(blockedModels.map((b) => b.toLowerCase()));
+  const statById = new Map(stats.map((s) => [s.id, s]));
 
   // A model is "manual" (admin-added, not from a built-in catalog scan) when
   // every provider entry backing it is the synthetic 'admin' provider used
@@ -33,6 +36,7 @@ export async function GET() {
       providers,
       hidden: blockedSet.has(m.id.toLowerCase()),
       manual: providers.length > 0 && providers.every((p) => p === 'admin'),
+      avail: statById.get(m.id)?.avail ?? null,
     };
   });
 

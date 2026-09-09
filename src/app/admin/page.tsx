@@ -14,6 +14,8 @@ interface AdminModel {
   title: string;
   providers: string[];
   hidden: boolean;
+  manual?: boolean;
+  avail: number | null;
 }
 
 interface BuiltinProvider {
@@ -66,6 +68,7 @@ export default function AdminPage() {
 
   const [newProvider, setNewProvider] = useState({ name: '', baseUrl: '', apiKey: '' });
   const [addingProvider, setAddingProvider] = useState(false);
+  const [bulkHiding, setBulkHiding] = useState(false);
 
   function showToast(text: string, kind: 'ok' | 'err') {
     setToast({ text, kind });
@@ -196,6 +199,33 @@ export default function AdminPage() {
     }
   }
 
+  async function disableLowSuccessModels() {
+    if (!confirm('Hide every model with under 20% success rate? Models with no data yet are left alone.')) {
+      return;
+    }
+    setBulkHiding(true);
+    try {
+      const res = await fetch('/api/admin/models/bulk-hide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threshold: 0.2 }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || 'Failed to hide low-success models', 'err');
+        return;
+      }
+      const result = await res.json();
+      showToast(
+        result.count > 0 ? `Hid ${result.count} model(s) under 20%` : 'No models under 20% found',
+        'ok',
+      );
+      await loadConfig();
+    } finally {
+      setBulkHiding(false);
+    }
+  }
+
   async function toggleProvider(p: BuiltinProvider) {
     setSavingRow('provider:' + p.name);
     try {
@@ -323,6 +353,13 @@ export default function AdminPage() {
             <span className="text-xs text-zinc-500">
               {filteredModels.length} / {data.models.length} models
             </span>
+            <button
+              onClick={disableLowSuccessModels}
+              disabled={bulkHiding}
+              className="rounded-lg border border-amber-700/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-300 transition hover:bg-amber-500/20 disabled:opacity-50"
+            >
+              {bulkHiding ? 'Working...' : 'Disable models under 20%'}
+            </button>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-zinc-800">
@@ -333,6 +370,7 @@ export default function AdminPage() {
                   <th className="px-4 py-3">Title</th>
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Providers</th>
+                  <th className="px-4 py-3">Success</th>
                   <th className="px-4 py-3 text-right">Hidden</th>
                 </tr>
               </thead>
@@ -388,6 +426,15 @@ export default function AdminPage() {
                       </select>
                     </td>
                     <td className="px-4 py-3 text-xs text-zinc-400">{m.providers.join(', ')}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {m.avail === null ? (
+                        <span className="text-zinc-600">no data</span>
+                      ) : (
+                        <span className={m.avail < 0.2 ? 'text-red-400' : 'text-zinc-400'}>
+                          {Math.round(m.avail * 100)}%
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => toggleHidden(m)}
@@ -405,7 +452,7 @@ export default function AdminPage() {
                 ))}
                 {filteredModels.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
+                    <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
                       No models match your filters.
                     </td>
                   </tr>
