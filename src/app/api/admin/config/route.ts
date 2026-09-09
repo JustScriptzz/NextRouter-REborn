@@ -21,13 +21,20 @@ export async function GET() {
 
   const blockedSet = new Set(blockedModels.map((b) => b.toLowerCase()));
 
-  const models = catalog.models.map((m) => ({
-    id: m.id,
-    type: m.type,
-    title: m.description,
-    providers: [...new Set((catalog.providersMap?.get(m.id) ?? []).map((p) => p.provider))],
-    hidden: blockedSet.has(m.id.toLowerCase()),
-  }));
+  // A model is "manual" (admin-added, not from a built-in catalog scan) when
+  // every provider entry backing it is the synthetic 'admin' provider used
+  // by `add | ...` model_rules.
+  const models = catalog.models.map((m) => {
+    const providers = [...new Set((catalog.providersMap?.get(m.id) ?? []).map((p) => p.provider))];
+    return {
+      id: m.id,
+      type: m.type,
+      title: m.description,
+      providers,
+      hidden: blockedSet.has(m.id.toLowerCase()),
+      manual: providers.length > 0 && providers.every((p) => p === 'admin'),
+    };
+  });
 
   const health = getGatewaysHealth();
   const builtinProviders = getBuiltinProviderNames().map((name) => ({
