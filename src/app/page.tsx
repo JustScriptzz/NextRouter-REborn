@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getCatalog } from '@/lib/providers';
 
 export default function Home() {
   useEffect(() => {
@@ -10,7 +9,7 @@ export default function Home() {
     // on initial page load.
     (async () => {
       try {
-        await getCatalog();
+        await fetch('/api/models');
       } catch {}
     })();
   }, []);

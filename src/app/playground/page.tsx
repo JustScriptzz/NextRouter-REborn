@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getCatalog } from '@/lib/providers';
-import { jsonOk } from '@/lib/http';
 import { usePathname, useRouter } from 'next/navigation';
 
 export default function Playground() {
