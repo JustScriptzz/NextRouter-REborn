@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { getCatalog } from '@/lib/providers';
 import { jsonOk } from '@/lib/http';
-import SiteChrome from '@/components/SiteChrome';
 import { usePathname, useRouter } from 'next/navigation';
 
 export default function Playground() {
@@ -64,9 +63,7 @@ export default function Playground() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      <SiteChrome>
-        <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <h2 className="text-xl font-medium mb-4 text-zinc-100">Models</h2>
@@ -97,8 +94,6 @@ export default function Playground() {
               )}
             </div>
           </div>
-        </main>
-      </SiteChrome>
-    </div>
+    </main>
   );
 }
