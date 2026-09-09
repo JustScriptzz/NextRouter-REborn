@@ -10,6 +10,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages';
 interface MinimalKVNamespace {
   get(key: string): Promise<string | null>;
   put(key: string, value: string): Promise<void>;
+  list(options?: { prefix?: string }): Promise<{ keys: { name: string }[] }>;
 }
 
 const ENV_FOR_KEY: Record<string, string> = {
@@ -91,4 +92,39 @@ export async function kvSet(key: string, values: string[]): Promise<boolean> {
 
 export function isKvConfigured(): boolean {
   return getKvBinding() !== null;
+}
+
+// Raw single-key helpers (no list/JSON-array semantics, no env fallback,
+// no in-memory cache) - used for data that isn't a simple admin-editable
+// list, like per-model stats blobs.
+export async function kvGetRaw(key: string): Promise<string | null> {
+  const kv = getKvBinding();
+  if (!kv) return null;
+  try {
+    return await kv.get(key);
+  } catch {
+    return null;
+  }
+}
+
+export async function kvSetRaw(key: string, value: string): Promise<boolean> {
+  const kv = getKvBinding();
+  if (!kv) return false;
+  try {
+    await kv.put(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function kvListRaw(prefix: string): Promise<string[]> {
+  const kv = getKvBinding();
+  if (!kv) return [];
+  try {
+    const result = await kv.list({ prefix });
+    return result.keys.map((k) => k.name);
+  } catch {
+    return [];
+  }
 }
