@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { getCatalog, getBuiltinProviderNames, getGatewaysHealth } from '@/lib/providers';
-import { kvGetCached, isKvConfigured } from '@/lib/kv';
+import { kvGetCached, isKvConfigured } from '@/lib/config-store';
 import { getModelStats } from '@/lib/model-stats';
 import { getModelSystemPrompts } from '@/lib/model-system-prompt';
 

@@ -1,7 +1,7 @@
 // Admin-configurable per-model system prompt. Stored as a single JSON
 // blob in Cloudflare KV (raw key, not the array/list config store) so it
 // survives isolate cold starts just like model-stats.ts.
-import { kvGetRaw, kvSetRaw } from './kv';
+import { kvGetRaw, kvSetRaw } from './config-store';
 
 const KV_KEY = 'model_system_prompts';
 const CACHE_TTL_MS = 15 * 1000;

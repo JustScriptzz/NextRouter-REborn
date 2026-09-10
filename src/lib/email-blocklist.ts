@@ -1,4 +1,4 @@
-import { kvGetCached } from './kv';
+import { kvGetCached } from './config-store';
 
 const DEFAULT_BLOCKED_DOMAINS = [
   'mailinator.com',

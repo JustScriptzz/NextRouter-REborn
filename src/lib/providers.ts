@@ -1,7 +1,7 @@
 import type { ModelKind } from './types';
 import { withV1Prefix } from './upstream';
 import { proxiedFetch } from './proxy-pool';
-import { kvGetCached } from './kv';
+import { kvGetCached } from './config-store';
 
 export interface CatalogEntry {
   id: string;

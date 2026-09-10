@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
-import { isKvConfigured, kvGetCached, kvSet } from '@/lib/kv';
+import { isKvConfigured, kvGetCached, kvSet } from '@/lib/config-store';
 
 export const runtime = 'edge';
 

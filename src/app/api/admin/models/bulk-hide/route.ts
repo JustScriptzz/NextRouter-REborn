@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
-import { kvGetCached, kvSet } from '@/lib/kv';
+import { kvGetCached, kvSet } from '@/lib/config-store';
 import { getCatalog } from '@/lib/providers';
 import { getModelStats } from '@/lib/model-stats';
 

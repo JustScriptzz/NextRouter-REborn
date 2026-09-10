@@ -1,4 +1,4 @@
-import { kvGetCached } from '@/lib/kv';
+import { kvGetCached } from '@/lib/config-store';
 import { jsonOk } from '@/lib/http';
 
 export const runtime = 'edge';
