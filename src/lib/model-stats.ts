@@ -1,21 +1,14 @@
-// Serverless: in-memory ring buffers per model, mirrored to Cloudflare
-// Workers KV as ONE combined blob (not one key per model - the free plan
-// caps KV writes at 1,000/day, and this project tracks hundreds of
-// models, so a per-model write on every recorded result would burn the
-// whole daily quota in a single probe cycle). All isolates share one
-// throttle window for the flush, so writes stay rare regardless of how
-// many models are active. Public function signatures are unchanged so no
-// call site elsewhere in the codebase needs to change.
+// Serverless: in-memory ring buffers per model, persisted to Cloudflare
+// D1 (SQLite) instead of Workers KV - D1's free tier allows 100,000 row
+// writes/day vs KV's 1,000/day, which matters here since this project
+// tracks hundreds of models and writes on every recorded result.
 import { after } from 'next/server';
-import { kvGetRaw, kvSetRaw } from './kv';
+import { getRequestContext } from '@cloudflare/next-on-pages';
 
 const RING = 120;
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const PROBE_BACKOFF_MS = 6 * 60 * 60 * 1000;
-const STATS_BLOB_KEY = 'model_stats_blob';
-// Conservative: keeps this well under the free 1,000 writes/day KV quota
-// even with several isolates flushing independently.
-const MIN_FLUSH_INTERVAL_MS = 5 * 60 * 1000;
+const MIN_FLUSH_INTERVAL_MS = 5 * 1000;
 
 interface StatEvent {
   o: 0 | 1;
@@ -33,15 +26,52 @@ export interface ModelStat {
 
 type StatsMap = Record<string, ModelStat>;
 
+// Minimal D1 binding shape - avoids depending on @cloudflare/workers-types
+// just for this one interface.
+interface D1Result<T = unknown> {
+  results: T[];
+}
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  run(): Promise<unknown>;
+  all<T = unknown>(): Promise<D1Result<T>>;
+  first<T = unknown>(): Promise<T | null>;
+}
+interface MinimalD1Database {
+  prepare(query: string): D1PreparedStatement;
+}
+
+// Same async-context-race guard as kv.ts: cache the binding after the
+// first successful resolve so later calls (which may happen after other
+// `await`s) never need to call getRequestContext() again.
+const globalForD1 = globalThis as unknown as {
+  __statsDb?: MinimalD1Database | null;
+  __statsDbReady?: boolean;
+};
+
+function getDb(): MinimalD1Database | null {
+  if (globalForD1.__statsDbReady) return globalForD1.__statsDb ?? null;
+  try {
+    const env = getRequestContext().env as { STATS_DB?: MinimalD1Database };
+    globalForD1.__statsDb = env.STATS_DB ?? null;
+  } catch {
+    return null;
+  }
+  if (globalForD1.__statsDb) globalForD1.__statsDbReady = true;
+  return globalForD1.__statsDb;
+}
+
 const globalForStats = globalThis as unknown as {
   __modelStats?: StatsMap;
-  __modelStatsDirty?: boolean;
-  __modelStatsLastFlush?: number;
-  __modelStatsFlushing?: Promise<void>;
+  __modelStatsLastFlush?: Record<string, number>;
 };
 
 function statsMap(): StatsMap {
   return (globalForStats.__modelStats ??= {});
+}
+
+function lastFlushMap(): Record<string, number> {
+  return (globalForStats.__modelStatsLastFlush ??= {});
 }
 
 function entry(id: string): ModelStat {
@@ -61,47 +91,52 @@ function dedupeAndTrim(events: StatEvent[]): StatEvent[] {
   return unique.slice(-RING);
 }
 
-// Merges every model this isolate has touched into the persisted blob and
-// writes it back in a SINGLE KV put, regardless of how many models
-// changed. Best-effort: never throws, never blocks the caller.
-async function flushAll(): Promise<void> {
+// Merges this isolate's local events for `id` into the persisted D1 row
+// and writes it back with a single UPSERT. Best-effort: never throws,
+// never blocks the caller (scheduled via `after()`).
+async function flushModel(id: string): Promise<void> {
   try {
-    const local = statsMap();
-    if (Object.keys(local).length === 0) return;
-    const raw = await kvGetRaw(STATS_BLOB_KEY);
-    const remote: StatsMap = raw ? (JSON.parse(raw) as StatsMap) : {};
-    const merged: StatsMap = { ...remote };
-    for (const [id, s] of Object.entries(local)) {
-      const r = merged[id];
-      merged[id] = r
-        ? {
-            events: dedupeAndTrim([...r.events, ...s.events]),
-            updatedAt: Math.max(r.updatedAt, s.updatedAt),
-            probeBackoffUntil: s.probeBackoffUntil ?? r.probeBackoffUntil,
-          }
-        : s;
-    }
-    await kvSetRaw(STATS_BLOB_KEY, JSON.stringify(merged));
+    const db = getDb();
+    if (!db) return;
+    const local = statsMap()[id];
+    if (!local) return;
+
+    const row = await db
+      .prepare('SELECT events, updated_at, probe_backoff_until FROM model_stats WHERE id = ?')
+      .bind(id)
+      .first<{ events: string; updated_at: number; probe_backoff_until: number | null }>();
+
+    const remoteEvents: StatEvent[] = row ? (JSON.parse(row.events) as StatEvent[]) : [];
+    const events = dedupeAndTrim([...remoteEvents, ...local.events]);
+    const updatedAt = Math.max(local.updatedAt, row?.updated_at ?? 0);
+    const probeBackoffUntil = local.probeBackoffUntil ?? row?.probe_backoff_until ?? null;
+
+    await db
+      .prepare(
+        `INSERT INTO model_stats (id, events, updated_at, probe_backoff_until)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           events = excluded.events,
+           updated_at = excluded.updated_at,
+           probe_backoff_until = excluded.probe_backoff_until`,
+      )
+      .bind(id, JSON.stringify(events), updatedAt, probeBackoffUntil)
+      .run();
   } catch {
     // Best-effort persistence only - a failed flush just delays the next one.
   }
 }
 
-function scheduleFlush(): void {
-  globalForStats.__modelStatsDirty = true;
-  const last = globalForStats.__modelStatsLastFlush ?? 0;
+function scheduleFlush(id: string): void {
+  const last = lastFlushMap()[id] ?? 0;
   if (Date.now() - last < MIN_FLUSH_INTERVAL_MS) return;
-  globalForStats.__modelStatsLastFlush = Date.now();
-  const run = async () => {
-    await flushAll();
-    globalForStats.__modelStatsDirty = false;
-  };
+  lastFlushMap()[id] = Date.now();
   try {
-    after(run);
+    after(() => flushModel(id));
   } catch {
     // `after()` needs an active request context; outside of one, just
     // fire-and-forget instead of failing the caller.
-    void run();
+    void flushModel(id);
   }
 }
 
@@ -130,7 +165,7 @@ export function recordModelResult(
     e.probeBackoffUntil = now + PROBE_BACKOFF_MS;
   }
   e.updatedAt = now;
-  scheduleFlush();
+  scheduleFlush(id);
 }
 
 export function isProbeBackedOff(id: string): boolean {
@@ -188,14 +223,34 @@ function summarize(id: string, s: ModelStat): PublicModelStat {
   };
 }
 
-// Reads the single persisted stats blob from KV and overlays this
-// isolate's own not-yet-flushed local events on top, so a fresh isolate
-// still sees history from every other isolate that has ever flushed.
+// Reads every persisted per-model row from D1 and overlays this isolate's
+// own not-yet-flushed local events on top, so a fresh isolate still sees
+// history from every other isolate that has ever recorded a result.
 export async function getModelStats(): Promise<PublicModelStat[]> {
   const local = statsMap();
-  const raw = await kvGetRaw(STATS_BLOB_KEY);
-  const remote: StatsMap = raw ? (JSON.parse(raw) as StatsMap) : {};
-  const merged = new Map<string, ModelStat>(Object.entries(remote));
+  const merged = new Map<string, ModelStat>();
+
+  const db = getDb();
+  if (db) {
+    try {
+      const { results } = await db
+        .prepare('SELECT id, events, updated_at, probe_backoff_until FROM model_stats')
+        .all<{ id: string; events: string; updated_at: number; probe_backoff_until: number | null }>();
+      for (const row of results) {
+        try {
+          merged.set(row.id, {
+            events: JSON.parse(row.events) as StatEvent[],
+            updatedAt: row.updated_at,
+            probeBackoffUntil: row.probe_backoff_until ?? undefined,
+          });
+        } catch {
+          // Skip a corrupted row rather than failing the whole read.
+        }
+      }
+    } catch {
+      // Best-effort: fall back to local-only data if D1 is unavailable.
+    }
+  }
 
   for (const [id, s] of Object.entries(local)) {
     const existing = merged.get(id);
