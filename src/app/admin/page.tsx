@@ -16,6 +16,7 @@ interface AdminModel {
   hidden: boolean;
   manual?: boolean;
   avail: number | null;
+  systemPrompt?: string;
 }
 
 interface BuiltinProvider {
@@ -69,6 +70,9 @@ export default function AdminPage() {
   const [newProvider, setNewProvider] = useState({ name: '', baseUrl: '', apiKey: '' });
   const [addingProvider, setAddingProvider] = useState(false);
   const [bulkHiding, setBulkHiding] = useState(false);
+  const [promptEditingId, setPromptEditingId] = useState<string | null>(null);
+  const [promptDraft, setPromptDraft] = useState('');
+  const [savingPrompt, setSavingPrompt] = useState(false);
 
   function showToast(text: string, kind: 'ok' | 'err') {
     setToast({ text, kind });
@@ -196,6 +200,38 @@ export default function AdminPage() {
       await loadConfig();
     } finally {
       setSavingRow(null);
+    }
+  }
+
+  function openPromptEditor(model: AdminModel) {
+    setPromptEditingId(model.id);
+    setPromptDraft(model.systemPrompt ?? '');
+  }
+
+  function closePromptEditor() {
+    setPromptEditingId(null);
+    setPromptDraft('');
+  }
+
+  async function savePrompt() {
+    if (!promptEditingId) return;
+    setSavingPrompt(true);
+    try {
+      const res = await fetch('/api/admin/models/system-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: promptEditingId, prompt: promptDraft }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || 'Failed to save system prompt', 'err');
+        return;
+      }
+      showToast(promptDraft.trim() ? 'System prompt saved' : 'System prompt cleared', 'ok');
+      closePromptEditor();
+      await loadConfig();
+    } finally {
+      setSavingPrompt(false);
     }
   }
 
@@ -371,6 +407,7 @@ export default function AdminPage() {
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Providers</th>
                   <th className="px-4 py-3">Success</th>
+                  <th className="px-4 py-3">Prompt</th>
                   <th className="px-4 py-3 text-right">Hidden</th>
                 </tr>
               </thead>
@@ -435,6 +472,18 @@ export default function AdminPage() {
                         </span>
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => openPromptEditor(m)}
+                        className={`rounded border px-2 py-1 text-xs transition ${
+                          m.systemPrompt
+                            ? 'border-emerald-700/60 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                            : 'border-zinc-700 text-zinc-400 hover:border-red-500/50 hover:text-zinc-200'
+                        }`}
+                      >
+                        {m.systemPrompt ? 'Edit prompt' : 'Set prompt'}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => toggleHidden(m)}
@@ -452,7 +501,7 @@ export default function AdminPage() {
                 ))}
                 {filteredModels.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
+                    <td colSpan={7} className="px-4 py-6 text-center text-zinc-500">
                       No models match your filters.
                     </td>
                   </tr>
@@ -460,6 +509,45 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+
+          {promptEditingId && (
+            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-medium text-zinc-100">
+                  System prompt — <span className="font-mono text-zinc-400">{promptEditingId}</span>
+                </h3>
+                <button
+                  onClick={closePromptEditor}
+                  className="text-xs text-zinc-500 hover:text-zinc-300"
+                >
+                  Close
+                </button>
+              </div>
+              <textarea
+                value={promptDraft}
+                onChange={(e) => setPromptDraft(e.target.value)}
+                rows={5}
+                placeholder="e.g. Always answer in Italian and keep responses under 3 sentences."
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
+              />
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={savePrompt}
+                  disabled={savingPrompt}
+                  className="rounded-lg border border-zinc-700/80 px-4 py-2 text-sm text-zinc-300 transition hover:border-red-500/50 hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  {savingPrompt ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => setPromptDraft('')}
+                  disabled={savingPrompt || !promptDraft}
+                  className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-400 transition hover:border-red-500/50 hover:text-zinc-200 disabled:opacity-30"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-8">

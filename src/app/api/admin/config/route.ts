@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { getCatalog, getBuiltinProviderNames, getGatewaysHealth } from '@/lib/providers';
 import { kvGetCached, isKvConfigured } from '@/lib/kv';
 import { getModelStats } from '@/lib/model-stats';
+import { getModelSystemPrompts } from '@/lib/model-system-prompt';
 
 export const runtime = 'edge';
 
@@ -10,7 +11,7 @@ export async function GET() {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [catalog, blockedModels, pinnedModels, disabledProviders, modelRules, extraGateways, stats] =
+  const [catalog, blockedModels, pinnedModels, disabledProviders, modelRules, extraGateways, stats, systemPrompts] =
     await Promise.all([
       getCatalog({ includeBlocked: true }),
       kvGetCached('blocked_models'),
@@ -19,6 +20,7 @@ export async function GET() {
       kvGetCached('model_rules'),
       kvGetCached('extra_gateways'),
       getModelStats(),
+      getModelSystemPrompts(),
     ]);
 
   const blockedSet = new Set(blockedModels.map((b) => b.toLowerCase()));
@@ -37,6 +39,7 @@ export async function GET() {
       hidden: blockedSet.has(m.id.toLowerCase()),
       manual: providers.length > 0 && providers.every((p) => p === 'admin'),
       avail: statById.get(m.id)?.avail ?? null,
+      systemPrompt: systemPrompts[m.id] ?? '',
     };
   });
 

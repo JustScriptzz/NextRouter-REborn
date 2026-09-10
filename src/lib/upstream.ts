@@ -756,6 +756,9 @@ export async function chatCompletions(opts: ChatCallOptions): Promise<Response> 
   const { applyIdentityInjection } = await import('./identity-inject');
   bodyToSend = applyIdentityInjection(bodyToSend, publicModelId, baseUrl);
 
+  const { applyModelSystemPrompt } = await import('./model-system-prompt');
+  bodyToSend = await applyModelSystemPrompt(bodyToSend, publicModelId);
+
   // Thinking is opt-in (client sent include_reasoning / reasoning_effort /
   // thinking flag): forward include_reasoning and ask for <thinking> upfront
   // in a single call, then split it into reasoning + content below. Streaming
