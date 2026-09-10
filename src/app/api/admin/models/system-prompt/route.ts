@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { setModelSystemPrompt } from '@/lib/model-system-prompt';
+import { isKvConfigured } from '@/lib/kv';
 
 export const runtime = 'edge';
 
