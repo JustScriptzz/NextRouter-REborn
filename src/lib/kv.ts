@@ -109,10 +109,16 @@ async function putWithRetry(
   key: string,
   value: string,
 ): Promise<boolean> {
-  const delays = [0, 400, 900];
+  const maxAttempts = 6;
   let lastError: unknown;
-  for (const delay of delays) {
-    if (delay) await sleep(delay);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      // Exponential backoff with jitter: spreads out concurrent writers to
+      // the same key instead of having them all retry in lockstep and
+      // collide again on every attempt.
+      const base = Math.min(300 * 2 ** (attempt - 1), 2000);
+      await sleep(base / 2 + Math.random() * (base / 2));
+    }
     try {
       await kv.put(key, value);
       return true;
