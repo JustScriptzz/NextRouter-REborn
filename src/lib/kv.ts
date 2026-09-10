@@ -34,14 +34,32 @@ function splitList(raw: string, key: string): string[] {
   return parts.map((p) => p.trim()).filter(Boolean);
 }
 
+// `getRequestContext()` uses AsyncLocalStorage-style context propagation
+// that can occasionally be lost across `await` boundaries under
+// concurrent traffic in the same isolate, making it throw even though a
+// binding genuinely exists. Once we've successfully resolved the binding
+// once in this isolate, we cache the object itself (bindings never change
+// for a given deployment) and never call getRequestContext() again here -
+// which also sidesteps the race for every call after the first.
+const globalForKv = globalThis as unknown as {
+  __kvBinding?: MinimalKVNamespace | null;
+  __kvBindingReady?: boolean;
+};
+
 function getKvBinding(): MinimalKVNamespace | null {
+  if (globalForKv.__kvBindingReady) return globalForKv.__kvBinding ?? null;
   try {
     const env = getRequestContext().env as { CONFIG_KV?: MinimalKVNamespace };
-    return env.CONFIG_KV ?? null;
+    globalForKv.__kvBinding = env.CONFIG_KV ?? null;
   } catch {
-    // No request context available (e.g. during build) - fall back to env.
+    // No request context available (e.g. mid-build, or a transient async-
+    // context race). Don't cache a failure - retry on the next call.
     return null;
   }
+  if (globalForKv.__kvBinding) {
+    globalForKv.__kvBindingReady = true;
+  }
+  return globalForKv.__kvBinding;
 }
 
 async function envDefault(key: string): Promise<string[]> {

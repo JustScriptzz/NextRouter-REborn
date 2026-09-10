@@ -31,6 +31,16 @@ export async function POST(req: Request) {
 
   const cleanName = name.trim();
   const cleanBase = baseUrl.trim();
+
+  try {
+    const parsed = new URL(cleanBase);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('bad protocol');
+  } catch {
+    return NextResponse.json(
+      { error: 'Base URL must be a valid http(s) URL, e.g. https://api.example.com' },
+      { status: 400 },
+    );
+  }
   const cleanKey = typeof apiKey === 'string' ? apiKey.trim() : '';
 
   const gateways = await kvGetCached('extra_gateways');

@@ -629,29 +629,43 @@ export default function AdminPage() {
               <div>
                 <label className="mb-1 block text-xs text-zinc-500">Name</label>
                 <input
+                  name="provider-name"
                   value={newProvider.name}
                   onChange={(e) => setNewProvider((s) => ({ ...s, name: e.target.value }))}
                   placeholder="my-provider"
                   required
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  inputMode="text"
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-zinc-500">Base URL</label>
                 <input
+                  name="provider-base-url"
                   value={newProvider.baseUrl}
                   onChange={(e) => setNewProvider((s) => ({ ...s, baseUrl: e.target.value }))}
                   placeholder="https://api.example.com"
                   required
+                  type="url"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-zinc-500">API key (optional)</label>
                 <input
+                  name="provider-api-key"
                   value={newProvider.apiKey}
                   onChange={(e) => setNewProvider((s) => ({ ...s, apiKey: e.target.value }))}
                   type="password"
+                  autoComplete="new-password"
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
                 />
               </div>
