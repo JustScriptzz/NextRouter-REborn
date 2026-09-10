@@ -26,10 +26,12 @@ export async function POST(req: Request) {
 
   const ok = await setModelSystemPrompt(id, prompt);
   if (!ok) {
-    return NextResponse.json(
-      { error: 'KV storage not configured for this deployment' },
-      { status: 503 },
-    );
+    return isKvConfigured()
+      ? NextResponse.json({ error: 'Failed to save. Please try again.' }, { status: 500 })
+      : NextResponse.json(
+          { error: 'KV storage not configured for this deployment' },
+          { status: 503 },
+        );
   }
 
   return NextResponse.json({ ok: true });

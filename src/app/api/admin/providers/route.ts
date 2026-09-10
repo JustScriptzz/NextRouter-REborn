@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
-import { kvGetCached, kvSet } from '@/lib/kv';
+import { isKvConfigured, kvGetCached, kvSet } from '@/lib/kv';
 
 export const runtime = 'edge';
 
@@ -52,10 +52,12 @@ export async function POST(req: Request) {
 
   const ok = await kvSet('extra_gateways', withoutSameName);
   if (!ok) {
-    return NextResponse.json(
-      { error: 'KV storage not configured for this deployment' },
-      { status: 503 },
-    );
+    return isKvConfigured()
+      ? NextResponse.json({ error: 'Failed to save. Please try again.' }, { status: 500 })
+      : NextResponse.json(
+          { error: 'KV storage not configured for this deployment' },
+          { status: 503 },
+        );
   }
 
   return NextResponse.json({ ok: true });
@@ -83,10 +85,12 @@ export async function DELETE(req: Request) {
 
   const ok = await kvSet('extra_gateways', filtered);
   if (!ok) {
-    return NextResponse.json(
-      { error: 'KV storage not configured for this deployment' },
-      { status: 503 },
-    );
+    return isKvConfigured()
+      ? NextResponse.json({ error: 'Failed to save. Please try again.' }, { status: 500 })
+      : NextResponse.json(
+          { error: 'KV storage not configured for this deployment' },
+          { status: 503 },
+        );
   }
 
   return NextResponse.json({ ok: true });

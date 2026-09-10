@@ -96,16 +96,40 @@ export async function kvGetCached(key: string): Promise<string[]> {
   return value;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Cloudflare KV limits writes to the same key to roughly once per second.
+// A quick double-tap or a couple of admin edits landing close together is
+// enough to hit that, so retry a few times with backoff before giving up -
+// this alone resolves the vast majority of "write failed" cases.
+async function putWithRetry(
+  kv: MinimalKVNamespace,
+  key: string,
+  value: string,
+): Promise<boolean> {
+  const delays = [0, 400, 900];
+  let lastError: unknown;
+  for (const delay of delays) {
+    if (delay) await sleep(delay);
+    try {
+      await kv.put(key, value);
+      return true;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  console.warn('[kv] put failed after retries', { key, error: String(lastError) });
+  return false;
+}
+
 export async function kvSet(key: string, values: string[]): Promise<boolean> {
   const kv = getKvBinding();
   if (!kv) return false;
-  try {
-    await kv.put(KV_KEY_PREFIX + key, JSON.stringify(values));
-    cache.set(key, { at: Date.now(), value: values });
-    return true;
-  } catch {
-    return false;
-  }
+  const ok = await putWithRetry(kv, KV_KEY_PREFIX + key, JSON.stringify(values));
+  if (ok) cache.set(key, { at: Date.now(), value: values });
+  return ok;
 }
 
 export function isKvConfigured(): boolean {
@@ -128,12 +152,7 @@ export async function kvGetRaw(key: string): Promise<string | null> {
 export async function kvSetRaw(key: string, value: string): Promise<boolean> {
   const kv = getKvBinding();
   if (!kv) return false;
-  try {
-    await kv.put(key, value);
-    return true;
-  } catch {
-    return false;
-  }
+  return putWithRetry(kv, key, value);
 }
 
 export async function kvListRaw(prefix: string): Promise<string[]> {
