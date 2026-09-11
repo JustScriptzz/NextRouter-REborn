@@ -624,18 +624,22 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
   }
 
   const extraGateways = await kvGetCached('extra_gateways');
-  const parsedExtraGateways = extraGateways
-    .map((line) => {
-      const parts = line.split('|').map((p) => p.trim());
-      if (parts.length < 2) return null;
-      const [name, gwBaseUrl, gwKey] = parts;
-      return {
-        provider: name.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom',
-        gwBaseUrl,
-        gwKey,
-      };
-    })
-    .filter((x): x is { provider: string; gwBaseUrl: string; gwKey?: string } => x !== null);
+  interface ParsedExtraGateway {
+    provider: string;
+    gwBaseUrl: string;
+    gwKey: string;
+  }
+  const parsedExtraGateways: ParsedExtraGateway[] = [];
+  for (const line of extraGateways) {
+    const parts = line.split('|').map((p) => p.trim());
+    if (parts.length < 2) continue;
+    const [name, gwBaseUrl, gwKey] = parts;
+    parsedExtraGateways.push({
+      provider: name.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom',
+      gwBaseUrl,
+      gwKey: gwKey ?? '',
+    });
+  }
 
   // Fire all extra-gateway live-model fetches concurrently instead of
   // sequentially: awaiting one at a time meant the total wait was the SUM
