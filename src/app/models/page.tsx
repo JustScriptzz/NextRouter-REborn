@@ -12,14 +12,21 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function ModelsPage() {
-  const catalog = await getCatalog();
-  const fallbackId = await getFallbackModelId();
-  const models: CatalogModelDTO[] = catalog.models.map((m) => ({
-    id: m.id,
-    title: m.description,
-    type: m.type,
-    isFallback: m.id === fallbackId,
-  }));
+  let models: CatalogModelDTO[] = [];
+
+  try {
+    const catalog = await getCatalog();
+    const fallbackId = await getFallbackModelId();
+    models = catalog.models.map((m) => ({
+      id: m.id,
+      title: m.description,
+      type: m.type,
+      isFallback: m.id === fallbackId,
+    }));
+  } catch (error) {
+    console.error('[GET /models] Error:', error);
+    models = [];
+  }
 
   return (
     <div className="mx-auto max-w-5xl py-10">
