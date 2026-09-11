@@ -350,9 +350,12 @@ const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
 const LIVE_MODELS_TIMEOUT_MS = 25000;
 const LIVE_MODELS_MAX = 500;
 
+const CATALOG_CACHE_TTL_MS = 60 * 1000;
+
 const globalForCatalog = globalThis as unknown as {
   gatewayModels?: Record<string, { at: number; models: LiveModelInfo[] | null }>;
   lastGoodGatewayModels?: Record<string, { at: number; models: LiveModelInfo[] }>;
+  catalogCache?: { at: number; includeBlocked: boolean; catalog: Catalog };
 };
 
 async function liveGatewayModels(
@@ -429,6 +432,16 @@ async function liveGatewayModels(
 }
 
 export async function getCatalog(options?: { includeBlocked?: boolean }): Promise<Catalog> {
+  const includeBlocked = options?.includeBlocked === true;
+  const cachedCatalog = globalForCatalog.catalogCache;
+  if (
+    cachedCatalog &&
+    cachedCatalog.includeBlocked === includeBlocked &&
+    Date.now() - cachedCatalog.at < CATALOG_CACHE_TTL_MS
+  ) {
+    return cachedCatalog.catalog;
+  }
+
   const byId = new Map<string, CatalogEntry>();
   const normalizedIds = new Map<string, string>();
   const providersMap = new Map<string, CatalogEntry[]>();
@@ -611,33 +624,55 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
   }
 
   const extraGateways = await kvGetCached('extra_gateways');
-  for (const line of extraGateways) {
-    const parts = line.split('|').map((p) => p.trim());
-    if (parts.length < 2) continue;
-    const [name, gwBaseUrl, gwKey] = parts;
-    const slot: GatewaySlot = {
-      provider: name.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom',
-      baseUrlEnv: '',
-      apiKeyEnv: '',
-      modelsEnv: '',
-      defaultBaseUrl: gwBaseUrl,
-    };
-    const live = await liveGatewayModels(slot, { baseUrl: gwBaseUrl, apiKey: gwKey ?? '' });
-    if (live && live.length > 0) {
-      for (const info of live) {
-        const type = resolveLiveType(info);
-        if (!type) continue;
-        add({
-          id: info.id,
-          type,
-          description: info.displayName ?? describeModel(info.id),
-          provider: slot.provider,
-          baseUrl: withV1Prefix(gwBaseUrl),
-          apiKey: gwKey ?? '',
-          upstreamModel: info.id,
-          supportsImageEdits: info.endpoints.includes('images/edits'),
-        });
-      }
+  const parsedExtraGateways = extraGateways
+    .map((line) => {
+      const parts = line.split('|').map((p) => p.trim());
+      if (parts.length < 2) return null;
+      const [name, gwBaseUrl, gwKey] = parts;
+      return {
+        provider: name.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom',
+        gwBaseUrl,
+        gwKey,
+      };
+    })
+    .filter((x): x is { provider: string; gwBaseUrl: string; gwKey?: string } => x !== null);
+
+  // Fire all extra-gateway live-model fetches concurrently instead of
+  // sequentially: awaiting one at a time meant the total wait was the SUM
+  // of every configured extra gateway's timeout, which was enough on its
+  // own to trip the Worker's resource limits when several were slow.
+  const extraLiveResults = await Promise.all(
+    parsedExtraGateways.map((p) =>
+      liveGatewayModels(
+        {
+          provider: p.provider,
+          baseUrlEnv: '',
+          apiKeyEnv: '',
+          modelsEnv: '',
+          defaultBaseUrl: p.gwBaseUrl,
+        },
+        { baseUrl: p.gwBaseUrl, apiKey: p.gwKey ?? '' },
+      ),
+    ),
+  );
+
+  for (let i = 0; i < parsedExtraGateways.length; i++) {
+    const p = parsedExtraGateways[i];
+    const live = extraLiveResults[i];
+    if (!live || live.length === 0) continue;
+    for (const info of live) {
+      const type = resolveLiveType(info);
+      if (!type) continue;
+      add({
+        id: info.id,
+        type,
+        description: info.displayName ?? describeModel(info.id),
+        provider: p.provider,
+        baseUrl: withV1Prefix(p.gwBaseUrl),
+        apiKey: p.gwKey ?? '',
+        upstreamModel: info.id,
+        supportsImageEdits: info.endpoints.includes('images/edits'),
+      });
     }
   }
 
@@ -723,6 +758,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
     );
   }
   const catalog: Catalog = { models: modelsOut, byId, providersMap };
+  globalForCatalog.catalogCache = { at: Date.now(), includeBlocked, catalog };
   return catalog;
 }
 
