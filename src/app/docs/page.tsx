@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import CodeBlock from '@/components/CodeBlock';
 import { PUBLIC_RPM_PER_IP } from '@/lib/public-access';
 
-const YOUR_KEY_PLACEHOLDER = '<YOUR_PRIVATE_KEY>';
+const YOUR_KEY_PLACEHOLDER = '<YOUR_PUBLIC_KEY>';
 
 export const metadata: Metadata = {
   title: 'Docs',
@@ -60,26 +60,22 @@ for await (const chunk of res.body) {
       <div className="anim-fade-up">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Documentation</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
-          NextRouter REborn exposes an OpenAI-compatible API. No signup, no shared
-          key - every key is private and tied to your Discord account.
+          NextRouter REborn exposes an OpenAI-compatible API. No signup - one
+          shared public key for everyone.
         </p>
       </div>
 
       <Section title="Get a key" className="anim-fade-up delay-1">
         <p className="text-sm text-zinc-400">
-          Keys are minted per Discord account by the bot - no signup form, no
-          shared secret. Join the server and run{' '}
-          <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
-            /getkey
-          </code>{' '}
-          to get yours (reply is private). Full flow on the{' '}
+          There&apos;s one shared public key for everyone - no signup, no bot
+          commands. Grab it from the{' '}
           <a href="/keys" className="underline underline-offset-4 text-zinc-100">
             Keys page
           </a>
           .
         </p>
         <p className="mt-3 text-sm text-zinc-400">
-          {PUBLIC_RPM_PER_IP} requests/min per key · no token caps · no increases. Pass
+          {PUBLIC_RPM_PER_IP} requests/min · no token caps · no increases. Pass
           it as{' '}
           <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
             Authorization: Bearer
@@ -181,7 +177,7 @@ for await (const chunk of res.body) {
           <Endpoint
             method="GET"
             path="/api/v1/whoami"
-            desc="Returns the caller mode: public (per-key rate limit, fixed) or admin."
+            desc="Returns the caller mode: public (fixed rate limit) or admin."
           />
         </div>
       </Section>
@@ -193,12 +189,12 @@ for await (const chunk of res.body) {
             <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               /api/v1
             </code>{' '}
-            endpoints take a private key (see above) sent as{' '}
+            endpoints take the shared public key (see above) sent as{' '}
             <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               Authorization: Bearer &lt;key&gt;
             </code>
-            . There is no shared key and no signup form - only per-Discord-user
-            private keys and admin keys are accepted.
+            . No signup form - the public key and admin keys are the only
+            credentials accepted.
           </p>
         </div>
       </Section>
@@ -209,10 +205,10 @@ for await (const chunk of res.body) {
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
-                Requests per minute: <strong className="text-zinc-100">{PUBLIC_RPM_PER_IP} RPM per IP</strong> on
+                Requests per minute: <strong className="text-zinc-100">{PUBLIC_RPM_PER_IP} RPM</strong> on
                 all{' '}
                 <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>/api/v1</code>{' '}
-                endpoints. Fixed for everyone — no increases.
+                endpoints, shared across everyone using the public key. Fixed — no increases.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
@@ -238,7 +234,7 @@ for await (const chunk of res.body) {
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
-                Admins are exempt from the per-IP gate.
+                Admins are exempt from the rate limit.
               </span>
             </li>
           </ul>
@@ -322,6 +318,7 @@ function Section({
       <h2 className="mb-4 flex items-center gap-3 text-lg font-semibold text-zinc-100">
         {title}
         <span className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
+      </span>
       </h2>
       {children}
     </section>
