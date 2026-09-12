@@ -300,15 +300,15 @@ const GATEWAYS: GatewaySlot[] = [
     modelFetchTimeoutMs: 8000,
   },
   {
-    // Ayechat: OpenAI-compatible upstream (chat at <base>/admin/v1/chat/completions).
-    // Inactive until AYECHAT_API_KEY is set in Render env vars. Models are
-    // discovered live from {base}/v1/models; AYECHAT_MODELS optionally pins
+    // Ayechat: OpenAI-compatible upstream (chat at <base>/chat/completions).
+    // Inactive until AYECHAT_API_KEY is set in the host env vars. Models are
+    // discovered live from {base}/models; AYECHAT_MODELS optionally pins
     // the list (comma-separated upstream IDs).
     provider: 'ayechat',
     baseUrlEnv: 'AYECHAT_BASE_URL',
     apiKeyEnv: 'AYECHAT_API_KEY',
     modelsEnv: 'AYECHAT_MODELS',
-    defaultBaseUrl: 'https://rimo-api.mywire.org/admin',
+    defaultBaseUrl: 'https://prayas-proxy.vercel.app/v1',
     requiresKey: true,
     modelFetchTimeoutMs: 8000,
   },
