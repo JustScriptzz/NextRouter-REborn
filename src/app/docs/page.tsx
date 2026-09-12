@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import CodeBlock from '@/components/CodeBlock';
-import { PUBLIC_API_KEY, PUBLIC_RPM_PER_IP } from '@/lib/public-access';
+import { PUBLIC_RPM_PER_IP } from '@/lib/public-access';
+
+const YOUR_KEY_PLACEHOLDER = '<YOUR_PRIVATE_KEY>';
 
 export const metadata: Metadata = {
   title: 'Docs',
@@ -11,14 +13,14 @@ const apiBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 
 export default function DocsPage() {
   const quickStart = `curl ${apiBase}/api/v1/chat/completions \\
-  -H "Authorization: Bearer ${PUBLIC_API_KEY}" \\
+  -H "Authorization: Bearer ${YOUR_KEY_PLACEHOLDER}" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"kiro-auto","messages":[{"role":"user","content":"Hello"}]}'`;
 
   const streamingExample = `const res = await fetch("${apiBase}/api/v1/chat/completions", {
   method: "POST",
   headers: {
-    "Authorization": "Bearer ${PUBLIC_API_KEY}",
+    "Authorization": "Bearer ${YOUR_KEY_PLACEHOLDER}",
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
@@ -32,7 +34,7 @@ for await (const chunk of res.body) {
 }`;
 
   const videoExample = `curl ${apiBase}/api/v1/videos/generations \\
-  -H "Authorization: Bearer ${PUBLIC_API_KEY}" \\
+  -H "Authorization: Bearer ${YOUR_KEY_PLACEHOLDER}" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"video-model-id","prompt":"A cat surfing a wave"}'`;
 
@@ -44,7 +46,7 @@ for await (const chunk of res.body) {
       "name": "NextRouter",
       "options": {
         "baseURL": "${apiBase}/api/v1",
-        "apiKey": "${PUBLIC_API_KEY}"
+        "apiKey": "${YOUR_KEY_PLACEHOLDER}"
       },
       "models": {
         "gpt-4o": { "name": "GPT-4o (NextRouter)" }
@@ -58,16 +60,27 @@ for await (const chunk of res.body) {
       <div className="anim-fade-up">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Documentation</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
-          NextRouter REborn exposes an OpenAI-compatible API. No signup, no personal
-          keys — everyone uses the same public key below.
+          NextRouter REborn exposes an OpenAI-compatible API. No signup, no shared
+          key - every key is private and tied to your Discord account.
         </p>
       </div>
 
-      <Section title="Public key" className="anim-fade-up delay-1">
-        <CodeBlock code={PUBLIC_API_KEY} label="api-key" />
+      <Section title="Get a key" className="anim-fade-up delay-1">
+        <p className="text-sm text-zinc-400">
+          Keys are minted per Discord account by the bot - no signup form, no
+          shared secret. Join the server and run{' '}
+          <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
+            /getkey
+          </code>{' '}
+          to get yours (reply is private). Full flow on the{' '}
+          <a href="/keys" className="underline underline-offset-4 text-zinc-100">
+            Keys page
+          </a>
+          .
+        </p>
         <p className="mt-3 text-sm text-zinc-400">
-          {PUBLIC_RPM_PER_IP} requests/min per IP · no token caps · no increases, same
-          for everyone. Pass it as{' '}
+          {PUBLIC_RPM_PER_IP} requests/min per key · no token caps · no increases. Pass
+          it as{' '}
           <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
             Authorization: Bearer
           </code>
@@ -168,7 +181,7 @@ for await (const chunk of res.body) {
           <Endpoint
             method="GET"
             path="/api/v1/whoami"
-            desc="Returns the caller mode: public (rpm_per_ip, fixed limits) or admin."
+            desc="Returns the caller mode: public (per-key rate limit, fixed) or admin."
           />
         </div>
       </Section>
@@ -180,12 +193,12 @@ for await (const chunk of res.body) {
             <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               /api/v1
             </code>{' '}
-            endpoints share one public key (see above) sent as{' '}
+            endpoints take a private key (see above) sent as{' '}
             <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
               Authorization: Bearer &lt;key&gt;
             </code>
-            . There are no personal keys and no signups — only the public key and
-            admin keys are accepted.
+            . There is no shared key and no signup form - only per-Discord-user
+            private keys and admin keys are accepted.
           </p>
         </div>
       </Section>

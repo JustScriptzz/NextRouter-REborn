@@ -1,18 +1,19 @@
 import { rateLimiter } from './rateLimit';
+import { resolveDiscordKey } from './discord-keys';
 
 export const runtime = 'edge';
 
-// Serverless public access: no database, no users, no sessions.
-// - Everyone uses the shared PUBLIC_API_KEY (documented on /docs).
+// Serverless access control: no database, no users table, no sessions.
+// - Private per-Discord-user keys are minted by the Discord bot (/getkey,
+//   /regenkey slash commands, see api/discord/interactions) and stored via
+//   config-store (Vercel Blob). There is no shared/public key anymore.
 // - The operator's own unlimited key is ADMIN_API_KEY (env-only, never
-//   documented). Legacy per-user nr_ keys no longer exist.
-export const PUBLIC_API_KEY =
-  process.env.PUBLIC_API_KEY || 'nr_public_nextrouter_free';
-export const PUBLIC_RPM_PER_IP = 30;
+//   documented).
+export const PUBLIC_RPM_PER_IP = 30; // per-key limit; name kept for API/doc compat
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || '';
 
-export type ApiCaller = { kind: 'admin' } | { kind: 'public'; ip: string };
+export type ApiCaller = { kind: 'admin' } | { kind: 'public'; discordUserId: string };
 
 export function getClientIp(req: Request): string {
   const xff = req.headers.get('x-forwarded-for');
@@ -48,22 +49,23 @@ export async function resolveApiCaller(req: Request): Promise<ApiCaller | null> 
   const key = bearerKey(req);
   if (!key) return null;
   if (safeEqual(key, ADMIN_API_KEY)) return { kind: 'admin' };
-  if (safeEqual(key, PUBLIC_API_KEY)) return { kind: 'public', ip: getClientIp(req) };
+  const discordUserId = await resolveDiscordKey(key);
+  if (discordUserId) return { kind: 'public', discordUserId };
   return null;
 }
 
 // Tracking id passed to upstream helpers. Usage persistence is a no-op
 // serverless, so these are labels only.
 export function trackingId(caller: ApiCaller): string {
-  return caller.kind === 'admin' ? 'admin' : `public:${caller.ip}`;
+  return caller.kind === 'admin' ? 'admin' : `discord:${caller.discordUserId}`;
 }
 
-// Fixed 30 RPM per IP gate for public callers. Returns an error message
-// when limited, null when allowed. Admins bypass it.
+// Fixed 30 RPM gate per private key. Returns an error message when
+// limited, null when allowed. Admins bypass it.
 export function checkPublicRateLimit(caller: ApiCaller): string | null {
   if (caller.kind === 'admin') return null;
-  const ok = rateLimiter.allow(`public-rpm:${caller.ip}`, PUBLIC_RPM_PER_IP);
+  const ok = rateLimiter.allow(`rpm:${caller.discordUserId}`, PUBLIC_RPM_PER_IP);
   return ok
     ? null
-    : `Public rate limit of ${PUBLIC_RPM_PER_IP} requests/min per IP exceeded. Try again shortly.`;
+    : `Rate limit of ${PUBLIC_RPM_PER_IP} requests/min exceeded. Try again shortly.`;
 }
