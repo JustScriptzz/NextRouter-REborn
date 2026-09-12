@@ -84,24 +84,30 @@ function describeModel(id: string): string {
   if (lower.includes('deepseek')) return 'Strong reasoning chat model';
   if (lower.includes('qwen')) return 'Open-weights chat model';
   if (lower.includes('flux') || lower.includes('sdxl')) return 'Image generation model';
+  if (/-image|image-preview|image-edit|gpt-image|qwen-image|dall-e|imagen|midjourney/.test(lower)) return 'Image generation model';
+  if (/(tts|gpt-audio|whisper|lyria|kokoro)/.test(lower)) return 'Audio model';
   return 'Chat model';
 }
 
-function classifyModel(id: string): ModelKind {
+function classifyModel(id: string, chatOnly?: boolean): ModelKind {
+  // Chat-only upstreams serve chat/completions exclusively: even
+  // image/audio-labeled models chat there, so they stay 'text'. Without
+  // this they'd land in tabs whose endpoints the upstream 404s.
+  if (chatOnly) return 'text';
   const lower = id.toLowerCase();
   if (/(text-embedding|embedding|e5-|bge-|minilm|rerank|ada-002)/.test(lower)) {
     return 'embedding';
   }
-  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid|meta-image|grok-imagine|qwen-image|gpt-image)/.test(lower)) {
+  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid|meta-image|grok-imagine|qwen-image|gpt-image|-image|image-preview|image-edit)/.test(lower)) {
     return 'image';
   }
-  if (/(whisper|transcri|speech-to-text|stt|recogni|nova-3)/.test(lower)) {
+  if (/(whisper|transcri|speech-to-text|stt|recogni|nova-3|\basr\b|parakeet)/.test(lower)) {
     return 'stt';
   }
-  if (/(tts|text-to-speech|eleven|aura|kokoro|xtts)/.test(lower)) {
+  if (/(tts|text-to-speech|eleven|aura|kokoro|xtts|gpt-audio|cartesia|playht)/.test(lower)) {
     return 'tts';
   }
-  if (/^(sora|veo|kling|wan|qwen-video)|\bvideo\b|-video$/.test(lower)) {
+  if (/^(sora|veo|kling|wan|qwen-video|pika|luma|hailuo|pixverse|gen-3)|\bvideo\b|-video$/.test(lower)) {
     return 'video';
   }
   return 'text';
@@ -116,7 +122,8 @@ function classifyFromEndpoints(endpoints: string[]): ModelKind | null {
   return null;
 }
 
-function resolveLiveType(info: LiveModelInfo): ModelKind | null {
+function resolveLiveType(info: LiveModelInfo, chatOnly?: boolean): ModelKind | null {
+  if (chatOnly) return 'text';
   if (info.modelType) {
     const lower = info.modelType.toLowerCase();
     if (ALL_KINDS.includes(lower as ModelKind)) return lower as ModelKind;
@@ -146,6 +153,9 @@ interface GatewaySlot {
   requiresKey?: boolean;
   modelFetchTimeoutMs?: number;
   seedIds?: string[];
+  // Chat-only upstream: every model from this slot is typed 'text' because
+  // the upstream only serves chat/completions (no images/audio endpoints).
+  chatOnly?: boolean;
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -173,14 +183,6 @@ const GATEWAYS: GatewaySlot[] = [
     defaultBaseUrl: '',
     disableLive: true,
     staticModels: ['x-preview-f-free'],
-  },
-  {
-    provider: 'jankrouter',
-    baseUrlEnv: 'JANKROUTER_BASE_URL',
-    apiKeyEnv: 'JANKROUTER_API_KEY',
-    modelsEnv: 'JANKROUTER_MODELS',
-    defaultBaseUrl: 'https://jankrouter.waifly.com/',
-    requiresKey: true,
   },
   {
     provider: 'kilo',
@@ -311,6 +313,10 @@ const GATEWAYS: GatewaySlot[] = [
     defaultBaseUrl: 'https://prayas-proxy.vercel.app/v1',
     requiresKey: true,
     modelFetchTimeoutMs: 8000,
+    // Chat-only upstream (see GatewaySlot.chatOnly): image/audio-labeled
+    // models stay 'text' here because they chat fine but have no
+    // images/generations or audio endpoint behind them.
+    chatOnly: true,
   },
 ];
 
@@ -498,7 +504,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
         : slot.staticModels ?? []) {
         add({
           id: upstreamModel,
-          type: classifyModel(upstreamModel),
+          type: classifyModel(upstreamModel, slot.chatOnly),
           description: describeModel(upstreamModel),
           provider: slot.provider,
           baseUrl: withV1Prefix(baseUrl),
@@ -515,7 +521,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
     if (slot.seedIds) {
       for (const seedId of slot.seedIds) {
         if (byId.has(seedId)) continue;
-        const kind = classifyModel(seedId);
+        const kind = classifyModel(seedId, slot.chatOnly);
         const entry: CatalogEntry = {
           id: seedId,
           type: kind,
@@ -544,7 +550,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
             }
           }
           if (!matched) continue;
-          const type = resolveLiveType(info);
+          const type = resolveLiveType(info, slot.chatOnly);
           if (!type || type !== matched.type) continue;
           const alt: CatalogEntry = {
             id: matched.id,
@@ -570,7 +576,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
         const canonicalId = resolveAlias(info.id);
         const isAliased = canonicalId !== info.id;
         if (isAliased && byId.has(canonicalId)) {
-          const type = resolveLiveType(info);
+          const type = resolveLiveType(info, slot.chatOnly);
           if (!type) continue;
           const existing = byId.get(canonicalId)!;
           if (type !== existing.type) continue;
@@ -591,7 +597,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
           }
           continue;
         }
-        const type = resolveLiveType(info);
+        const type = resolveLiveType(info, slot.chatOnly);
         if (!type) continue;
         add({
           id: canonicalId,
@@ -609,7 +615,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
     }
 
     for (const upstreamModel of listFromEnv(slot.modelsEnv)) {
-      const kind = classifyModel(upstreamModel);
+      const kind = classifyModel(upstreamModel, slot.chatOnly);
       add({
         id: upstreamModel,
         type: kind,
