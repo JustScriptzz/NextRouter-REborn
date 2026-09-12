@@ -165,7 +165,7 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'LOGFARE_API_KEY',
     modelsEnv: 'LOGFARE_MODELS',
     defaultBaseUrl: '',
-    excludeIds: ['qwen3-embedding-8b'],
+    excludeIds: ['qwen3-embedding-8b', 'flux-1-schnell'],
   },
   {
     provider: 'scriptzz',
@@ -241,6 +241,8 @@ const GATEWAYS: GatewaySlot[] = [
     apiKeyEnv: 'OLLAMA_API_KEY',
     modelsEnv: 'OLLAMA_MODELS',
     defaultBaseUrl: 'https://ollama.com',
+    // Dead upstream (probe fails on every pipe): drop until fixed.
+    excludeIds: ['glm-5.3-flash', 'kimi-k2.7-code'],
   },
   {
     // Bring-your-own OpenAI key. Inactive until OPENAI_API_KEY is set —
