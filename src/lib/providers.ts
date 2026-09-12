@@ -156,6 +156,10 @@ interface GatewaySlot {
   // Chat-only upstream: every model from this slot is typed 'text' because
   // the upstream only serves chat/completions (no images/audio endpoints).
   chatOnly?: boolean;
+  // Skip live probing: never spend real completions health-checking this
+  // slot's models. For 400+ model pipes every public /api/status hit would
+  // otherwise fan out into hundreds of live chats and throttle the upstream.
+  skipProbe?: boolean;
 }
 
 const GATEWAYS: GatewaySlot[] = [
@@ -319,6 +323,9 @@ const GATEWAYS: GatewaySlot[] = [
     // models stay 'text' here because they chat fine but have no
     // images/generations or audio endpoint behind them.
     chatOnly: true,
+    // Never probe: 430 live-chat health checks per status hit would
+    // instantly throttle the upstream (see GatewaySlot.skipProbe).
+    skipProbe: true,
   },
 ];
 
@@ -825,6 +832,10 @@ export interface GatewayHealth {
 
 export function getBuiltinProviderNames(): string[] {
   return GATEWAYS.map((slot) => slot.provider);
+}
+
+export function isProbeSkipped(provider: string): boolean {
+  return GATEWAYS.some((slot) => slot.provider === provider && slot.skipProbe === true);
 }
 
 export function getGatewaysHealth(): GatewayHealth[] {

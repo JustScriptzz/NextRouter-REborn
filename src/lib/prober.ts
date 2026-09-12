@@ -1,4 +1,4 @@
-import { getCatalog, type CatalogEntry } from './providers';
+import { getCatalog, isProbeSkipped, type CatalogEntry } from './providers';
 import { isProbeBackedOff, recordModelResult } from './model-stats';
 import { proxiedFetch } from './proxy-pool';
 import { withV1Prefix } from './upstream';
@@ -71,7 +71,8 @@ async function probePipe(
 
 async function probeModel(id: string, type: string, pipes: CatalogEntry[]): Promise<void> {
   if (type === 'stt') return;
-  for (const pipe of pipes.slice(0, MAX_PIPES_PER_MODEL)) {
+  const eligible = pipes.filter((p) => !isProbeSkipped(p.provider));
+  for (const pipe of eligible.slice(0, MAX_PIPES_PER_MODEL)) {
     const ok = await probePipe(id, type, pipe.baseUrl, pipe.apiKey, pipe.upstreamModel);
     if (ok) return;
   }
@@ -86,6 +87,9 @@ export async function probeCatalog(): Promise<{ probed: number }> {
       catalog.providersMap?.get(entry.id) && (catalog.providersMap.get(entry.id) ?? []).length > 0
         ? (catalog.providersMap.get(entry.id) as CatalogEntry[])
         : [entry];
+    // Skip pipes that opt out of live probing (e.g. 400+ model chat-only
+    // upstreams where a health check per model would throttle the upstream).
+    if (pipes.length > 0 && pipes.every((p) => isProbeSkipped(p.provider))) continue;
     tasks.push(() => probeModel(entry.id, entry.type, pipes));
   }
   let idx = 0;
