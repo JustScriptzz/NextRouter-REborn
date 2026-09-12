@@ -31,7 +31,12 @@ async function readAll(): Promise<Record<string, string>> {
       cache = { at: Date.now(), data: {} };
       return {};
     }
-    const res = await fetch(info.url, { cache: 'no-store' });
+    // The store is private, so the URL from head() is not publicly
+    // fetchable — it needs the same read/write token as a bearer token.
+    const res = await fetch(info.url, {
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    });
     if (!res.ok) return cache?.data ?? {};
     const data = (await res.json()) as Record<string, string>;
     cache = { at: Date.now(), data };
@@ -50,7 +55,11 @@ async function writeAll(data: Record<string, string>): Promise<boolean> {
     if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
     try {
       await put(BLOB_KEY, JSON.stringify(data), {
-        access: 'public',
+        // The connected Blob store ("nextrouter-reborn-blob") is
+        // configured with private access, so writing with access:
+        // 'public' was rejected on every attempt. Match the store's
+        // actual access mode.
+        access: 'private',
         addRandomSuffix: false,
         allowOverwrite: true,
         contentType: 'application/json',
@@ -76,8 +85,8 @@ async function writeRaw(key: string, value: string): Promise<boolean> {
   return writeAll(all);
 }
 
-// List-style config (admin-editable lists: blocked_models, model_rules,
-// extra_gateways, etc.) - stored as a JSON array string.
+// List-style config (admin-editable lists: blocked_models,
+// model_rules, extra_gateways, etc.) - stored as a JSON array string.
 export async function kvGet(key: string): Promise<string[]> {
   const raw = await readRaw(key);
   if (!raw) return [];
