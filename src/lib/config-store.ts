@@ -1,88 +1,79 @@
-// Admin config storage backed by Cloudflare D1 (SQLite) instead of
-// Workers KV: D1\'s free tier allows far more writes/day, and this is
-// the same D1 database already used for model stats (one binding, two
-// tables). Function names match the old KV-backed module so nothing
-// else needed to change beyond the import path.
-import { getRequestContext } from '@cloudflare/next-on-pages';
+// Admin config storage backed by Vercel Blob.
+// Replaces the old Cloudflare D1/KV-backed module: on Vercel there is no
+// D1 binding, so isKvConfigured() always returned false and admin edits
+// never persisted across requests/deploys. Vercel Blob is a real
+// persistent object store (survives deploys, no server needed) and only
+// needs the BLOB_READ_WRITE_TOKEN env var, which Vercel sets automatically
+// once you create a Blob store in the project's Storage tab.
+// Function names/signatures match the old module so nothing else needs
+// to change beyond this file.
+import { put, head } from '@vercel/blob';
 
-interface D1Result<T = unknown> {
-  results: T[];
-}
-interface D1PreparedStatement {
-  bind(...values: unknown[]): D1PreparedStatement;
-  run(): Promise<unknown>;
-  all<T = unknown>(): Promise<D1Result<T>>;
-  first<T = unknown>(): Promise<T | null>;
-}
-interface MinimalD1Database {
-  prepare(query: string): D1PreparedStatement;
-}
+const BLOB_KEY = 'admin-config.json';
+const CACHE_TTL_MS = 15 * 1000;
 
-// Same async-context-race guard used elsewhere: cache the binding after
-// the first successful resolve so later calls (which may happen after
-// other `await`s) never need to call getRequestContext() again.
-const globalForDb = globalThis as unknown as {
-  __configDb?: MinimalD1Database | null;
-  __configDbReady?: boolean;
-};
+let cache: { at: number; data: Record<string, string> } | null = null;
 
-function getDb(): MinimalD1Database | null {
-  if (globalForDb.__configDbReady) return globalForDb.__configDb ?? null;
-  try {
-    const env = getRequestContext().env as { STATS_DB?: MinimalD1Database };
-    globalForDb.__configDb = env.STATS_DB ?? null;
-  } catch {
-    return null;
-  }
-  if (globalForDb.__configDb) globalForDb.__configDbReady = true;
-  return globalForDb.__configDb;
+function isBlobConfigured(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
 export function isKvConfigured(): boolean {
-  return getDb() !== null;
+  return isBlobConfigured();
 }
 
-// Short-lived in-memory cache so a burst of requests in the same isolate
-// doesn't hit D1 on every call, while still picking up admin edits quickly.
-const CACHE_TTL_MS = 15 * 1000;
-const listCache = new Map<string, { at: number; value: string[] }>();
-
-async function readRaw(key: string): Promise<string | null> {
-  const db = getDb();
-  if (!db) return null;
+async function readAll(): Promise<Record<string, string>> {
+  if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.data;
+  if (!isBlobConfigured()) return {};
   try {
-    const row = await db
-      .prepare('SELECT value FROM admin_config WHERE key = ?')
-      .bind(key)
-      .first<{ value: string }>();
-    return row?.value ?? null;
-  } catch {
-    return null;
+    const info = await head(BLOB_KEY).catch(() => null);
+    if (!info) {
+      cache = { at: Date.now(), data: {} };
+      return {};
+    }
+    const res = await fetch(info.url, { cache: 'no-store' });
+    if (!res.ok) return cache?.data ?? {};
+    const data = (await res.json()) as Record<string, string>;
+    cache = { at: Date.now(), data };
+    return data;
+  } catch (err) {
+    console.warn('[config-store] read failed', { error: String(err) });
+    return cache?.data ?? {};
   }
 }
 
-async function writeRaw(key: string, value: string): Promise<boolean> {
-  const db = getDb();
-  if (!db) return false;
+async function writeAll(data: Record<string, string>): Promise<boolean> {
+  if (!isBlobConfigured()) return false;
   const delays = [0, 400, 900];
   let lastError: unknown;
   for (const delay of delays) {
     if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
     try {
-      await db
-        .prepare(
-          `INSERT INTO admin_config (key, value) VALUES (?, ?)
-           ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        )
-        .bind(key, value)
-        .run();
+      await put(BLOB_KEY, JSON.stringify(data), {
+        access: 'public',
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType: 'application/json',
+      });
+      cache = { at: Date.now(), data };
       return true;
     } catch (err) {
       lastError = err;
     }
   }
-  console.warn('[config-store] write failed after retries', { key, error: String(lastError) });
+  console.warn('[config-store] write failed after retries', { key: 'admin-config', error: String(lastError) });
   return false;
+}
+
+async function readRaw(key: string): Promise<string | null> {
+  const all = await readAll();
+  return all[key] ?? null;
+}
+
+async function writeRaw(key: string, value: string): Promise<boolean> {
+  const all = await readAll();
+  all[key] = value;
+  return writeAll(all);
 }
 
 // List-style config (admin-editable lists: blocked_models, model_rules,
@@ -97,6 +88,8 @@ export async function kvGet(key: string): Promise<string[]> {
     return [];
   }
 }
+
+const listCache = new Map<string, { at: number; value: string[] }>();
 
 export async function kvGetCached(key: string): Promise<string[]> {
   const hit = listCache.get(key);

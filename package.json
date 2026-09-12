@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.0",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "^2.4.3",
     "drizzle-orm": "^0.36.4",
