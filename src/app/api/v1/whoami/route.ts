@@ -1,4 +1,9 @@
-import { checkPublicRateLimit, resolveApiCaller, PUBLIC_RPM_PER_IP } from '@/lib/public-access';
+import {
+  checkPublicRateLimit,
+  resolveApiCaller,
+  PUBLIC_DAILY_PER_IP,
+  PUBLIC_RPM_PER_IP,
+} from '@/lib/public-access';
 import { jsonErrorCors, jsonOkCors } from '@/lib/http';
 
 export const runtime = 'edge';
@@ -12,12 +17,14 @@ export async function GET(req: Request) {
     return jsonOkCors({
       mode: 'admin',
       rpm_per_ip: PUBLIC_RPM_PER_IP,
+      daily_per_ip: PUBLIC_DAILY_PER_IP,
       limits: 'fixed — no increases',
     });
   }
   return jsonOkCors({
     mode: 'public',
     rpm_per_ip: PUBLIC_RPM_PER_IP,
+    daily_per_ip: PUBLIC_DAILY_PER_IP,
     limits: 'fixed — no increases',
   });
 }

@@ -16,13 +16,13 @@ export default function LimitsPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Rate limit</p>
-            <p className="mt-1 text-2xl font-bold text-zinc-50">30<span className="text-sm font-medium text-zinc-400">/min</span></p>
+            <p className="mt-1 text-2xl font-bold text-zinc-50">20<span className="text-sm font-medium text-zinc-400">/min</span></p>
             <p className="mt-1 text-xs text-zinc-500">per IP address</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Token cap</p>
-            <p className="mt-1 text-2xl font-bold text-zinc-50">None</p>
-            <p className="mt-1 text-xs text-zinc-500">no daily limits</p>
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Daily quota</p>
+            <p className="mt-1 text-2xl font-bold text-zinc-50">500<span className="text-sm font-medium text-zinc-400">/day</span></p>
+            <p className="mt-1 text-xs text-zinc-500">per IP, resets midnight UTC</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Increases</p>
@@ -31,8 +31,8 @@ export default function LimitsPage() {
           </div>
         </div>
         <p className="mt-4 text-sm text-zinc-400">
-          Hitting 429? Slow down and retry — the window resets every minute. Admins
-          are exempt from the per-IP gate.
+          Hitting 429? Slow down and retry — the minute window resets every minute,
+          the daily quota at midnight UTC. Admins are exempt from both gates.
         </p>
         <Link href="/docs" className="btn-primary mt-4 inline-flex">
           Get the public key

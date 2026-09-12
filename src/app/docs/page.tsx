@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import CodeBlock from '@/components/CodeBlock';
-import { PUBLIC_RPM_PER_IP } from '@/lib/public-access';
+import { PUBLIC_DAILY_PER_IP, PUBLIC_RPM_PER_IP } from '@/lib/public-access';
 
 const YOUR_KEY_PLACEHOLDER = '<YOUR_PUBLIC_KEY>';
 
@@ -65,7 +65,7 @@ for await (const chunk of res.body) {
         </p>
       </div>
 
-      <Section title="Get a key" className="anim-fade-up delay-1">
+      <Section title="Public key" className="anim-fade-up delay-1">
         <p className="text-sm text-zinc-400">
           There&apos;s one shared public key for everyone - no signup, no bot
           commands. Grab it from the{' '}
@@ -75,8 +75,8 @@ for await (const chunk of res.body) {
           .
         </p>
         <p className="mt-3 text-sm text-zinc-400">
-          {PUBLIC_RPM_PER_IP} requests/min · no token caps · no increases. Pass
-          it as{' '}
+          {PUBLIC_RPM_PER_IP} requests/min and {PUBLIC_DAILY_PER_IP} requests/day
+          per IP · no token caps · no increases. Pass it as{' '}
           <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>
             Authorization: Bearer
           </code>
@@ -205,10 +205,11 @@ for await (const chunk of res.body) {
             <li className="flex items-start gap-2.5">
               <Bullet />
               <span>
-                Requests per minute: <strong className="text-zinc-100">{PUBLIC_RPM_PER_IP} RPM</strong> on
+                <strong className="text-zinc-100">{PUBLIC_RPM_PER_IP} requests/min</strong> and{' '}
+                <strong className="text-zinc-100">{PUBLIC_DAILY_PER_IP} requests/day</strong> per IP on
                 all{' '}
                 <code className="rounded px-1.5 py-0.5 font-mono text-xs text-zinc-300" style={{ background: '#1D1D1F' }}>/api/v1</code>{' '}
-                endpoints, shared across everyone using the public key. Fixed — no increases.
+                endpoints. Fixed for everyone — no increases.
               </span>
             </li>
             <li className="flex items-start gap-2.5">
@@ -318,7 +319,6 @@ function Section({
       <h2 className="mb-4 flex items-center gap-3 text-lg font-semibold text-zinc-100">
         {title}
         <span className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
-      </span>
       </h2>
       {children}
     </section>

@@ -391,7 +391,7 @@ export default function PlaygroundClient() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-50">Playground</h1>
-          <p className="mt-1 text-sm text-zinc-400">Try any model live — chat, image and audio. Your Playground API key is auto-created.</p>
+          <p className="mt-1 text-sm text-zinc-400">Try any model live — chat, image and audio. Uses the shared public key (20/min · 500/day per IP).</p>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span title={keyError || undefined} className="rounded-full bg-white/5 px-3 py-1.5 font-mono text-zinc-400">{keyMasked || (keyError ? 'key failed — hover me' : 'no key yet')}</span>

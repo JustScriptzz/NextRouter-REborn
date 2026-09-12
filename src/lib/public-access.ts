@@ -1,20 +1,19 @@
-import { rateLimiter } from './rateLimit';
+import { dailyLimiter, rateLimiter } from './rateLimit';
 
 export const runtime = 'edge';
 
 // Serverless access control: no database, no users table, no sessions.
 // - A single shared public key (PUBLIC_API_KEY, env-only) gates every
-//   /api/v1 endpoint at a fixed 30 RPM.
+//   /api/v1 endpoint: 20 requests/min + 500 requests/day, both per IP.
 // - The operator's own unlimited key is ADMIN_API_KEY (env-only, never
 //   documented).
-// Per-Discord-user private keys (/getkey, /regenkey) are disabled for
-// now - see git history (src/lib/discord-keys.ts) to bring them back.
-export const PUBLIC_RPM_PER_IP = 30; // rpm limit for the public key
+export const PUBLIC_RPM_PER_IP = 20; // requests/min per IP
+export const PUBLIC_DAILY_PER_IP = 500; // requests/day per IP (UTC-day buckets)
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || '';
-const PUBLIC_API_KEY = process.env.PUBLIC_API_KEY || '';
+export const PUBLIC_API_KEY = process.env.PUBLIC_API_KEY || '';
 
-export type ApiCaller = { kind: 'admin' } | { kind: 'public' };
+export type ApiCaller = { kind: 'admin' } | { kind: 'public'; ip: string };
 
 export function getClientIp(req: Request): string {
   const xff = req.headers.get('x-forwarded-for');
@@ -50,7 +49,7 @@ export async function resolveApiCaller(req: Request): Promise<ApiCaller | null> 
   const key = bearerKey(req);
   if (!key) return null;
   if (safeEqual(key, ADMIN_API_KEY)) return { kind: 'admin' };
-  if (safeEqual(key, PUBLIC_API_KEY)) return { kind: 'public' };
+  if (safeEqual(key, PUBLIC_API_KEY)) return { kind: 'public', ip: getClientIp(req) };
   return null;
 }
 
@@ -60,12 +59,15 @@ export function trackingId(caller: ApiCaller): string {
   return caller.kind === 'admin' ? 'admin' : 'public';
 }
 
-// Fixed 30 RPM gate on the shared public key. Returns an error message
-// when limited, null when allowed. Admins bypass it.
+// Fixed 20 RPM + 500/day gates per IP on the shared public key. Returns
+// an error message when limited, null when allowed. Admins bypass both.
 export function checkPublicRateLimit(caller: ApiCaller): string | null {
   if (caller.kind === 'admin') return null;
-  const ok = rateLimiter.allow('rpm:public', PUBLIC_RPM_PER_IP);
-  return ok
-    ? null
-    : `Rate limit of ${PUBLIC_RPM_PER_IP} requests/min exceeded. Try again shortly.`;
+  if (!rateLimiter.allow(`rpm:${caller.ip}`, PUBLIC_RPM_PER_IP)) {
+    return `Rate limit of ${PUBLIC_RPM_PER_IP} requests/min per IP exceeded. Try again shortly.`;
+  }
+  if (!dailyLimiter.allow(`daily:${caller.ip}`, PUBLIC_DAILY_PER_IP)) {
+    return `Daily limit of ${PUBLIC_DAILY_PER_IP} requests/day per IP exceeded. Try again tomorrow.`;
+  }
+  return null;
 }

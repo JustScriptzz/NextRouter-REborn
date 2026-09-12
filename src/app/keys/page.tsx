@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PUBLIC_DAILY_PER_IP, PUBLIC_RPM_PER_IP } from '@/lib/public-access';
 
 // Shared public key - no signups, no per-user minting. Set PUBLIC_API_KEY
 // in the Vercel project env vars; this page reads it server-side and
@@ -12,8 +13,9 @@ export default function KeysPage() {
       <div className="anim-fade-up">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-50">API Keys</h1>
         <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">
-          No signup, no Discord bot - one shared public key, rate limited to keep
-          things fair for everyone.
+          No signup, no Discord bot - one shared public key, limited to{' '}
+          {PUBLIC_RPM_PER_IP} requests/min and {PUBLIC_DAILY_PER_IP} requests/day
+          per IP to keep things fair for everyone.
         </p>
       </div>
 
@@ -43,7 +45,8 @@ export default function KeysPage() {
           .
         </p>
         <p className="mt-3 text-xs text-zinc-500">
-          Shared by everyone, capped at a fixed requests-per-minute limit - see the{' '}
+          Shared by everyone, capped at {PUBLIC_RPM_PER_IP} requests/min and{' '}
+          {PUBLIC_DAILY_PER_IP} requests/day per IP - see the{' '}
           <Link href="/docs" className="underline underline-offset-4">
             docs
           </Link>{' '}

@@ -27,8 +27,8 @@ export async function POST(req: Request) {
   const limited = checkPublicRateLimit(caller);
   if (limited) return jsonErrorCors(429, limited, 'rate_limit');
   const trackId = trackingId(caller);
-  // No per-user RPM gates, no daily token limits: public callers are gated
-  // only by the fixed 30 RPM per IP above. Admins are unlimited.
+  // No per-user keys, no token caps: public callers are gated only by the
+  // fixed 20 RPM + 500/day per IP above. Admins are unlimited.
   const remaining = UNLIMITED_BUDGET;
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;

@@ -5,10 +5,11 @@ interface Bucket {
 
 class InMemoryRateLimiter {
   private buckets = new Map<string, Bucket>();
-  private readonly windowMs = 60_000;
 
-  allow(scope: string, maxPerMinute: number): boolean {
-    if (!Number.isFinite(maxPerMinute) || maxPerMinute <= 0) return true;
+  constructor(private readonly windowMs: number = 60_000) {}
+
+  allow(scope: string, maxPerWindow: number): boolean {
+    if (!Number.isFinite(maxPerWindow) || maxPerWindow <= 0) return true;
     const now = Date.now();
     const windowStart = Math.floor(now / this.windowMs) * this.windowMs;
     const bucket = this.buckets.get(scope);
@@ -16,10 +17,13 @@ class InMemoryRateLimiter {
       this.buckets.set(scope, { windowStart, count: 1 });
       return true;
     }
-    if (bucket.count >= maxPerMinute) return false;
+    if (bucket.count >= maxPerWindow) return false;
     bucket.count += 1;
     return true;
   }
 }
 
 export const rateLimiter = new InMemoryRateLimiter();
+
+// 24h rolling window (UTC-day-aligned buckets) for daily quotas.
+export const dailyLimiter = new InMemoryRateLimiter(24 * 60 * 60 * 1000);
