@@ -10,7 +10,10 @@ import {
 } from '@/lib/upstream';
 import { UNLIMITED_BUDGET } from '@/lib/usage';
 
-export const runtime = 'edge';
+// Node.js, not edge: on Hobby the edge runtime is killed ~25s in, which
+// 504s every upstream completion slower than that. Node.js gets the full
+// 60s Hobby cap (maxDuration above activates only on Pro).
+export const runtime = 'nodejs';
 
 const RETRY_MAX_ATTEMPTS = 60;
 const RETRY_BASE_DELAY_MS = 800;
