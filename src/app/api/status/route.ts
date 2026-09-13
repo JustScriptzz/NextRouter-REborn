@@ -1,38 +1,18 @@
-import { after } from 'next/server';
 import { jsonOkCors } from '@/lib/http';
 import { getModelStats } from '@/lib/model-stats';
-import { probeCatalog } from '@/lib/prober';
 import { getCatalog } from '@/lib/providers';
 
 export const runtime = 'edge';
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-const PROBE_STALE_MS = 10 * 60 * 1000;
-
-const globalForProbe = globalThis as unknown as {
-  __statusLastProbeAt?: number;
-  __statusProbeRunning?: boolean;
-};
-
 export async function GET() {
+  // NOTE: this endpoint never triggers probing. It used to kick off a full
+  // probeCatalog() sweep when stale, which meant every status-page view (the
+  // UI polls every 10s) fanned out into hundreds of live completions and
+  // throttled the upstreams it was measuring. Probing now happens only via
+  // the secret/cron /api/status/probe route.
   const [stats, catalog] = await Promise.all([getModelStats(), getCatalog()]);
-
-  const last = globalForProbe.__statusLastProbeAt ?? 0;
-  const stale = Date.now() - last > PROBE_STALE_MS;
-  if (stale && !globalForProbe.__statusProbeRunning) {
-    globalForProbe.__statusProbeRunning = true;
-    globalForProbe.__statusLastProbeAt = Date.now();
-    after(async () => {
-      try {
-        await probeCatalog();
-      } catch {
-        /* probe failures don't affect the response */
-      } finally {
-        globalForProbe.__statusProbeRunning = false;
-      }
-    });
-  }
 
   const rows = new Map<
     string,
