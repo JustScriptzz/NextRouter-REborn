@@ -61,11 +61,15 @@ export async function POST(req: Request) {
       ...catalogPipes.filter((p) => !isProbeBackedOff(p.id)),
       ...catalogPipes.filter((p) => isProbeBackedOff(p.id)),
     ];
+    // Stats are recorded once per REQUEST (not per pipe attempt): a failover
+    // that ends in success must not paint the model red because an earlier
+    // pipe flaked. Only a request where every pipe failed records a fail.
+    let saw429 = false;
     for (const pipe of orderedPipes) {
       if (Date.now() >= deadline) break;
       const pipeStart = Date.now();
       try {
-        return await withRetry(
+        const res = await withRetry(
           () =>
             chatCompletions({
               baseUrl: pipe.baseUrl,
@@ -82,6 +86,8 @@ export async function POST(req: Request) {
             deadlineAt: Math.min(deadline, Date.now() + PROVIDER_FAILOVER_BUDGET_MS),
           },
         );
+        recordModelResult(pipe.id, true, Date.now() - pipeStart, undefined, undefined, saw429 ? 429 : undefined);
+        return res;
       } catch (error) {
         if (isAbortError(error)) {
           console.warn('[chat] pipe aborted', { model: modelId, provider: pipe.provider });
@@ -90,6 +96,7 @@ export async function POST(req: Request) {
         // Pass the status through so a 429 starts the 6h probe backoff for
         // this model instead of only affecting this one request.
         const pipeStatus = error instanceof UpstreamRequestError ? error.status : undefined;
+        if (pipeStatus === 429) saw429 = true;
         console.warn('[chat] pipe failed', {
           model: modelId,
           provider: pipe.provider,
@@ -98,20 +105,16 @@ export async function POST(req: Request) {
           message:
             error instanceof Error ? error.message.slice(0, 160) : String(error).slice(0, 160),
         });
-        recordModelResult(
-          pipe.id,
-          false,
-          Date.now() - pipeStart,
-          undefined,
-          undefined,
-          pipeStatus,
-        );
         lastError = error;
       }
     }
     if (lastError instanceof UpstreamRequestError) {
+      recordModelResult(modelId, false, Date.now() - requestStart, undefined, undefined, lastError.status);
       console.warn('[chat] all pipes failed', { model: modelId, status: lastError.status });
       return upstreamErrorWithRetryAfter(lastError);
+    }
+    if (lastError) {
+      recordModelResult(modelId, false, Date.now() - requestStart);
     }
     return jsonErrorCors(502, 'Upstream request failed', 'upstream_error');
   }
