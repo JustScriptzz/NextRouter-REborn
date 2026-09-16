@@ -27,7 +27,9 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
         const res = await fetch('/api/models', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && Array.isArray(data.models)) setModelList(data.models);
+        if (!cancelled && Array.isArray(data.models)) {
+          setModelList(data.models.filter((model: CatalogModelDTO) => !model.id.toLowerCase().includes('kilo')));
+        }
       } catch {
         /* keep the empty initial list */
       }

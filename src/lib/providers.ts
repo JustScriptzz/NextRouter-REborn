@@ -354,6 +354,12 @@ function isAllowedBySubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
 
 const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
 const LIVE_MODELS_TIMEOUT_MS = 5000;
+const EXCLUDED_MODEL_MARKERS = ['kilo', 'kilo-auto'];
+
+function isExcludedModelId(id: string) {
+  const normalized = id.toLowerCase();
+  return EXCLUDED_MODEL_MARKERS.some((marker) => normalized.includes(marker));
+}
 const LIVE_MODELS_MAX = 500;
 
 const CATALOG_CACHE_TTL_MS = 60 * 1000;
@@ -453,6 +459,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
   const providersMap = new Map<string, CatalogEntry[]>();
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const add = (entry: CatalogEntry) => {
+    if (isExcludedModelId(entry.id) || isExcludedModelId(entry.upstreamModel)) return;
     const normalized = entry.id.replace(/-/g, '');
     const ownerId = byId.has(entry.id) ? entry.id : normalizedIds.get(normalized);
     if (!ownerId) {

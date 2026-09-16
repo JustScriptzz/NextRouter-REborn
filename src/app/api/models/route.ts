@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const catalog = await getCatalog();
     const fallbackId = catalog.models.find((entry) => entry.type === 'text')?.id ?? null;
-    const models: PublicModelDTO[] = catalog.models.map(
+    const models: PublicModelDTO[] = catalog.models.filter((entry) => !entry.id.toLowerCase().includes('kilo')).map(
       (entry): PublicModelDTO => ({
         id: entry.id,
         type: entry.type,
