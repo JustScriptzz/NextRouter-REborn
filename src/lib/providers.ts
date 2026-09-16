@@ -327,6 +327,20 @@ const GATEWAYS: GatewaySlot[] = [
     // instantly throttle the upstream (see GatewaySlot.skipProbe).
     skipProbe: true,
   },
+  {
+    // APInex: commercial OpenAI-compatible gateway (chat at
+    // <base>/chat/completions). Paid — keep it AFTER the free pipes so it
+    // serves as failover, not first choice. Inactive until APINEX_API_KEY
+    // is set in the host env vars. Models are discovered live from
+    // {base}/models; APINEX_MODELS optionally pins the list.
+    provider: 'apinex',
+    baseUrlEnv: 'APINEX_BASE_URL',
+    apiKeyEnv: 'APINEX_API_KEY',
+    modelsEnv: 'APINEX_MODELS',
+    defaultBaseUrl: 'https://apinex.bond',
+    requiresKey: true,
+    modelFetchTimeoutMs: 8000,
+  },
 ];
 
 function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
