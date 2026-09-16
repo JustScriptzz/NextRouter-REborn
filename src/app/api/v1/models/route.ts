@@ -6,7 +6,7 @@ export const runtime = 'edge';
 export async function GET() {
   const catalog = await getCatalog();
   const created = Math.floor(Date.now() / 1000);
-  const data = catalog.models.map((entry) => ({
+  const data = catalog.models.filter((entry) => !entry.id.toLowerCase().includes('kilo')).map((entry) => ({
     id: entry.id,
     object: 'model',
     created,
