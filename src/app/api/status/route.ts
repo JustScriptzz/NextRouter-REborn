@@ -37,7 +37,7 @@ export async function GET() {
       id,
       type: entry.type,
       providers,
-      free: id.includes(':free') || id.includes('kilo-auto') || id.endsWith('/free'),
+      free: id.includes(':free') || id.endsWith('/free'),
       ok: 0,
       fail: 0,
       avail: null,

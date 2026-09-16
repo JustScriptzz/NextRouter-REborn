@@ -13,7 +13,6 @@ const GATEWAYS = [
   { provider: 'cogito', base: env('COGITO_BASE_URL') || 'https://opencode.ai/zen', key: env('COGITO_API_KEY'), disableLive: true, staticModels: ['x-preview-f-free'] },
   { provider: 'jankrouter', base: env('JANKROUTER_BASE_URL') || 'https://jankrouter.waifly.com/', key: env('JANKROUTER_API_KEY') },
   { provider: 'aquadevs', base: env('AQUADEVS_BASE_URL'), key: env('AQUADEVS_API_KEY'), excludeTiers: ['premium'] },
-  { provider: 'kilo', base: env('KILO_BASE_URL') || 'https://api.kilo.ai/api/gateway', key: '', onlyIfContains: [':free', 'kilo-auto/free'] },
   { provider: 'ollama', base: env('OLLAMA_BASE_URL') || 'https://ollama.com', key: env('OLLAMA_API_KEY') },
 ].filter((g) => Boolean(g.base));
 

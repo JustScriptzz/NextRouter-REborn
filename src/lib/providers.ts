@@ -189,15 +189,6 @@ const GATEWAYS: GatewaySlot[] = [
     staticModels: ['x-preview-f-free'],
   },
   {
-    provider: 'kilo',
-    baseUrlEnv: 'KILO_BASE_URL',
-    apiKeyEnv: 'KILO_API_KEY',
-    modelsEnv: 'KILO_MODELS',
-    defaultBaseUrl: 'https://api.kilo.ai/api/gateway',
-    onlyIfContains: [':free', 'kilo-auto/free'],
-    onlyIfFree: true,
-  },
-  {
     provider: 'crax',
     baseUrlEnv: 'CRAX_BASE_URL',
     apiKeyEnv: 'CRAX_API_KEY',
