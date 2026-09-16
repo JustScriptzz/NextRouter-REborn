@@ -1,33 +1,13 @@
 import type { Metadata } from 'next';
-import { getCatalog } from '@/lib/providers';
-import type { CatalogModelDTO } from '@/components/ModelCard';
 import ModelsExplorer from '@/components/ModelsExplorer';
-
-export const runtime = 'edge';
 
 export const metadata: Metadata = {
   title: 'Models',
 };
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
 
-export default async function ModelsPage() {
-  let models: CatalogModelDTO[] = [];
-
-  try {
-    const catalog = await getCatalog();
-    const fallbackId = catalog.models.find((entry) => entry.type === 'text')?.id ?? null;
-    models = catalog.models.map((m) => ({
-      id: m.id,
-      title: m.description,
-      type: m.type,
-      isFallback: m.id === fallbackId,
-    }));
-  } catch (error) {
-    console.error('[GET /models] Error:', error);
-    models = [];
-  }
-
+export default function ModelsPage() {
   return (
     <div className="mx-auto max-w-5xl py-10">
       <div className="anim-fade-up">
@@ -41,7 +21,7 @@ export default async function ModelsPage() {
         </p>
       </div>
       <div className="anim-fade-up delay-1 mt-8">
-        <ModelsExplorer models={models} />
+        <ModelsExplorer models={[]} />
       </div>
     </div>
   );

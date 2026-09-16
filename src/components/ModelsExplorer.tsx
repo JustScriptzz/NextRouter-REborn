@@ -17,7 +17,26 @@ const KIND_LABELS: Record<string, string> = {
 export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [modelList, setModelList] = useState(models);
   const [statusMap, setStatusMap] = useState<Record<string, ModelStatusLite>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadModels() {
+      try {
+        const res = await fetch('/api/models', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.models)) setModelList(data.models);
+      } catch {
+        /* keep the empty initial list */
+      }
+    }
+    loadModels();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,12 +71,12 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
-    map.set('all', models.length);
-    for (const m of models) {
+    map.set('all', modelList.length);
+    for (const m of modelList) {
       map.set(m.type, (map.get(m.type) ?? 0) + 1);
     }
     return map;
-  }, [models]);
+  }, [modelList]);
 
   const kinds = useMemo(
     () => KIND_ORDER.filter((k) => (counts.get(k) ?? 0) > 0),
@@ -66,12 +85,12 @@ export default function ModelsExplorer({ models }: { models: CatalogModelDTO[] }
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return models.filter((m) => {
+    return modelList.filter((m) => {
       if (filter !== 'all' && m.type !== filter) return false;
       if (!q) return true;
       return m.id.toLowerCase().includes(q) || (m.title ?? '').toLowerCase().includes(q);
     });
-  }, [models, query, filter]);
+  }, [modelList, query, filter]);
 
   return (
     <div>
