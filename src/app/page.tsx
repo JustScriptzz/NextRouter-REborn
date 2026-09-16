@@ -1,19 +1,4 @@
-'use client';
-
-import { useEffect } from 'react';
-
 export default function Home() {
-  useEffect(() => {
-    // Intro: prefetch live models to warm the cache.
-    // We keep this out of the model list component so it only runs once
-    // on initial page load.
-    (async () => {
-      try {
-        await fetch('/api/models');
-      } catch {}
-    })();
-  }, []);
-
   return (
     <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6">
       <div className="text-center">

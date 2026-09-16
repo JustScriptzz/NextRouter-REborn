@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getCatalog, getFallbackModelId } from '@/lib/providers';
+import { getCatalog } from '@/lib/providers';
 import type { CatalogModelDTO } from '@/components/ModelCard';
 import ModelsExplorer from '@/components/ModelsExplorer';
 
@@ -16,7 +16,7 @@ export default async function ModelsPage() {
 
   try {
     const catalog = await getCatalog();
-    const fallbackId = await getFallbackModelId();
+    const fallbackId = catalog.models.find((entry) => entry.type === 'text')?.id ?? null;
     models = catalog.models.map((m) => ({
       id: m.id,
       title: m.description,

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface MeResponse {
   user: { email: string; username: string } | null;
@@ -28,41 +28,6 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
   const [unread, setUnread] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
-
-  const loadUnread = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await fetch('/api/public-key');
-      if (res.ok) {
-        const d = await res.json();
-        setUnread(typeof d.unread === 'number' ? d.unread : 0);
-      }
-    } catch {}
-  }, [user]);
-
-  useEffect(() => {
-    loadUnread();
-    const t = setInterval(loadUnread, 15000);
-    return () => clearInterval(t);
-  }, [loadUnread, user]);
-
-  const loadUser = useCallback(() => {
-    fetch('/api/public-key')
-      .then((r) => r.json())
-      .then((d) => {
-        // keys page sets this; otherwise leave null.
-        if (typeof d?.key === 'string') {
-          // Not storing state globally — the key is fetched on demand.
-        }
-      })
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    loadUser();
-    const t = setInterval(loadUser, 15000);
-    return () => clearInterval(t);
-  }, [loadUser]);
 
   useEffect(() => {
     setOpen(false);
