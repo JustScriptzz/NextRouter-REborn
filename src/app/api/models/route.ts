@@ -1,4 +1,4 @@
-import { getCatalog, getFallbackModelId } from '@/lib/providers';
+import { getCatalog } from '@/lib/providers';
 import { jsonOk } from '@/lib/http';
 import type { PublicModelDTO } from '@/lib/types';
 
@@ -7,7 +7,7 @@ export const runtime = 'edge';
 export async function GET() {
   try {
     const catalog = await getCatalog();
-    const fallbackId = await getFallbackModelId();
+    const fallbackId = catalog.models.find((entry) => entry.type === 'text')?.id ?? null;
     const models: PublicModelDTO[] = catalog.models.map(
       (entry): PublicModelDTO => ({
         id: entry.id,
