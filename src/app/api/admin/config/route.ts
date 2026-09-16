@@ -6,6 +6,7 @@ import { getModelStats } from '@/lib/model-stats';
 import { getModelSystemPrompts } from '@/lib/model-system-prompt';
 
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const session = await requireAdmin();

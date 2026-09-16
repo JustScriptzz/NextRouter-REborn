@@ -7,7 +7,7 @@
 // once you create a Blob store in the project's Storage tab.
 // Function names/signatures match the old module so nothing else needs
 // to change beyond this file.
-import { put, head } from '@vercel/blob';
+import { get, put } from '@vercel/blob';
 
 const BLOB_KEY = 'admin-config.json';
 const CACHE_TTL_MS = 15 * 1000;
@@ -26,19 +26,12 @@ async function readAll(): Promise<Record<string, string>> {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.data;
   if (!isBlobConfigured()) return {};
   try {
-    const info = await head(BLOB_KEY).catch(() => null);
-    if (!info) {
+    const result = await get(BLOB_KEY, { access: 'private', useCache: false }).catch(() => null);
+    if (!result || result.statusCode !== 200) {
       cache = { at: Date.now(), data: {} };
       return {};
     }
-    // The store is private, so the URL from head() is not publicly
-    // fetchable — it needs the same read/write token as a bearer token.
-    const res = await fetch(info.url, {
-      cache: 'no-store',
-      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
-    });
-    if (!res.ok) return cache?.data ?? {};
-    const data = (await res.json()) as Record<string, string>;
+    const data = (await new Response(result.stream).json()) as Record<string, string>;
     cache = { at: Date.now(), data };
     return data;
   } catch (err) {
