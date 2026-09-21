@@ -153,6 +153,9 @@ interface GatewaySlot {
   requiresKey?: boolean;
   modelFetchTimeoutMs?: number;
   seedIds?: string[];
+  // Default API key when the env var is unset (for pipes whose key is
+  // explicitly public/shared by the operator). Env always wins.
+  defaultApiKey?: string;
   // Chat-only upstream: every model from this slot is typed 'text' because
   // the upstream only serves chat/completions (no images/audio endpoints).
   chatOnly?: boolean;
@@ -163,6 +166,20 @@ interface GatewaySlot {
 }
 
 const GATEWAYS: GatewaySlot[] = [
+  {
+    // Lilith: free shared OpenAI-compatible gateway, healthy and fast
+    // (~3s completions). FIRST so traffic lands here immediately while
+    // other pipes stall; failover still covers everything behind it.
+    // Key is published by the operator for client use; env overrides it.
+    provider: 'lilith',
+    baseUrlEnv: 'LILITH_BASE_URL',
+    apiKeyEnv: 'LILITH_API_KEY',
+    modelsEnv: 'LILITH_MODELS',
+    defaultBaseUrl: 'https://api.naelle-card.my.id/v1',
+    defaultApiKey: 'sk-lilith-bansos-1b-free',
+    requiresKey: true,
+    modelFetchTimeoutMs: 8000,
+  },
   {
     provider: 'logfare',
     baseUrlEnv: 'LOGFARE_BASE_URL',
@@ -395,7 +412,7 @@ async function liveGatewayModels(
     overrides?.baseUrl ??
     cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
   if (!baseUrl) return null;
-  const apiKey = overrides?.apiKey ?? cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+  const apiKey = overrides?.apiKey ?? cleanEnvValue(process.env[slot.apiKeyEnv] ?? slot.defaultApiKey ?? '');
   const cacheKey = `${slot.provider}::${baseUrl}`;
   const cache = globalForCatalog.gatewayModels?.[cacheKey];
   const now = Date.now();
@@ -506,7 +523,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
       if (slot.disableLive) return false;
       const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
       if (!baseUrl) return false;
-      const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+      const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? slot.defaultApiKey ?? '');
       if (slot.requiresKey && !apiKey) return false;
       return true;
     });
@@ -518,7 +535,7 @@ export async function getCatalog(options?: { includeBlocked?: boolean }): Promis
     if (disabledProviders.includes(slot.provider)) continue;
     const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
     if (!baseUrl) continue;
-    const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+    const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? slot.defaultApiKey ?? '');
     if (slot.requiresKey && !apiKey) continue;
 
     if (slot.disableLive) {
