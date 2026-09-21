@@ -1,0 +1,23 @@
+# Cloudflare Workers deployment (OpenNext adapter).
+# Fill REPLACE_ME values after creating the account resources, then:
+#   npx wrangler d1 migrations apply STATS_DB
+#   npx wrangler secret put <KEY>   # for every secret env var
+#   npx wrangler deploy
+name = "nextrouter-reborn"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 database backing src/lib/model-stats.ts (binding name MUST stay STATS_DB).
+[[d1_databases]]
+binding = "STATS_DB"
+database_name = "nextrouter-stats"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Nightly probe (replaces vercel.json crons). Receiver checks CRON_SECRET.
+[triggers]
+crons = ["0 3 * * *"]
+
+# Non-secret vars live here; secrets go via `wrangler secret put`.
+[vars]
+NODE_ENV = "production"
+NEXT_PUBLIC_APP_URL = "https://nextrouter-reborn.workers.dev"
