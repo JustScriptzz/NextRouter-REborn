@@ -333,7 +333,7 @@ const GATEWAYS: GatewaySlot[] = [
     baseUrlEnv: 'AYECHAT_BASE_URL',
     apiKeyEnv: 'AYECHAT_API_KEY',
     modelsEnv: 'AYECHAT_MODELS',
-    defaultBaseUrl: 'https://prayas-proxy.vercel.app/v1',
+    defaultBaseUrl: 'https://prayas-proxy.justscriptzz.workers.dev/v1',
     requiresKey: true,
     modelFetchTimeoutMs: 8000,
     // Chat-only upstream (see GatewaySlot.chatOnly): image/audio-labeled
