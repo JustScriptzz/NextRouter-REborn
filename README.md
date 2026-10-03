@@ -53,8 +53,7 @@ Pick one, the gateway accepts all of them as `Bearer` (or `x-api-key` on `/v1/me
 
 | Source | How |
 |---|---|
-| Discord bot | `discord-bot/` — users `/claim` a key, bot owns the ledger via `BOT_VALIDATOR_URL` + `BOT_SHARED_SECRET` |
-| Postgres | Email accounts + website-issued keys (hashed, masked) |
+| Postgres | Self-hosted `nr_…` rows (hashed, masked) |
 | Demo key | Literal `demo` — shared bucket, for trying it out |
 | System key | `SYSTEM_TEST_KEY` env-only, unlimited RPM for sweeps |
 
@@ -74,8 +73,7 @@ Set each env var as a Worker secret (`wrangler secret put <NAME>`). Never commit
 src/app/            landing, dashboard, models, playground, keys, usage, docs
 src/app/api/v1/     chat, messages (Anthropic), images, audio, embeddings, video, models
 src/lib/            providers (slots + catalog), upstream (pipeline), auth, usage,
-                    bot-ledger, shell-config (display catalog — edit this file)
-discord-bot/        optional Discord key bot + validator API
+                    shell-config (display catalog — edit this file)
 ```
 
 ## Limits & security

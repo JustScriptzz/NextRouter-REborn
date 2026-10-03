@@ -115,8 +115,8 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
               <span className="text-sm font-bold text-white">NextRouter</span>
             </div>
             <p className="mt-3 max-w-sm text-[13px] leading-relaxed text-neutral-500">
-              One endpoint for every model you use. Keys are handed out by the
-              Discord bot — no signup form, no waitlist. Limit is 5M tokens a
+              One endpoint for every model you use. Self-hosted — no signup form,
+              no waitlist. Limit is 5M tokens a
               day, resets at midnight UTC.
             </p>
             <div className="mt-4 flex gap-2">
@@ -140,7 +140,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
             <div className="flex flex-col gap-2 text-[13px]">
               <Link href="/keys" className="text-neutral-400 hover:text-white">Get an API key</Link>
               <a href={DISCORD_URL} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-white">discord invite</a>
-              <Link href="/docs" className="text-neutral-400 hover:text-white">Bot commands</Link>
+              <Link href="/docs" className="text-neutral-400 hover:text-white">Docs & setup</Link>
               <span className="mono mt-2 text-[11px] text-neutral-600">no providers wired yet</span>
             </div>
           </div>
@@ -148,7 +148,7 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
         <div className="border-t" style={{ borderColor: '#1c1c1c' }}>
           <div className="mono mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 text-[11px] text-neutral-600 sm:flex-row sm:items-center sm:px-6">
             <span>© 2026 nextrouter — run by hand, not by committee.</span>
-            <span className="sm:ml-auto">keys via discord bot · 50m tokens/day</span>
+            <span className="sm:ml-auto">self-hosted · 50m tokens/day</span>
           </div>
         </div>
       </footer>

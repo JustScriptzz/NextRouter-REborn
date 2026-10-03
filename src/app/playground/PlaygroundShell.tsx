@@ -55,7 +55,7 @@ export default function PlaygroundShell() {
       setTimeout(() => {
         const reply =
           text.toLowerCase().includes('key')
-            ? 'Keys come from the Discord bot (/claim in #bot-commands). Paste yours above and the playground will remember it — or use the shared demo key.'
+            ? 'Paste a key above (or the shared demo key) and the playground will remember it.'
             : text.toLowerCase().includes('limit')
               ? '50,000,000 tokens a day, all models combined. Resets 00:00 UTC.'
               : `${CANNED[n % CANNED.length]} You said: “${text.slice(0, 140)}${text.length > 140 ? '…' : ''}”`;
@@ -91,7 +91,7 @@ export default function PlaygroundShell() {
       .catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
         const hint = /401|invalid|unauthorized|key/i.test(msg)
-          ? ' Check your key — claim one with /claim in Discord, or use the demo key.'
+          ? ' Check your key — use the demo key or mint your own (see keys tab).'
           : /429|limit|rate/i.test(msg)
             ? ' Limit hit — wait a bit and retry.'
             : /404|not found/i.test(msg)

@@ -3,7 +3,8 @@ import { db } from './db/client';
 
 // No DATABASE_URL = no database at all. Every KV read returns its default
 // and every write is a silent no-op, with zero connection attempts and zero
-// log spam. The Discord bot owns keys + usage in this mode.
+// log spam. Without a database, keys resolve via demo key, SYSTEM_TEST_KEY,
+// or the external validator (BOT_VALIDATOR_URL) when configured.
 const DB_ON = (process.env.DATABASE_URL ?? '') !== '';
 
 let ensured = false;

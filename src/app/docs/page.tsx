@@ -13,19 +13,14 @@ export default function DocsPage() {
         If you&apos;ve used OpenAI&apos;s API, you already know this one. Base URL + key + model id.
       </p>
 
-      <Section n="01" title="Get a key (Discord bot)">
+      <Section n="01" title="Get a key">
         <p>
-          Keys aren&apos;t minted on the website. Join{' '}
-          <a href={DISCORD_URL} target="_blank" rel="noreferrer" className="mono text-white underline underline-offset-4">your discord invite</a>,
-          go to <span className="mono text-white">#bot-commands</span>, run <span className="mono text-white">/claim</span>.
-          The bot DMs you a key. Full walkthrough on the <Link href="/keys" className="underline underline-offset-4 hover:text-white">keys tab</Link>.
+          No signup form. For trying it out, the key is literally{' '}
+          <span className="mono text-white">demo</span> — shared bucket, works instantly.
+          Self-hosting for real use? Mint <span className="mono text-white">nr_…</span> keys
+          in Postgres (see README) or set <span className="mono text-white">SYSTEM_TEST_KEY</span> for
+          sweeps. Full walkthrough on the <Link href="/keys" className="underline underline-offset-4 hover:text-white">keys tab</Link>.
         </p>
-        <div className="mono mt-2 space-y-1 text-[12px]">
-          <div><span className="text-white">/claim</span> <span className="text-neutral-500">— get key</span></div>
-          <div><span className="text-white">/usage</span> <span className="text-neutral-500">— tokens today</span></div>
-          <div><span className="text-white">/rotate</span> <span className="text-neutral-500">— replace leaked key</span></div>
-          <div><span className="text-white">/revoke</span> <span className="text-neutral-500">— kill your key entirely</span></div>
-        </div>
       </Section>
 
       <Section n="02" title="First request">

@@ -1,5 +1,5 @@
-// Bot-ledger client — gateway key validation + usage accounting through the
-// Discord bot's validator HTTP API, instead of Postgres.
+// External-ledger client — gateway key validation + usage accounting through
+// an external validator HTTP API, instead of Postgres.
 //
 // Active when BOT_VALIDATOR_URL and BOT_SHARED_SECRET are both set.
 // When unset, the legacy Postgres paths in auth.ts / usage.ts apply.

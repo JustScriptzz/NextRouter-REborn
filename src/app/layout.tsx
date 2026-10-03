@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: '%s | NextRouter',
   },
   description:
-    'NextRouter — one OpenAI-compatible endpoint for every model. Keys via Discord bot. 50M tokens/day.',
+    'NextRouter — one OpenAI-compatible endpoint for every model. 50M tokens/day.',
   icons: { icon: ['/logo.png', '/logo.svg'] },
 };
 

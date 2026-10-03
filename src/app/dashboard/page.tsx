@@ -21,7 +21,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex gap-2">
           <Link href="/playground" className="btn btn-line px-3 py-1.5 text-[13px]">Open playground</Link>
-          <a href={DISCORD_URL} target="_blank" rel="noreferrer" className="btn btn-solid px-3 py-1.5 text-[13px]">Get key</a>
+          <Link href="/keys" className="btn btn-solid px-3 py-1.5 text-[13px]">Keys</Link>
         </div>
       </div>
 
@@ -56,11 +56,10 @@ export default function DashboardPage() {
         <div className="panel panel-pad">
           <div className="micro">Quick start</div>
           <div className="term mt-3">
-            <div className="term-body">{`# 1 — grab a key from the bot
-/claim  (in discord #bot-commands)
+            <div className="term-body">{`# 1 — grab the demo key (or mint nr_... in Postgres)
+export NR_KEY=demo
 
 # 2 — call it like OpenAI
-export NR_KEY=nr_...
 curl $BASE/chat/completions -H "Authorization: Bearer $NR_KEY" ...`}</div>
           </div>
           <div className="mt-3 flex gap-2">

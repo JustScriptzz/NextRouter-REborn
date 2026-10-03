@@ -1,5 +1,6 @@
-// No accounts, no sessions: keys are issued by the Discord bot (see
-// bot-ledger.ts), plus the in-code demo key and the env-only system key.
+// No accounts, no sessions: keys are the in-code demo key, the env-only
+// system key, and nr_... rows in Postgres (plus an optional external
+// validator via BOT_VALIDATOR_URL, inert unless configured).
 // This module only answers "which identity does this Bearer key belong to"
 // for the gateway routes.
 import { createHash } from 'crypto';
@@ -31,7 +32,8 @@ export async function getUserFromApiKey(
   const sys = systemTestKey();
   if (sys && key === sys) return { ...SYSTEM_IDENTITY, id: SYSTEM_USER_ID };
   if (!key.startsWith('nr_')) return null;
-  // No-database mode: the Discord bot owns keys + ledger, ask it.
+  // External validator mode: when BOT_VALIDATOR_URL is set, keys are checked
+  // against it instead of Postgres.
   if (botLedgerEnabled()) {
     const botUser = await validateKeyWithBot(key);
     if (!botUser) return null;
