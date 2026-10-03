@@ -85,4 +85,7 @@ src/lib/            providers (slots + catalog), upstream (pipeline), auth, usag
 
 ## License
 
-MIT recommended — add a `LICENSE` file before distributing.
+NextRouter Public License v1.0 — see `LICENSE`. Free to use, copy, modify,
+and honestly host. Two hard lines: don't pass off upstream models as your
+own, and don't sell access under false pretenses about what powers it.
+Break either and your rights terminate automatically.

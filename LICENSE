@@ -1,0 +1,37 @@
+NextRouter Public License v1.0
+
+Copyright (c) 2026 Marco Ciullo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+2. NO MISREPRESENTATION. You may not present models served through this
+   Software as your own proprietary models. Upstream model identities must
+   pass through honestly — no renaming a free-tier model and selling it as
+   something it is not.
+
+3. NO FALSE RESALE. You may not sell access to a deployment of this Software
+   under false pretenses about what powers it (fake capabilities, fake
+   model names, fake "premium AI"). Honest paid hosting of a clearly
+   described deployment is allowed.
+
+4. Violating conditions 2 or 3 terminates your rights under this license
+   automatically. The copyright holder may additionally name violators
+   publicly.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+(This is a plain-language license drafted for this project, not legal advice.
+If you need it to hold up somewhere specific, have a lawyer bless it.)
