@@ -1,5 +1,7 @@
 # NextRouter
 
+> **Status: dormant.** The hosted gateway is no longer serving traffic — no keys are being issued and the model catalog is unlit. This repo stays public as a self-hostable shell: clone it, bring your own upstreams, run your own gateway.
+
 One endpoint for every model you use. NextRouter is a self-hostable AI gateway — OpenAI-compatible and Anthropic-compatible APIs backed by a catalog of upstream providers you configure yourself. Black and white, no noise.
 
 ```
@@ -20,7 +22,7 @@ curl https://YOUR_DEPLOYMENT/api/v1/chat/completions \
 - **Live model health** — the Models tab probes every id and shows green / amber / red with auto-retest
 - **Playground, docs, usage dashboard** — the whole shell, no accounts required
 
-## Quickstart
+## Quickstart (self-host)
 
 ```bash
 npm install
@@ -58,7 +60,7 @@ Pick one, the gateway accepts all of them as `Bearer` (or `x-api-key` on `/v1/me
 
 ## Deploy
 
-Cloudflare Workers (primary):
+Cloudflare Workers:
 
 ```bash
 npm run deploy   # opennext build + wrangler deploy
