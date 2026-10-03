@@ -1,0 +1,41 @@
+# Local secrets for `opennextjs-cloudflare preview` / `wrangler dev`.
+# NEVER commit this file (it stays gitignored). Fill values from your .env.local.
+# For production deploys, set each one with:  wrangler secret put <NAME>
+
+DATABASE_URL=
+SESSION_SECRET=
+ENCRYPTION_KEY=
+ALTCHA_SECRET=
+CRON_SECRET=
+OLLAMA_API_KEY=
+PROXY_POOL=
+PROXY_URL=
+PROXY_ROTATE_HOSTS=
+PROXY_COOLDOWN_MS=
+# Upstream gateways (generic OpenAI-compatible slots)
+PRIMARY_BASE_URL=
+PRIMARY_API_KEY=
+PRIMARY_MODELS=
+SECONDARY_BASE_URL=
+SECONDARY_API_KEY=
+SECONDARY_MODELS=
+FALLBACK_BASE_URL=
+FALLBACK_API_KEY=
+FALLBACK_MODELS=
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_SECURE=
+MAIL_FROM=
+ALLOW_UNVERIFIED_LOGIN=
+# No-database mode: gateway validates keys + reads/writes usage through the bot.
+BOT_VALIDATOR_URL=
+BOT_SHARED_SECRET=
+DAILY_CAP=50000000
+# System test key (no rpm). Set a long random value, never publish it.
+SYSTEM_TEST_KEY=
+# Legacy provider env names (removed from code — kept here so old deploys
+# don't break on missing vars; safe to delete once rotated):
+# AQUADEVS_API_KEY, AQUADEVS_MODELS, OBSIDIAN_API_KEY, OBSIDIAN_MODELS,
+# CRAX_API_KEY, CRAX_MODELS, PRAYAS_API_KEY, PRAYAS_MODELS

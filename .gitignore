@@ -1,0 +1,105 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Next.js
+.next
+out
+
+# Pterodactyl bundled Node runtime
+.node_runtime
+node-*-linux-x64.tar.xz
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+.drizzle
+*.db
+*.db-wal
+*.db-shm
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python / TS artifacts
+__pycache__/
+*.pyc
+tsconfig.tsbuildinfo
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Vercel
+.vercel
+
+.vercel
+.env*
+
+# Cloudflare Workers (opennext)
+.dev.vars
+.open-next
+.wrangler
+
+# Local secret dumps — NEVER commit
+*-key.json
+*-env.json
+envs-latest.json
+envs-dec.json
+pool-env.json
+pool-alive.txt
+render-*.json
+crax-*.json
+sweep-*.json
+sweep-*.jsonl
+kimi-req.json
+verify-*.json
+*.pem
+*.key
+
+# Local probe / debug scripts with hardcoded keys (private only)
+check-*.py
+test-*.py
+diag-*.py
+probe-*.py
+sweep-*.py
+verify-*.py
+debug-*.py
+pt-*.py
+list_env.py
+catalog-*.mjs
+test-neon*.mjs
+_nr_*.mjs
+
+# Private snapshots / duplicates
+.nr-main/
+.nr-main2/
+SESSION-SUMMARY.md
+pool-alive.txt
+
+# Scratch / probe / debug helpers (private, never public)
+# Root python: only the Pterodactyl launchers stay tracked.
+/*.py
+!/_run.py
+!/run.py
+/*.mjs
+!/next.config.mjs
+!/postcss.config.mjs
+index.html
+test-audio.wav
+test-tools-all-models.py
+discord-bot/run_validator.py
+discord-bot/seed_limits.py
+discord-bot/test_limits.py

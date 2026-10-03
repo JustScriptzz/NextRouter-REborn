@@ -1,0 +1,674 @@
+import type { ModelKind } from './types';
+import { withV1Prefix } from './upstream';
+import { proxiedFetch } from './proxy-pool';
+import { kvGetCached } from './kv';
+
+export interface CatalogEntry {
+  id: string;
+  type: ModelKind;
+  description: string;
+  provider: string;
+  baseUrl: string;
+  apiKey: string;
+  upstreamModel: string;
+  supportsImageEdits: boolean;
+  systemPrompt?: string;
+}
+
+export interface Catalog {
+  models: CatalogEntry[];
+  byId: Map<string, CatalogEntry>;
+  providersMap?: Map<string, CatalogEntry[]>;
+}
+
+interface LiveModelInfo {
+  id: string;
+  endpoints: string[];
+  displayName: string | null;
+  owner: string | null;
+  modelType: string | null;
+  tier: string | null;
+  isFree: boolean;
+}
+
+const MODEL_ALIASES = new Map<string, string>([
+  ['os-alpha', 'x-preview-f-free'],
+  ['os_alpha', 'x-preview-f-free'],
+  ['gemini-3-flash', 'gemini-3.6'],
+  ['minimax/minimax-m3:free', 'minimax-m3'],
+  ['minimax/minimax-m2.7:free', 'minimax-m2.7'],
+  ['deepseek-v4-pro:0813', 'deepseek-v4-pro-0813'],
+  ['deepseek-v4-flash:0731', 'deepseek-v4-flash-0731'],
+  ['nvidia/nemotron-3-super-120b-a12b:free', 'nemotron-3-super'],
+  ['nvidia/nemotron-3-ultra-550b-a55b:free', 'nemotron-3-ultra'],
+  ['cohere/north-mini-code:free', 'north-mini-code'],
+  // Add your own upstream -> public renames here, e.g.:
+  // ['weird-upstream-id', 'clean-public-id'],
+]);
+
+export const LIMITED_PROVIDERS: string[] = [];
+
+function resolveAlias(id: string): string {
+  const lower = id.toLowerCase();
+  return MODEL_ALIASES.get(lower) ?? id;
+}
+
+const ALL_KINDS: ModelKind[] = ['text', 'image', 'tts', 'stt', 'video', 'embedding'];
+
+function listFromEnv(name: string): string[] {
+  const raw = process.env[name];
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function cleanEnvValue(value: string): string {
+  let out = value.trim();
+  if (
+    out.length >= 2 &&
+    ((out.startsWith('"') && out.endsWith('"')) ||
+      (out.startsWith("'") && out.endsWith("'")))
+  ) {
+    out = out.slice(1, -1).trim();
+  }
+  return out.replace(new RegExp('\\s+', 'g'), '');
+}
+
+function describeModel(id: string): string {
+  const lower = id.toLowerCase();
+  if (lower.includes('cogito')) return 'Reasoning-optimized chat model';
+  if (lower.includes('gpt')) return 'High-performance chat model';
+  if (lower.includes('claude')) return 'Advanced reasoning chat model';
+  if (lower.includes('gemini')) return 'Multimodal-capable chat model';
+  if (lower.includes('llama')) return 'Open-weight chat model';
+  if (lower.includes('mistral')) return 'Efficient open-weight chat model';
+  if (lower.includes('deepseek')) return 'Strong reasoning chat model';
+  if (lower.includes('qwen')) return 'Open-weights chat model';
+  if (lower.includes('flux') || lower.includes('sdxl')) return 'Image generation model';
+  return 'Chat model';
+}
+
+function classifyModel(id: string): ModelKind {
+  const lower = id.toLowerCase();
+  if (/(text-embedding|embedding|e5-|bge-|minilm|rerank|ada-002)/.test(lower)) {
+    return 'embedding';
+  }
+  if (/(flux|sdxl|stable-diffusion|dall-?e|midjourney|imagen|dreamshaper|phoenix|lucid|meta-image|grok-imagine|qwen-image|gpt-image)/.test(lower)) {
+    return 'image';
+  }
+  if (/(whisper|transcri|speech-to-text|stt|recogni|nova-3)/.test(lower)) {
+    return 'stt';
+  }
+  if (/(tts|text-to-speech|eleven|aura|kokoro|xtts)/.test(lower)) {
+    return 'tts';
+  }
+  if (/^(sora|veo|kling|wan|qwen-video)|\bvideo\b|-video$/.test(lower)) {
+    return 'video';
+  }
+  return 'text';
+}
+
+function classifyFromEndpoints(endpoints: string[]): ModelKind | null {
+  if (endpoints.includes('chat/completions')) return 'text';
+  if (endpoints.some((e) => e.startsWith('images/'))) return 'image';
+  if (endpoints.includes('audio/speech')) return 'tts';
+  if (endpoints.includes('audio/transcriptions')) return 'stt';
+  if (endpoints.some((e) => e.startsWith('embeddings'))) return 'embedding';
+  return null;
+}
+
+function resolveLiveType(info: LiveModelInfo): ModelKind | null {
+  if (info.modelType) {
+    const lower = info.modelType.toLowerCase();
+    if (ALL_KINDS.includes(lower as ModelKind)) return lower as ModelKind;
+    if (lower !== 'audio') return null;
+  }
+  if (info.endpoints.length > 0) {
+    return classifyFromEndpoints(info.endpoints);
+  }
+  return classifyModel(info.id);
+}
+
+interface GatewaySlot {
+  provider: string;
+  baseUrlEnv: string;
+  apiKeyEnv: string;
+  modelsEnv: string;
+  defaultBaseUrl?: string;
+  staticModels?: string[];
+  disableLive?: boolean;
+  matchExistingOnly?: boolean;
+  excludeOwners?: string[];
+  excludeTiers?: string[];
+  excludeSubstrings?: string[];
+  excludeIds?: string[];
+  onlyIfContains?: string[];
+  onlyIfFree?: boolean;
+  requiresKey?: boolean;
+  modelFetchTimeoutMs?: number;
+  seedIds?: string[];
+  // upstreamId -> public id. Applied in the disableLive path so ugly provider
+  // IDs are renamed on our API. upstreamModel keeps the real ID for calls.
+  rename?: Record<string, string>;
+}
+
+// Live providers. All slots are disableLive: the catalog is EXACTLY the
+// modelsEnv pin lists — nothing the provider lists beyond them appears.
+// Public build: generic OpenAI-compatible slots. Set *_BASE_URL / *_API_KEY /
+// *_MODELS in env. See .env.example for the template. Add more slots by
+// copying a block.
+const GATEWAYS: GatewaySlot[] = [
+  {
+    provider: 'primary',
+    baseUrlEnv: 'PRIMARY_BASE_URL',
+    apiKeyEnv: 'PRIMARY_API_KEY',
+    modelsEnv: 'PRIMARY_MODELS',
+    defaultBaseUrl: '',
+    requiresKey: true,
+    disableLive: true,
+  },
+  // Prayas slot removed 2026-09-27. Pins + renames kept in
+  // private git history for one-line re-enable.
+  {
+    provider: 'secondary',
+    baseUrlEnv: 'SECONDARY_BASE_URL',
+    apiKeyEnv: 'SECONDARY_API_KEY',
+    modelsEnv: 'SECONDARY_MODELS',
+    defaultBaseUrl: '',
+    requiresKey: true,
+    disableLive: true,
+    rename: {
+      'hyb/deepseek-v4-flash': 'deepseek-v4-flash',
+      'hyb/glm-5.3-flash': 'glm-5.3-flash',
+    },
+  },
+  {
+    provider: 'fallback',
+    baseUrlEnv: 'FALLBACK_BASE_URL',
+    apiKeyEnv: 'FALLBACK_API_KEY',
+    modelsEnv: 'FALLBACK_MODELS',
+    defaultBaseUrl: '',
+    requiresKey: true,
+    disableLive: true,
+    rename: {
+      'moondream3.1': 'moondream-3.1',
+      'kimi-k2.6': 'kimi-k2-6',
+      'kimi-k2.7-code': 'kimi-k2-7-code',
+      'grok-4.6': 'grok-4-6',
+      'qwen-3.8-27b': 'qwen3.8-27b',
+      'deepseek-v4.1-flash': 'deepseek-v4.1-flash-alt',
+      'gemma-4-26b-a4b': 'gemma-4-26b',
+    },
+  },
+];
+
+function isExcludedOwner(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.excludeOwners || slot.excludeOwners.length === 0) return false;
+  if (!info.owner) return false;
+  const owner = info.owner.toLowerCase();
+  return slot.excludeOwners.some((o) => o.toLowerCase() === owner);
+}
+
+function isExcludedId(slot: GatewaySlot, id: string): boolean {
+  if (!slot.excludeIds || slot.excludeIds.length === 0) return false;
+  const lower = id.toLowerCase();
+  return slot.excludeIds.some((x) => x.toLowerCase() === lower);
+}
+
+function isExcludedTier(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.excludeTiers || slot.excludeTiers.length === 0) return false;
+  if (!info.tier) return false;
+  const tier = info.tier.toLowerCase();
+  return slot.excludeTiers.some((t) => t.toLowerCase() === tier);
+}
+
+function isExcludedSubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.excludeSubstrings || slot.excludeSubstrings.length === 0) return false;
+  const id = info.id.toLowerCase();
+  return slot.excludeSubstrings.some((s) => id.includes(s.toLowerCase()));
+}
+
+function isAllowedBySubstring(slot: GatewaySlot, info: LiveModelInfo): boolean {
+  if (!slot.onlyIfContains || slot.onlyIfContains.length === 0) return true;
+  const id = info.id.toLowerCase();
+  return slot.onlyIfContains.some((s) => id.includes(s.toLowerCase()));
+}
+
+const LIVE_MODELS_TTL_MS = 2 * 60 * 1000;
+const LIVE_MODELS_TIMEOUT_MS = 25000;
+const LIVE_MODELS_MAX = 500;
+
+const globalForCatalog = globalThis as unknown as {
+  gatewayModels?: Record<string, { at: number; models: LiveModelInfo[] | null }>;
+  lastGoodGatewayModels?: Record<string, { at: number; models: LiveModelInfo[] }>;
+};
+
+async function liveGatewayModels(
+  slot: GatewaySlot,
+  overrides?: { baseUrl?: string; apiKey?: string },
+): Promise<LiveModelInfo[] | null> {
+  const baseUrl =
+    overrides?.baseUrl ??
+    cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
+  if (!baseUrl) return null;
+  const apiKey = overrides?.apiKey ?? cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+  const cacheKey = `${slot.provider}::${baseUrl}`;
+  const cache = globalForCatalog.gatewayModels?.[cacheKey];
+  const now = Date.now();
+  if (cache && now - cache.at < LIVE_MODELS_TTL_MS) return cache.models;
+
+  let models: LiveModelInfo[] | null = null;
+  try {
+    const url = `${withV1Prefix(baseUrl)}/models`;
+    const res = await proxiedFetch(url, {
+      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+      cache: 'no-store',
+      signal: AbortSignal.timeout(slot.modelFetchTimeoutMs ?? LIVE_MODELS_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      const bodyText = await res.text().catch(() => '');
+      console.warn(`[gateway] ${slot.provider} model fetch non-ok:`, res.status, bodyText.slice(0, 300));
+    }
+    if (res.ok) {
+      const body = (await res.json().catch(() => null)) as
+        | { data?: Array<Record<string, unknown>> }
+        | null;
+      if (body && Array.isArray(body.data)) {
+        const collected: LiveModelInfo[] = [];
+        for (const entry of body.data) {
+          const id = typeof entry?.id === 'string' ? entry.id : '';
+          if (!id) continue;
+          const rawEndpoints = Array.isArray(entry.endpoints) ? entry.endpoints : [];
+          const endpoints = rawEndpoints.filter(
+            (e): e is string => typeof e === 'string' && e.length > 0,
+          );
+          let displayName: string | null = null;
+          if (typeof entry.display_name === 'string' && entry.display_name) {
+            displayName = entry.display_name;
+          } else if (typeof entry.name === 'string' && entry.name) {
+            displayName = entry.name;
+          }
+          const owner =
+            typeof entry.owned_by === 'string' && entry.owned_by ? entry.owned_by : null;
+          const modelType =
+            typeof entry.type === 'string' && entry.type ? entry.type : null;
+          const tier = typeof entry.tier === 'string' && entry.tier ? entry.tier : null;
+          const isFree = entry.isFree === true;
+          collected.push({ id, endpoints, displayName, owner, modelType, tier, isFree });
+        }
+        if (collected.length > 0) models = collected.slice(0, LIVE_MODELS_MAX);
+      }
+    }
+  } catch (error) {
+    models = null;
+    console.warn(`[gateway] ${slot.provider} model fetch failed:`, error instanceof Error ? error.message : error);
+  }
+
+  const gatewayModels = (globalForCatalog.gatewayModels ??= {});
+  if (models !== null && models.length > 0) {
+    const lastGood = (globalForCatalog.lastGoodGatewayModels ??= {});
+    lastGood[cacheKey] = { at: now, models };
+  } else {
+    const lastGood = globalForCatalog.lastGoodGatewayModels?.[cacheKey];
+    if (lastGood) models = lastGood.models;
+  }
+  gatewayModels[cacheKey] = { at: now, models };
+  return models;
+}
+
+export async function getCatalog(options?: { includeBlocked?: boolean }): Promise<Catalog> {
+  const byId = new Map<string, CatalogEntry>();
+  const normalizedIds = new Map<string, string>();
+  const providersMap = new Map<string, CatalogEntry[]>();
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const add = (entry: CatalogEntry) => {
+    const normalized = entry.id.replace(/-/g, '');
+    const ownerId = byId.has(entry.id) ? entry.id : normalizedIds.get(normalized);
+    if (!ownerId) {
+      byId.set(entry.id, entry);
+      normalizedIds.set(normalized, entry.id);
+      providersMap.set(entry.id, [entry]);
+      return;
+    }
+    const existing = byId.get(ownerId);
+    if (!existing || existing.type !== entry.type) return;
+    if (ownerId !== entry.id) entry = { ...entry, id: ownerId };
+    const list = providersMap.get(ownerId) ?? [existing];
+    if (list.some((e) => e.provider === entry.provider && e.upstreamModel === entry.upstreamModel)) {
+      return;
+    }
+    list.push(entry);
+    providersMap.set(ownerId, list);
+  };
+
+  for (const slot of GATEWAYS) {
+    const disabledProviders = await kvGetCached('disabled_providers');
+    if (disabledProviders.includes(slot.provider)) continue;
+    const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
+    if (!baseUrl) continue;
+    const apiKey = cleanEnvValue(process.env[slot.apiKeyEnv] ?? '');
+    if (slot.requiresKey && !apiKey) continue;
+
+    if (slot.disableLive) {
+      const renameMap = slot.rename
+        ? Object.fromEntries(
+            Object.entries(slot.rename).map(([k, v]) => [k.toLowerCase(), v]),
+          )
+        : null;
+      for (const upstreamModel of listFromEnv(slot.modelsEnv).length
+        ? listFromEnv(slot.modelsEnv)
+        : slot.staticModels ?? []) {
+        const publicId = renameMap?.[upstreamModel.toLowerCase()] ?? upstreamModel;
+        add({
+          id: publicId,
+          type: classifyModel(upstreamModel),
+          description: describeModel(publicId),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(baseUrl),
+          apiKey,
+          upstreamModel,
+          supportsImageEdits: false,
+        });
+      }
+      continue;
+    }
+
+    const live = await liveGatewayModels(slot);
+
+    if (slot.seedIds) {
+      for (const seedId of slot.seedIds) {
+        if (byId.has(seedId)) continue;
+        const kind = classifyModel(seedId);
+        const entry: CatalogEntry = {
+          id: seedId,
+          type: kind,
+          description: describeModel(seedId),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(baseUrl),
+          apiKey,
+          upstreamModel: seedId,
+          supportsImageEdits: false,
+        };
+        byId.set(seedId, entry);
+        providersMap.set(seedId, [entry]);
+      }
+    }
+
+    if (live && live.length > 0) {
+      for (const info of live) {
+        if (slot.matchExistingOnly) {
+          const n = norm(info.id);
+          let matched: CatalogEntry | null = null;
+          for (const existing of byId.values()) {
+            const e = norm(existing.id);
+            if (e === n || e.startsWith(n) || n.startsWith(e)) {
+              matched = existing;
+              break;
+            }
+          }
+          if (!matched) continue;
+          const type = resolveLiveType(info);
+          if (!type || type !== matched.type) continue;
+          const alt: CatalogEntry = {
+            id: matched.id,
+            type,
+            description: info.displayName ?? describeModel(matched.id),
+            provider: slot.provider,
+            baseUrl: withV1Prefix(baseUrl),
+            apiKey,
+            upstreamModel: info.id,
+            supportsImageEdits: false,
+          };
+          const list = providersMap.get(matched.id) ?? [];
+          list.push(alt);
+          providersMap.set(matched.id, list);
+          continue;
+        }
+        if (isExcludedId(slot, info.id)) continue;
+        if (slot.onlyIfFree && !info.isFree && !isAllowedBySubstring(slot, info)) continue;
+        if (isExcludedOwner(slot, info)) continue;
+        if (isExcludedTier(slot, info)) continue;
+        if (isExcludedSubstring(slot, info)) continue;
+        if (!isAllowedBySubstring(slot, info)) continue;
+        const canonicalId = resolveAlias(info.id);
+        const isAliased = canonicalId !== info.id;
+        if (isAliased && byId.has(canonicalId)) {
+          const type = resolveLiveType(info);
+          if (!type) continue;
+          const existing = byId.get(canonicalId)!;
+          if (type !== existing.type) continue;
+          const alt: CatalogEntry = {
+            id: canonicalId,
+            type,
+            description: info.displayName ?? describeModel(canonicalId),
+            provider: slot.provider,
+            baseUrl: withV1Prefix(baseUrl),
+            apiKey,
+            upstreamModel: info.id,
+            supportsImageEdits: info.endpoints.includes('images/edits'),
+          };
+          const list = providersMap.get(canonicalId) ?? [existing];
+          if (!list.some((e) => e.provider === slot.provider && e.upstreamModel === info.id)) {
+            list.push(alt);
+            providersMap.set(canonicalId, list);
+          }
+          continue;
+        }
+        const type = resolveLiveType(info);
+        if (!type) continue;
+        add({
+          id: canonicalId,
+          type,
+          description: info.displayName ?? describeModel(canonicalId),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(baseUrl),
+          apiKey,
+          upstreamModel: info.id,
+          supportsImageEdits: info.endpoints.includes('images/edits'),
+        });
+      }
+
+      continue;
+    }
+
+    for (const upstreamModel of listFromEnv(slot.modelsEnv)) {
+      const kind = classifyModel(upstreamModel);
+      add({
+        id: upstreamModel,
+        type: kind,
+        description: describeModel(upstreamModel),
+        provider: slot.provider,
+        baseUrl: withV1Prefix(baseUrl),
+        apiKey,
+        upstreamModel,
+        supportsImageEdits: false,
+      });
+    }
+  }
+
+  const extraGateways = await kvGetCached('extra_gateways');
+  for (const line of extraGateways) {
+    const parts = line.split('|').map((p) => p.trim());
+    if (parts.length < 2) continue;
+    const [name, gwBaseUrl, gwKey] = parts;
+    const slot: GatewaySlot = {
+      provider: name.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom',
+      baseUrlEnv: '',
+      apiKeyEnv: '',
+      modelsEnv: '',
+      defaultBaseUrl: gwBaseUrl,
+    };
+    const live = await liveGatewayModels(slot, { baseUrl: gwBaseUrl, apiKey: gwKey ?? '' });
+    if (live && live.length > 0) {
+      for (const info of live) {
+        const type = resolveLiveType(info);
+        if (!type) continue;
+        add({
+          id: info.id,
+          type,
+          description: info.displayName ?? describeModel(info.id),
+          provider: slot.provider,
+          baseUrl: withV1Prefix(gwBaseUrl),
+          apiKey: gwKey ?? '',
+          upstreamModel: info.id,
+          supportsImageEdits: info.endpoints.includes('images/edits'),
+        });
+      }
+    }
+  }
+
+  const rules = await kvGetCached('model_rules');
+  const entries = [...byId.values()];
+  for (const rule of rules) {
+    const parts = rule.split('|').map((p) => p.trim());
+    const cmd = parts[0]?.toLowerCase();
+    if (cmd === 'add' && parts.length >= 5) {
+      const id = parts[1];
+      const type = ALL_KINDS.includes(parts[2] as ModelKind) ? (parts[2] as ModelKind) : 'text';
+      entries.push({
+        id,
+        type,
+        description: parts[5] ?? describeModel(id),
+        provider: 'admin',
+        baseUrl: withV1Prefix(parts[3]),
+        apiKey: parts[6] ?? '',
+        upstreamModel: parts[4] ?? id,
+        supportsImageEdits: false,
+      });
+    } else if (cmd === 'rename' && parts.length >= 3) {
+      const target = entries.find((x) => x.id === parts[1]);
+      if (target) target.id = parts[2];
+    } else if (cmd === 'endpoint' && parts.length >= 3) {
+      const target = entries.find((x) => x.id === parts[1]);
+      if (target) target.baseUrl = withV1Prefix(parts[2]);
+    } else if (cmd === 'name' && parts.length >= 3) {
+      const target = entries.find((x) => x.id === parts[1]);
+      if (target) target.description = parts[2];
+    } else if (cmd === 'type' && parts.length >= 3) {
+      const newType = parts[2].toLowerCase() as ModelKind;
+      if (ALL_KINDS.includes(newType)) {
+        const target = entries.find((x) => x.id === parts[1]);
+        if (target) target.type = newType;
+      }
+    } else if (cmd === 'system' && parts.length >= 3) {
+      const target = entries.find((x) => x.id === parts[1]);
+      if (target) target.systemPrompt = parts.slice(2).join('|').trim();
+    }
+  }
+
+  const rebuiltById = new Map<string, CatalogEntry>();
+  for (const entry of entries) {
+    if (!rebuiltById.has(entry.id)) rebuiltById.set(entry.id, entry);
+  }
+  byId.clear();
+  for (const [k, v] of rebuiltById) byId.set(k, v);
+
+  const blockedModels = await kvGetCached('blocked_models');
+  const pinnedModels = await kvGetCached('pinned_models');
+
+  const stackRules = rules.filter((r) => r.startsWith('stack |'));
+  for (const rule of stackRules) {
+    const parts = rule.split('|').map((p) => p.trim());
+    const [,, targetId, stackProvider, stackBaseUrl, stackUpstream, stackApiKey] = parts;
+    if (!targetId || !stackProvider || !stackBaseUrl || !stackUpstream) continue;
+    const existing = providersMap.get(targetId) ?? [];
+    if (existing.length === 0) continue;
+    if (existing.some((e) => e.provider === stackProvider && e.upstreamModel === stackUpstream)) continue;
+    const baseEntry = existing[0];
+    existing.push({
+      id: targetId,
+      type: baseEntry.type,
+      description: baseEntry.description,
+      provider: stackProvider,
+      baseUrl: withV1Prefix(stackBaseUrl),
+      apiKey: stackApiKey ?? '',
+      upstreamModel: stackUpstream,
+      supportsImageEdits: false,
+    });
+    providersMap.set(targetId, existing);
+  }
+
+  let modelsOut = [...byId.values()];
+  if (blockedModels.length > 0 && !options?.includeBlocked) {
+    const blocked = new Set(blockedModels.map((b) => b.toLowerCase()));
+    modelsOut = modelsOut.filter((m) => !blocked.has(m.id.toLowerCase()));
+  }
+  if (pinnedModels.length > 0) {
+    const pinOrder = new Map(pinnedModels.map((id, i) => [id.toLowerCase(), i]));
+    modelsOut.sort(
+      (a, b) =>
+        (pinOrder.get(a.id.toLowerCase()) ?? 9999) -
+        (pinOrder.get(b.id.toLowerCase()) ?? 9999),
+    );
+  }
+  const catalog: Catalog = { models: modelsOut, byId, providersMap };
+  return catalog;
+}
+
+export async function getCatalogModel(id: string): Promise<CatalogEntry | null> {
+  const target = resolveAlias(id);
+  const [catalog, blocked] = await Promise.all([getCatalog(), kvGetCached('blocked_models')]);
+  if (blocked.length > 0) {
+    const lower = id.toLowerCase();
+    const targetLower = target.toLowerCase();
+    if (blocked.some((b) => b.toLowerCase() === targetLower || b.toLowerCase() === lower)) {
+      return null;
+    }
+  }
+  return catalog.byId.get(target) ?? catalog.byId.get(id) ?? null;
+}
+
+export async function getCatalogModelProviders(id: string): Promise<CatalogEntry[]> {
+  const target = resolveAlias(id);
+  const [catalog, blocked] = await Promise.all([getCatalog(), kvGetCached('blocked_models')]);
+  let viaMap =
+    catalog.providersMap?.get(target) ?? catalog.providersMap?.get(id) ?? undefined;
+  if (!viaMap || viaMap.length === 0) {
+    viaMap = catalog.models.filter((m) => m.id === target || m.id === id);
+  }
+  if (blocked.length > 0) {
+    const lower = id.toLowerCase();
+    const targetLower = target.toLowerCase();
+    const blockedSet = new Set(blocked.map((b) => b.toLowerCase()));
+    if (blockedSet.has(targetLower) || blockedSet.has(lower)) return [];
+    return viaMap.filter((e) => !blockedSet.has(e.id.toLowerCase()));
+  }
+  return viaMap;
+}
+
+export async function getFallbackModelId(): Promise<string | null> {
+  const catalog = await getCatalog();
+  return catalog.models.find((entry) => entry.type === 'text')?.id ?? null;
+}
+
+export function clearGatewayCaches(): void {
+  globalForCatalog.gatewayModels = {};
+}
+
+export interface GatewayHealth {
+  provider: string;
+  configured: boolean;
+  baseUrl: string;
+  cachedModels: number | null;
+  lastSuccessAt: number | null;
+  lastAttemptAt: number | null;
+}
+
+export function getGatewaysHealth(): GatewayHealth[] {
+  return GATEWAYS.map((slot) => {
+    const baseUrl = cleanEnvValue(process.env[slot.baseUrlEnv] || slot.defaultBaseUrl || '');
+    const fresh = globalForCatalog.gatewayModels?.[`${slot.provider}::${baseUrl}`] ?? null;
+    const lastGood =
+      globalForCatalog.lastGoodGatewayModels?.[`${slot.provider}::${baseUrl}`] ?? null;
+    return {
+      provider: slot.provider,
+      configured: baseUrl.length > 0,
+      baseUrl,
+      cachedModels: fresh?.models ? fresh.models.length : null,
+      lastSuccessAt: lastGood?.at ?? null,
+      lastAttemptAt: fresh?.at ?? null,
+    };
+  });
+}
